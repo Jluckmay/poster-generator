@@ -133,10 +133,10 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
         models_to_try = [model] if model else []
         if provider == "nvidia":
             for fb in (
-                "meta/llama-3.3-70b-instruct",
-                "nvidia/llama-3.1-nemotron-70b-instruct",
-                "meta/llama-3.1-70b-instruct",
-                "meta/llama-3.1-8b-instruct",
+                "nvidia/nemotron-3.5-super-vl-120b-a12b",
+                "nvidia/nemotron-3.5-lightning-30b-a3b",
+                "mistralai/mistral-large-2411",
+                "mistralai/mistral-large-4",
             ):
                 if fb not in models_to_try:
                     models_to_try.append(fb)
