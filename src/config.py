@@ -35,7 +35,7 @@ PROVIDERS: Dict[str, Dict[str, Any]] = {
     "nvidia": {
         "name": "NVIDIA NIM",
         "env": "NVIDIA_API_KEY",
-        "default_model": "meta/llama-3.3-70b-instruct",
+        "default_model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
         "url": "https://integrate.api.nvidia.com/v1/chat/completions",
     },
     "google": {
