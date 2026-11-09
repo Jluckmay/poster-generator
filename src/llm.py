@@ -141,51 +141,71 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
                 if fb not in models_to_try:
                     models_to_try.append(fb)
 
+        headers = {
+            "Authorization": f"Bearer {api_key}",
+            "Accept": "application/json",
+            "Content-Type": "application/json",
+            "User-Agent": "Mozilla/5.0 (compatible; BannerGenerator/1.0)",
+        }
+
         last_exc: Exception | None = None
         for idx, m_name in enumerate(models_to_try):
             req_timeout = 35 if idx == 0 else 20
-            try:
-                r = requests.post(
-                    cfg["url"],
-                    headers={"Authorization": f"Bearer {api_key}"},
-                    json={
-                        "model": m_name,
-                        "temperature": 0.2,
-                        "max_tokens": 4096,
-                        "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                    },
-                    timeout=req_timeout,
-                )
-                r.raise_for_status()
-                res_data = r.json()
-                choices = res_data.get("choices") or []
-                if not choices:
+            # Alguns modelos/gateways da NVIDIA NIM rejeitam mensagens com role='system' ou exigem payload padrão
+            message_variants = [
+                [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                [{"role": "user", "content": f"{system}\n\n{user}"}],
+            ]
+            for msgs in message_variants:
+                try:
+                    r = requests.post(
+                        cfg["url"],
+                        headers=headers,
+                        json={
+                            "model": m_name,
+                            "temperature": 0.2,
+                            "max_tokens": 4096,
+                            "stream": False,
+                            "messages": msgs,
+                        },
+                        timeout=req_timeout,
+                    )
+                    r.raise_for_status()
+                    res_data = r.json()
+                    choices = res_data.get("choices") or []
+                    if not choices:
+                        continue
+                    first_choice = choices[0]
+                    msg = first_choice.get("message") or {}
+                    content = msg.get("content")
+                    if not content and msg.get("reasoning_content"):
+                        content = msg.get("reasoning_content")
+                    if not content and first_choice.get("text"):
+                        content = first_choice.get("text")
+                    if content and isinstance(content, str) and content.strip():
+                        return content.strip()
                     continue
-                first_choice = choices[0]
-                msg = first_choice.get("message") or {}
-                content = msg.get("content")
-                if not content and msg.get("reasoning_content"):
-                    content = msg.get("reasoning_content")
-                if not content and first_choice.get("text"):
-                    content = first_choice.get("text")
-                if content and isinstance(content, str) and content.strip():
-                    return content.strip()
-                continue
-            except requests.HTTPError as exc:
-                last_exc = exc
-                if exc.response.status_code in (404, 410, 422, 500, 502, 503) and len(models_to_try) > 1:
+                except requests.HTTPError as exc:
+                    last_exc = exc
+                    if exc.response.status_code in (400, 404, 410, 422, 500, 502, 503):
+                        continue
+                    raise
+                except requests.RequestException as exc:
+                    last_exc = exc
                     continue
-                raise
-            except requests.RequestException as exc:
-                last_exc = exc
-                if len(models_to_try) > 1:
-                    continue
-                raise
         if last_exc:
             raise last_exc
         raise LLMError("Nenhum modelo disponível para o provedor ou resposta vazia.")
     except requests.HTTPError as exc:  # nunca expõe cabeçalhos/chave
-        raise LLMError(f"Provedor retornou HTTP {exc.response.status_code}.") from None
+        detail = ""
+        try:
+            err_json = exc.response.json()
+            if isinstance(err_json, dict):
+                detail = err_json.get("detail") or err_json.get("message") or (err_json.get("error") if isinstance(err_json.get("error"), str) else (err_json.get("error") or {}).get("message"))
+        except Exception:
+            detail = (exc.response.text or "")[:150]
+        detail_str = f" ({detail})" if detail else ""
+        raise LLMError(f"Provedor retornou HTTP {exc.response.status_code}{detail_str}.") from None
     except (requests.RequestException, KeyError, IndexError, ValueError):
         raise LLMError("Falha ao consultar o provedor de IA.") from None
 

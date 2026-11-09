@@ -172,8 +172,6 @@ def api_extract() -> Tuple[Response, int] | Response:
                     result = ai_extract(text, language, provider, key, request.form.get("model") or None)
                 except Exception as exc:
                     warning = str(exc)
-                    if not user_key and ("410" in warning or "401" in warning or "403" in warning):
-                        config.mark_server_key_invalid(provider)
                     if not user_key:
                         for fallback_p in ("google", "openai", "deepseek"):
                             if fallback_p != provider and config.server_key_for(fallback_p):
@@ -187,12 +185,12 @@ def api_extract() -> Tuple[Response, int] | Response:
         if result is None:
             result = heuristic_parse(text)
             if mode == "ai":
-                if "410" in warning:
-                    warning = "A chave deste provedor expirou (HTTP 410). Insira sua chave de API (ex: Gemini gratuita em Google AI Studio) para IA."
-                elif "Chave de API necessária" in warning:
-                    warning = "Chave de API não informada. Para síntese com IA, insira uma chave de API (ex: Gemini gratuita em Google AI Studio)."
+                if "Chave de API necessária" in warning:
+                    warning = "Chave de API não informada no modo IA — campos preenchidos por extração estrutural direta."
+                elif warning:
+                    warning = f"IA indisponível ({warning}) — campos preenchidos por extração estrutural direta."
                 else:
-                    warning = (warning + " — ").lstrip(" —") + "usando extração básica (sem IA)."
+                    warning = "Campos preenchidos por extração estrutural direta (sem IA)."
         return jsonify({"poster": result, "mode": "ai" if not warning and mode == "ai" else "basic", "warning": warning})
     except HTTPException:
         raise
