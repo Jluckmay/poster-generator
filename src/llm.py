@@ -132,14 +132,33 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
         # Provedores OpenAI / NVIDIA / DeepSeek com fallback resiliente de modelos para NVIDIA NIM
         models_to_try = [model] if model else []
         if provider == "nvidia":
-            for fb in (
-                "meta/llama-3.3-70b-instruct",
-                "nvidia/llama-3.1-nemotron-70b-instruct",
-                "meta/llama-3.1-70b-instruct",
-                "meta/llama-3.1-8b-instruct",
-            ):
-                if fb not in models_to_try:
-                    models_to_try.append(fb)
+            # Consulta modelos ativos para evitar 410 de modelos EOL
+            live_models = set()
+            try:
+                r_models = requests.get(
+                    "https://integrate.api.nvidia.com/v1/models",
+                    headers={"Authorization": f"Bearer {api_key}", "Accept": "application/json"},
+                    timeout=5,
+                )
+                if r_models.ok:
+                    data = r_models.json().get("data") or []
+                    live_models = {m.get("id") for m in data if m.get("id")}
+            except Exception:
+                pass
+
+            preferred = [
+                m for m in (
+                    model,
+                    "meta/llama-3.3-70b-instruct",
+                    "deepseek-ai/deepseek-r1",
+                    "qwen/qwen2.5-72b-instruct",
+                    "mistralai/mistral-large-2411",
+                ) if m
+            ]
+            if live_models:
+                models_to_try = [m for m in preferred if m in live_models] or [m for m in live_models if "instruct" in m or "chat" in m][:3] or list(live_models)[:2]
+            else:
+                models_to_try = preferred
 
         headers = {
             "Authorization": f"Bearer {api_key}",
