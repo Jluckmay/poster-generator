@@ -64,7 +64,16 @@ PROVIDERS: Dict[str, Dict[str, Any]] = {
 }
 
 
+_EXPIRED_SERVER_KEYS: set[str] = set()
+
+
+def mark_server_key_invalid(provider: str) -> None:
+    _EXPIRED_SERVER_KEYS.add(provider)
+
+
 def server_key_for(provider: str) -> str:
+    if provider in _EXPIRED_SERVER_KEYS:
+        return ""
     cfg = PROVIDERS.get(provider)
     return os.environ.get(cfg["env"], "").strip() if cfg else ""
 

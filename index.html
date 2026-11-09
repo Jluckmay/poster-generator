@@ -1920,6 +1920,7 @@ button.sm {
         <label data-i18n="api_key">Chave de API</label>
         <input type="password" id="apiKey" data-i18n-ph="ph_api_key" autocomplete="new-password" spellcheck="false" data-lpignore="true" autocapitalize="off" placeholder="Cole sua chave aqui ou use a do servidor">
         <div class="hint" data-i18n="key_hint">A chave é utilizada unicamente nesta chamada e jamais é persistida em disco.</div>
+        <div style="margin-top:4px;font-size:11px;"><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--amber);text-decoration:underline;">⚡ Obter chave gratuita do Google Gemini (Google AI Studio) ↗</a></div>
       </div>
       <p style="margin:12px 0 0;"><button class="pri" id="extractBtn" data-i18n="extract">Extrair conteúdo do trabalho</button></p>
       <div id="extractMsg"></div>
@@ -2787,25 +2788,24 @@ function populateProviders() {
     const prevVal = $("#provider").value;
     const entries = Object.entries(CFG.providers);
 
-    // Ordena priorizando o provedor padrão do servidor Render no topo
+    // Provedores que realmente possuem chave ativa no servidor têm prioridade
     entries.sort((a, b) => {
-      const aServer = a[1].server_key || a[0] === "nvidia";
-      const bServer = b[1].server_key || b[0] === "nvidia";
+      const aServer = Boolean(a[1].server_key);
+      const bServer = Boolean(b[1].server_key);
       if (aServer && !bServer) return -1;
       if (!aServer && bServer) return 1;
       return 0;
     });
 
     $("#provider").innerHTML = entries.map(([k, v]) => {
-      const isServer = v.server_key || k === "nvidia";
+      const isServer = Boolean(v.server_key);
       const serverTag = isServer
         ? (uiLang === "en-US" ? " (Render Server) ✓" : " (Servidor Render) ✓")
-        : (v.server_key ? " ✓" : "");
+        : "";
       return `<option value="${k}">${v.name}${serverTag}</option>`;
     }).join("");
 
-    // O provedor padrão selecionado é o servidor backend Render (nvidia)
-    const serverDefault = entries.find(e => e[1].server_key || e[0] === "nvidia");
+    const serverDefault = entries.find(e => Boolean(e[1].server_key));
     const defaultKey = serverDefault ? serverDefault[0] : (CFG.default_provider || "nvidia");
 
     if (prevVal && CFG.providers[prevVal]) {
@@ -2818,12 +2818,12 @@ function populateProviders() {
       const p = $("#provider").value;
       if (CFG.providers[p]) {
         $("#model").placeholder = CFG.providers[p].default_model;
-        const isServer = CFG.providers[p].server_key || p === "nvidia";
+        const isServer = Boolean(CFG.providers[p].server_key);
         const apiKeyInput = $("#apiKey");
         if (apiKeyInput) {
           apiKeyInput.placeholder = isServer
             ? (uiLang === "en-US" ? "Using Render Server key (optional: enter custom key)" : "Usando chave do Servidor Render (opcional: digite chave própria)")
-            : t("ph_api_key");
+            : (uiLang === "en-US" ? "Enter API key (e.g. free Gemini from Google AI Studio)" : "Cole sua chave de API (ex: Gemini grátis no Google AI Studio)");
         }
       }
     };
@@ -2905,8 +2905,16 @@ $("#extractBtn").onclick = async () => {
   fd.append("file", docFile);
   fd.append("language", posterLang);
   const isAi = Boolean(($("#useAI") || $("#useAi"))?.checked);
-  fd.append("mode", isAi ? "ai" : "basic");
   const selectedProvider = $("#provider") ? $("#provider").value : "nvidia";
+  const userKey = ($("#apiKey") ? $("#apiKey").value : "").trim();
+  const providerHasServerKey = Boolean(CFG.providers && CFG.providers[selectedProvider] && CFG.providers[selectedProvider].server_key);
+
+  let modeVal = isAi ? "ai" : "basic";
+  if (isAi && !userKey && !providerHasServerKey) {
+    modeVal = "basic";
+  }
+  fd.append("mode", modeVal);
+
   let modelVal = $("#model") ? $("#model").value.trim() : "";
   if (!modelVal && selectedProvider === "nvidia") {
     modelVal = "meta/llama-3.3-70b-instruct";
@@ -2915,7 +2923,7 @@ $("#extractBtn").onclick = async () => {
   }
   fd.append("provider", selectedProvider);
   fd.append("model", modelVal);
-  fd.append("api_key", $("#apiKey") ? $("#apiKey").value : "");
+  fd.append("api_key", userKey);
 
   $("#extractBtn").disabled = true;
   showMsg(msg, t("working"), "ok");
@@ -2937,10 +2945,12 @@ $("#extractBtn").onclick = async () => {
     }
     if (!r.ok) return showMsg(msg, j.error || "Erro na extração (" + r.status + ")", "err");
     fillFromExtract(j.poster);
-    if (j.warning && isAi) {
-      showMsg(msg, "⚠️ A extração com IA falhou (" + j.warning + "). Os campos foram preenchidos pela extração básica (sem IA).", "err");
+    if (isAi && !userKey && !providerHasServerKey) {
+      showMsg(msg, t("extracted") + " (💡 Análise estrutural realizada. Para síntese com IA, insira sua chave gratuita de API).", "ok");
+    } else if (j.warning && isAi) {
+      showMsg(msg, "ℹ️ Campos preenchidos via análise estrutural (" + j.warning + ").", "ok");
     } else {
-      showMsg(msg, t("extracted") + (j.warning ? " (" + j.warning + ")" : ""), j.warning ? "err" : "ok");
+      showMsg(msg, t("extracted") + (j.warning ? " (" + j.warning + ")" : ""), "ok");
     }
   } catch (e) {
     showMsg(msg, String(e), "err");
