@@ -807,15 +807,17 @@ button.sm {
 
 .draft-poster {
   width: 100%;
+  max-width: 960px;
   background: #ffffff;
   color: #1a1a1a;
   box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
   border-radius: 4px;
   position: relative;
-  overflow: hidden;
+  overflow: visible;
   display: flex;
   flex-direction: column;
-  transition: all 0.25s ease;
+  transition: transform 0.2s ease, box-shadow 0.25s ease;
+  transform-origin: top center;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 22px;
   box-sizing: border-box;
@@ -882,23 +884,32 @@ button.sm {
   width: 100%;
 }
 .draft-grid {
-  display: grid;
-  gap: 12px;
+  display: flex;
+  gap: 14px;
+  width: 100%;
+  align-items: flex-start;
   flex: 1;
-  align-content: start;
+}
+.draft-col {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-width: 0;
 }
 .draft-block {
   background: #ffffff;
   border-radius: 4px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
   border: 1px solid rgba(0,0,0,0.08);
   display: flex;
   flex-direction: column;
   gap: 6px;
   font-size: 9.5px;
-  line-height: 1.4;
+  line-height: 1.45;
   box-sizing: border-box;
+  width: 100%;
 }
 .draft-block-title {
   font-size: 10.5px;
@@ -910,7 +921,7 @@ button.sm {
 }
 .draft-block-body {
   color: #374151;
-  overflow: hidden;
+  overflow-wrap: break-word;
   word-break: break-word;
 }
 .draft-block-body p {
@@ -1904,7 +1915,7 @@ button.sm {
       <div id="aiBox" style="margin-top:10px;">
         <div class="row">
           <div><label data-i18n="provider">Provedor de IA</label><select id="provider"></select></div>
-          <div><label data-i18n="model">Modelo (opcional)</label><input type="text" id="model" autocomplete="off" placeholder="nvidia/nemotron-3.5-super-vl-120b-a12b"></div>
+          <div><label data-i18n="model">Modelo (opcional)</label><input type="text" id="model" autocomplete="off" placeholder="meta/llama-3.3-70b-instruct"></div>
         </div>
         <label data-i18n="api_key">Chave de API</label>
         <input type="password" id="apiKey" data-i18n-ph="ph_api_key" autocomplete="new-password" spellcheck="false" data-lpignore="true" autocapitalize="off" placeholder="Cole sua chave aqui ou use a do servidor">
@@ -2512,7 +2523,7 @@ const DEFAULT_CFG = {
   },
   default_provider: "nvidia",
   providers: {
-    "nvidia": { "name": "NVIDIA NIM", "default_model": "nvidia/nemotron-3.5-super-vl-120b-a12b", "server_key": true },
+    "nvidia": { "name": "NVIDIA NIM", "default_model": "meta/llama-3.3-70b-instruct", "server_key": true },
     "google": { "name": "Google Gemini", "default_model": "gemini-2.0-flash", "server_key": false },
     "openai": { "name": "OpenAI", "default_model": "gpt-4o-mini", "server_key": false },
     "anthropic": { "name": "Anthropic Claude", "default_model": "claude-3-5-haiku-latest", "server_key": false },
@@ -2857,6 +2868,7 @@ document.querySelectorAll("input[name=posterLang]").forEach(r => {
 $("#themeBtn").onclick = () => {
   const d = document.documentElement;
   d.dataset.theme = d.dataset.theme === "dark" ? "light" : "dark";
+  updateDraftPreview();
 };
 const useAiCheckbox = $("#useAI") || $("#useAi");
 if (useAiCheckbox) {
@@ -2897,7 +2909,7 @@ $("#extractBtn").onclick = async () => {
   const selectedProvider = $("#provider") ? $("#provider").value : "nvidia";
   let modelVal = $("#model") ? $("#model").value.trim() : "";
   if (!modelVal && selectedProvider === "nvidia") {
-    modelVal = "nvidia/nemotron-3.5-super-vl-120b-a12b";
+    modelVal = "meta/llama-3.3-70b-instruct";
   } else if (!modelVal && CFG.providers && CFG.providers[selectedProvider]) {
     modelVal = CFG.providers[selectedProvider].default_model;
   }
@@ -2912,9 +2924,15 @@ $("#extractBtn").onclick = async () => {
       onStatusUpdate: (stMsg) => showMsg(msg, stMsg, "ok")
     });
     let j = {};
-    try {
-      j = await r.json();
-    } catch {
+    const ct = (r.headers.get("content-type") || "").toLowerCase();
+    if (ct.includes("application/json")) {
+      try {
+        j = await r.json();
+      } catch {
+        return showMsg(msg, `Resposta inválida do servidor (${r.status}). Tente novamente em instantes.`, "err");
+      }
+    } else {
+      await r.text().catch(() => "");
       return showMsg(msg, `Erro no servidor (${r.status}). O serviço pode estar reiniciando ou temporariamente indisponível. Tente novamente em instantes.`, "err");
     }
     if (!r.ok) return showMsg(msg, j.error || "Erro na extração (" + r.status + ")", "err");
@@ -3219,6 +3237,23 @@ $("#quickSampleBtn").onclick = () => {
 
 /* ---------- Alternância de Visualização (Rascunho vs PDF) ---------- */
 let currentViewMode = "draft";
+let draftScale = 1.0;
+
+function setDraftZoom(newScale) {
+  draftScale = Math.max(0.35, Math.min(2.5, newScale));
+  const poster = $("#draftPoster");
+  if (poster) {
+    poster.style.transform = `scale(${draftScale})`;
+    poster.style.transformOrigin = "top center";
+  }
+  const zd = $("#zoomDisplay");
+  if (zd) zd.textContent = Math.round(draftScale * 100) + "%";
+}
+
+function updateDraftZoomUI() {
+  const zd = $("#zoomDisplay");
+  if (zd) zd.textContent = Math.round(draftScale * 100) + "%";
+}
 
 function setViewMode(mode) {
   currentViewMode = mode;
@@ -3226,6 +3261,7 @@ function setViewMode(mode) {
   const btnPdf = $("#btnViewPdf");
   const draftCont = $("#draftPreview");
   const toolbar = $("#pdf-toolbar");
+  const pageNavGroup = $("#pageNavGroup");
   const canvasList = $("#pdfCanvasList");
   const iframe = $("#pdf-iframe");
 
@@ -3234,9 +3270,11 @@ function setViewMode(mode) {
 
   if (mode === "draft") {
     if (draftCont) draftCont.classList.remove("hidden");
-    if (toolbar) toolbar.style.display = "none";
+    if (toolbar) toolbar.style.display = "flex";
+    if (pageNavGroup) pageNavGroup.style.display = "none";
     if (canvasList) canvasList.style.display = "none";
     if (iframe) iframe.style.display = "none";
+    updateDraftZoomUI();
     updateDraftPreview();
   } else {
     if (draftCont) draftCont.classList.add("hidden");
@@ -3244,6 +3282,8 @@ function setViewMode(mode) {
       if (toolbar) toolbar.style.display = "flex";
       if (canvasList) canvasList.style.display = "block";
       if (iframe) iframe.style.display = "none";
+      const zd = $("#zoomDisplay");
+      if (zd) zd.textContent = Math.round((state.scale || 1.0) * 100) + "%";
       renderPosterPages();
     } else if (pdfBlob) {
       if (toolbar) toolbar.style.display = "none";
@@ -3394,34 +3434,53 @@ function updateDraftPreview() {
     footerLogosEl.innerHTML = "";
   }
 
-  // Seções e Grade de Colunas
+  // Seções e Grade de Colunas (Fluxo em Colunas Acadêmicas)
   const grid = $("#draftGrid");
   if (grid) {
-    grid.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
     const renderedSections = sections.filter(s => s && ((s.title && s.title.trim()) || (s.content && s.content.trim()) || s.images.length > 0));
     const activeSections = renderedSections.length > 0 ? renderedSections : sections;
 
-    grid.innerHTML = activeSections.map(s => {
-      const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
-      const sBody = (s.content && s.content.trim()) || dFb.content;
-      const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
-      const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody);
-      const imgHtml = (s.images && s.images.length > 0)
-        ? `<div class="draft-block-imgs">${s.images.slice(0, 2).map(im => `<img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">`).join("")}</div>`
-        : "";
+    const numCols = Math.max(1, Math.min(5, cols));
+    const colBuckets = Array.from({ length: numCols }, () => []);
+    if (numCols === 1) {
+      colBuckets[0] = activeSections;
+    } else if (numCols === 2) {
+      // Em pôster acadêmico de 2 colunas: Col 1 = Introdução, Metodologia; Col 2 = Resultados, Conclusões, Referências
+      const splitIdx = Math.max(1, Math.min(activeSections.length - 1, Math.floor(activeSections.length / 2)));
+      colBuckets[0] = activeSections.slice(0, splitIdx);
+      colBuckets[1] = activeSections.slice(splitIdx);
+    } else {
+      const perCol = Math.ceil(activeSections.length / numCols);
+      for (let c = 0; c < numCols; c++) {
+        colBuckets[c] = activeSections.slice(c * perCol, (c + 1) * perCol);
+      }
+    }
 
-      return `
-        <div class="draft-block">
-          <div class="draft-block-title">
-            ${escapeHtml(sTitle)}
-          </div>
-          <div class="draft-block-body" style="color: ${bodyColor};">
-            ${bodyHtml}
-          </div>
-          ${imgHtml}
-        </div>
-      `;
-    }).join("");
+    grid.innerHTML = colBuckets.map(colSecs => `
+      <div class="draft-col">
+        ${colSecs.map(s => {
+          const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
+          const sBody = (s.content && s.content.trim()) || dFb.content;
+          const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
+          const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody);
+          const imgHtml = (s.images && s.images.length > 0)
+            ? `<div class="draft-block-imgs">${s.images.slice(0, 2).map(im => `<img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">`).join("")}</div>`
+            : "";
+
+          return `
+            <div class="draft-block">
+              <div class="draft-block-title">
+                ${escapeHtml(sTitle)}
+              </div>
+              <div class="draft-block-body" style="color: ${bodyColor};">
+                ${bodyHtml}
+              </div>
+              ${imgHtml}
+            </div>
+          `;
+        }).join("")}
+      </div>
+    `).join("");
   }
 }
 
@@ -4158,24 +4217,48 @@ function renderPageOnCanvas(num, canvas, scale) {
 
 /* ---------- Controles da Barra do Visualizador ---------- */
 $("#btnZoomIn").onclick = () => {
-  state.fitMode = "custom";
-  state.scale = Math.min(3.0, (state.scale || 1.0) * 1.2);
-  $("#zoomDisplay").textContent = Math.round(state.scale * 100) + "%";
-  renderPosterPages();
+  if (currentViewMode === "draft") {
+    setDraftZoom(draftScale * 1.15);
+  } else {
+    state.fitMode = "custom";
+    state.scale = Math.min(3.0, (state.scale || 1.0) * 1.2);
+    $("#zoomDisplay").textContent = Math.round(state.scale * 100) + "%";
+    renderPosterPages();
+  }
 };
 $("#btnZoomOut").onclick = () => {
-  state.fitMode = "custom";
-  state.scale = Math.max(0.2, (state.scale || 1.0) / 1.2);
-  $("#zoomDisplay").textContent = Math.round(state.scale * 100) + "%";
-  renderPosterPages();
+  if (currentViewMode === "draft") {
+    setDraftZoom(draftScale / 1.15);
+  } else {
+    state.fitMode = "custom";
+    state.scale = Math.max(0.2, (state.scale || 1.0) / 1.2);
+    $("#zoomDisplay").textContent = Math.round(state.scale * 100) + "%";
+    renderPosterPages();
+  }
 };
 $("#btnFitWidth").onclick = () => {
-  state.fitMode = "width";
-  renderPosterPages();
+  if (currentViewMode === "draft") {
+    setDraftZoom(1.0);
+  } else {
+    state.fitMode = "width";
+    renderPosterPages();
+  }
 };
 $("#btnFitPage").onclick = () => {
-  state.fitMode = "page";
-  renderPosterPages();
+  if (currentViewMode === "draft") {
+    const container = $("#pdf-viewport-container");
+    const poster = $("#draftPoster");
+    if (container && poster && poster.offsetHeight > 0) {
+      const availH = container.clientHeight - 80;
+      const s = Math.max(0.35, Math.min(1.0, availH / poster.offsetHeight));
+      setDraftZoom(s);
+    } else {
+      setDraftZoom(1.0);
+    }
+  } else {
+    state.fitMode = "page";
+    renderPosterPages();
+  }
 };
 
 window.addEventListener("resize", () => {

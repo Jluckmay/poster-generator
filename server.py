@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Any, Dict, Tuple
 
 from flask import Flask, Response, jsonify, request, send_from_directory
+from werkzeug.exceptions import HTTPException
 
 from src import config
 from src.extractors import ALLOWED_DOC_EXT, extract_text, heuristic_parse
@@ -142,49 +143,54 @@ def api_config() -> Response:
 @app.post("/api/extract")
 def api_extract() -> Tuple[Response, int] | Response:
     """Recebe um trabalho (PDF/DOCX/TXT/MD/TEX) e devolve os campos do pôster."""
-    f = request.files.get("file")
-    if not f or not f.filename:
-        return _err("Nenhum arquivo enviado.")
-    language = request.form.get("language", config.DEFAULT_LANGUAGE)
-    mode = request.form.get("mode", "ai")
     try:
-        text = extract_text(f.filename, f.read())
-    except ValueError as exc:
-        return _err(str(exc))
-    except Exception:
-        return _err("Não foi possível ler o arquivo.")
-    if len(text) < 80:
-        return _err("O arquivo não contém texto suficiente.")
-
-    warning = ""
-    result: Dict[str, Any] | None = None
-    if mode == "ai":
-        provider = request.form.get("provider", config.DEFAULT_PROVIDER)
-        user_key = request.form.get("api_key")
+        f = request.files.get("file")
+        if not f or not f.filename:
+            return _err("Nenhum arquivo enviado.")
+        language = request.form.get("language", config.DEFAULT_LANGUAGE)
+        mode = request.form.get("mode", "ai")
         try:
-            key = resolve_key(provider, user_key)
-            result = ai_extract(text, language, provider, key, request.form.get("model") or None)
-        except Exception as exc:
-            warning = str(exc)
-            # Se a chamada com a chave padrão do servidor falhar (ex: 410 Gone / expirada), tenta provedores alternativos no servidor
-            if not user_key:
-                for fallback_p in ("google", "openai", "deepseek"):
-                    if fallback_p != provider and config.server_key_for(fallback_p):
-                        try:
-                            f_key = config.server_key_for(fallback_p)
-                            result = ai_extract(text, language, fallback_p, f_key, None)
-                            warning = ""
-                            break
-                        except Exception:
-                            continue
-    if result is None:
-        result = heuristic_parse(text)
+            text = extract_text(f.filename, f.read())
+        except ValueError as exc:
+            return _err(str(exc))
+        except Exception:
+            return _err("Não foi possível ler o arquivo.")
+        if len(text) < 80:
+            return _err("O arquivo não contém texto suficiente.")
+
+        warning = ""
+        result: Dict[str, Any] | None = None
         if mode == "ai":
-            if "410" in warning:
-                warning = "Chave NVIDIA NIM do servidor expirou (HTTP 410). Cole sua própria chave de API (Google Gemini, OpenAI, Claude ou DeepSeek) no campo acima para gerar via IA."
-            else:
-                warning = (warning + " — ").lstrip(" —") + "usando extração básica (sem IA)."
-    return jsonify({"poster": result, "mode": "ai" if not warning and mode == "ai" else "basic", "warning": warning})
+            provider = request.form.get("provider", config.DEFAULT_PROVIDER)
+            user_key = request.form.get("api_key")
+            try:
+                key = resolve_key(provider, user_key)
+                result = ai_extract(text, language, provider, key, request.form.get("model") or None)
+            except Exception as exc:
+                warning = str(exc)
+                # Se a chamada com a chave padrão do servidor falhar (ex: 410 Gone / expirada), tenta provedores alternativos no servidor
+                if not user_key:
+                    for fallback_p in ("google", "openai", "deepseek"):
+                        if fallback_p != provider and config.server_key_for(fallback_p):
+                            try:
+                                f_key = config.server_key_for(fallback_p)
+                                result = ai_extract(text, language, fallback_p, f_key, None)
+                                warning = ""
+                                break
+                            except Exception:
+                                continue
+        if result is None:
+            result = heuristic_parse(text)
+            if mode == "ai":
+                if "410" in warning:
+                    warning = "Chave NVIDIA NIM do servidor expirou (HTTP 410). Cole sua própria chave de API (Google Gemini, OpenAI, Claude ou DeepSeek) no campo acima para gerar via IA."
+                else:
+                    warning = (warning + " — ").lstrip(" —") + "usando extração básica (sem IA)."
+        return jsonify({"poster": result, "mode": "ai" if not warning and mode == "ai" else "basic", "warning": warning})
+    except HTTPException:
+        raise
+    except Exception as exc:
+        return jsonify({"error": f"Erro interno ao processar o arquivo: {str(exc)}"}), 500
 
 
 @app.post("/api/generate")

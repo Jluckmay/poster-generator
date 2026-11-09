@@ -130,9 +130,14 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
             r.raise_for_status()
             return r.json()["content"][0]["text"]
         # Provedores OpenAI / NVIDIA / DeepSeek com fallback resiliente de modelos para NVIDIA NIM
-        models_to_try = [model]
+        models_to_try = [model] if model else []
         if provider == "nvidia":
-            for fb in ("nvidia/nemotron-3.5-super-vl-120b-a12b", "meta/llama-3.1-70b-instruct", "meta/llama-3.1-8b-instruct", "meta/llama-3.3-70b-instruct"):
+            for fb in (
+                "meta/llama-3.3-70b-instruct",
+                "nvidia/llama-3.1-nemotron-70b-instruct",
+                "meta/llama-3.1-70b-instruct",
+                "meta/llama-3.1-8b-instruct",
+            ):
                 if fb not in models_to_try:
                     models_to_try.append(fb)
 
@@ -144,16 +149,31 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
                     cfg["url"],
                     headers={"Authorization": f"Bearer {api_key}"},
                     json={
-                        "model": m_name, "temperature": 0.2, "max_tokens": 4096,
+                        "model": m_name,
+                        "temperature": 0.2,
+                        "max_tokens": 4096,
                         "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
                     },
                     timeout=req_timeout,
                 )
                 r.raise_for_status()
-                return r.json()["choices"][0]["message"]["content"]
+                res_data = r.json()
+                choices = res_data.get("choices") or []
+                if not choices:
+                    continue
+                first_choice = choices[0]
+                msg = first_choice.get("message") or {}
+                content = msg.get("content")
+                if not content and msg.get("reasoning_content"):
+                    content = msg.get("reasoning_content")
+                if not content and first_choice.get("text"):
+                    content = first_choice.get("text")
+                if content and isinstance(content, str) and content.strip():
+                    return content.strip()
+                continue
             except requests.HTTPError as exc:
                 last_exc = exc
-                if exc.response.status_code in (404, 410) and len(models_to_try) > 1:
+                if exc.response.status_code in (404, 410, 422, 500, 502, 503) and len(models_to_try) > 1:
                     continue
                 raise
             except requests.RequestException as exc:
@@ -163,19 +183,22 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
                 raise
         if last_exc:
             raise last_exc
-        raise LLMError("Nenhum modelo disponível para o provedor.")
+        raise LLMError("Nenhum modelo disponível para o provedor ou resposta vazia.")
     except requests.HTTPError as exc:  # nunca expõe cabeçalhos/chave
         raise LLMError(f"Provedor retornou HTTP {exc.response.status_code}.") from None
     except (requests.RequestException, KeyError, IndexError, ValueError):
         raise LLMError("Falha ao consultar o provedor de IA.") from None
 
 
-def parse_json_object(raw: str) -> Dict[str, Any]:
-    raw = re.sub(r"^```(?:json)?|```$", "", raw.strip(), flags=re.M).strip()
-    start, end = raw.find("{"), raw.rfind("}")
+def parse_json_object(raw: Any) -> Dict[str, Any]:
+    if not raw or not isinstance(raw, str):
+        raise LLMError("Resposta da IA está vazia ou nula.")
+    clean_raw = raw.strip()
+    clean_raw = re.sub(r"^```(?:json)?|```$", "", clean_raw, flags=re.M).strip()
+    start, end = clean_raw.find("{"), clean_raw.rfind("}")
     if start < 0 or end <= start:
         raise LLMError("Resposta da IA não contém JSON válido.")
-    snippet = raw[start : end + 1]
+    snippet = clean_raw[start : end + 1]
     try:
         obj = json.loads(snippet)
     except json.JSONDecodeError:
@@ -192,12 +215,13 @@ def parse_json_object(raw: str) -> Dict[str, Any]:
 
 def ai_extract(text: str, language: str, provider: str, api_key: str, model: str | None) -> Dict[str, Any]:
     system = SYSTEM_PROMPT.replace("{language}", _LANG_NAME.get(language, "Brazilian Portuguese"))
-    obj = parse_json_object(chat(provider, api_key, model, system, f"<paper>\n{text[:35000]}\n</paper>"))
+    raw_response = chat(provider, api_key, model, system, f"<paper>\n{text[:35000]}\n</paper>")
+    obj = parse_json_object(raw_response)
     secs = obj.get("sections") if isinstance(obj.get("sections"), dict) else {}
     return {
-        "title": obj.get("title") or "",
-        "authors": obj.get("authors") or "",
-        "affiliations": obj.get("affiliations") or "",
-        "email": obj.get("email") or "",
-        "sections": [{"id": sid, "content": secs.get(sid) or ""} for sid in DEFAULT_SECTION_IDS],
+        "title": str(obj.get("title") or "").strip(),
+        "authors": str(obj.get("authors") or "").strip(),
+        "affiliations": str(obj.get("affiliations") or "").strip(),
+        "email": str(obj.get("email") or "").strip(),
+        "sections": [{"id": sid, "content": str(secs.get(sid) or "").strip()} for sid in DEFAULT_SECTION_IDS],
     }
