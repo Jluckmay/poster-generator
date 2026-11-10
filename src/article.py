@@ -86,23 +86,14 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             f"{text}\n{_images_to_latex(sec['images'], labels['figure'], fig, cap)}\n\\vspace{{{cm(1)}}}"
         )
 
-    contact: List[str] = []
-    if poster["email"]:
-        contact.append(_inline(poster["email"]))
-    if poster["url"]:
-        contact.append(escape_latex(poster["url"]))
-    if contact:
-        qr = f"\\par\\vspace{{{cm(0.5)}}}\\qrcode[height={cm(3)}]{{{poster['url']}}}" if _QR_OK.match(poster["url"]) else ""
-        body.append(
-            f"\\noindent\\textcolor{{accent}}{{\\rule{{\\linewidth}}{{{_pt(5 * s)}pt}}}}\\par\\vspace{{{cm(0.5)}}}\n"
-            f"\\Needspace{{{cm(8)}}}\\noindent\\textcolor{{accent}}{{{_fs(40, s)}\\textbf{{\\MakeUppercase{{{labels['contact']}}}}}}}\\par\\vspace{{{cm(1)}}}\n"
-            + "\\\\\n".join(contact) + qr + "\\par"
-        )
 
     header_logos = [images[p] for p in poster["logos_header"] if p in images]
     footer_logos = [images[p] for p in poster["logos_footer"] if p in images]
     authors = escape_latex(poster["authors"]).replace("\n", ", ")
-    affil = "\\\\".join(escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip())
+    affil_bits = [escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip()]
+    if poster["email"]:
+        affil_bits.append(_inline(poster["email"]))
+    affil = "\\\\".join(affil_bits)
     rule8 = f"\\textcolor{{accent}}{{\\rule{{\\textwidth}}{{{_pt(8 * s)}pt}}}}"
     cols = max(1, poster["columns"])
     open_cols, close_cols = (f"\\begin{{multicols}}{{{cols}}}", "\\end{multicols}") if cols > 1 else ("", "")

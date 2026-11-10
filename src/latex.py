@@ -320,14 +320,31 @@ def text_to_latex(text: str) -> str:
 
 def references_to_latex(text: str, small: bool = True) -> str:
     items = [ln.strip() for ln in text.split("\n") if ln.strip()]
-    items = [re.sub(r"^\s*(?:\[\d+\]|\d+[.)]|[-*•])\s*", "", it) for it in items]
-    items = items[:4]
-    if not items:
+    # Extrai o número de citação [n] do início de cada item, se houver
+    numbered: List[tuple[int, str]] = []
+    for it in items:
+        m = re.match(r"^\s*\[(\d+)\]\s*(.*)$", it, re.IGNORECASE)
+        if m:
+            numbered.append((int(m.group(1)), m.group(2).strip()))
+        else:
+            m2 = re.match(r"^\s*\d+[.)]\s*(.*)$", it)
+            if m2:
+                numbered.append((0, m2.group(1).strip()))
+            else:
+                numbered.append((0, it))
+    if not numbered:
         return ""
+    # Ordena pelos números de citação quando disponíveis, mantendo ordem original para os não-numerados
+    numbered.sort(key=lambda x: x[0] if x[0] > 0 else 999999)
+    max_refs = 20
+    out_items = []
+    for idx, (num, content) in enumerate(numbered[:max_refs], start=1):
+        display_num = num if num > 0 else idx
+        out_items.append(f"\\item [{display_num}] {_inline(content)}")
     return (
         ("{\\small" if small else "{")
         + "\\begin{enumerate}\n"
-        + "\n".join(f"\\item {_inline(it)}" for it in items)
+        + "\n".join(out_items)
         + "\n\\end{enumerate}}"
     )
 
@@ -459,27 +476,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         sections.append(
             {**s, "images": [{"file": images[i["path"]], "caption": i["caption"]} for i in s["images"] if i["path"] in images]}
         )
-    contact_bits = []
-    if poster["email"]:
-        contact_bits.append(_inline(poster["email"]))
-    qr = ""
-    if _QR_OK.match(poster["url"]):
-        qr = f"\\begin{{center}}\\qrcode[height=3cm]{{{poster['url']}}}\\end{{center}}"
-        contact_bits.append(escape_latex(poster["url"]))
-    elif poster["url"]:
-        contact_bits.append(escape_latex(poster["url"]))
-    contact_block = None
-    if contact_bits:
-        contact_block = {
-            "id": "contact",
-            "title": labels["contact"],
-            "latex": "\\\\\n".join(contact_bits) + ("\n" + qr if qr else ""),
-            "content": "",
-            "images": [],
-        }
-
-    contact_weight = 750 if contact_block else 0
-    cols = split_columns(sections, poster["columns"], contact_weight=contact_weight)
+    cols = split_columns(sections, poster["columns"])
     counter = [0]
     col_tex: List[str] = []
     for ci, col in enumerate(cols):
@@ -488,18 +485,17 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             body = references_to_latex(s["content"]) if s["id"] == "references" else text_to_latex(s["content"])
             body += "\n" + _images_to_latex(s["images"], labels["figure"], counter)
             parts.append(f"\\block{{{_inline(s['title'])}}}{{\n{body}\n}}")
-        if contact_block and ci == len(cols) - 1:
-            parts.append(f"\\block{{{contact_block['title']}}}{{\n{contact_block['latex']}\n}}")
         col_tex.append("\n".join(parts))
-    if not sections and contact_block:
-        col_tex = [f"\\column{{1}}\n\\block{{{contact_block['title']}}}{{\n{contact_block['latex']}\n}}"]
 
     logos = "".join(
         f"\\includegraphics[height=6cm]{{{images[p]}}}\\hspace{{2cm}}" for p in poster["logos_header"] if p in images
     )
     title = _inline(poster["title"]) or "~"
     authors = escape_latex(poster["authors"]).replace("\n", ", ")
-    institute = "\\\\".join(escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip())
+    institute_bits = [escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip()]
+    if poster["email"]:
+        institute_bits.append(_inline(poster["email"]))
+    institute = "\\\\".join(institute_bits)
 
     return f"""\\documentclass[{poster.get('_font') or paper['font']},a0paper,margin=20mm,innermargin=12mm,blockverticalspace=12mm,colspace=12mm,subcolspace=8mm]{{tikzposter}}
 \\geometry{{paperwidth={pw * 10:.0f}mm,paperheight={ph * 10:.0f}mm,margin=20mm}}

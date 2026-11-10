@@ -75,15 +75,12 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     if _QR_OK.match(poster.get("url", "")):
         qr = f"\\begin{{center}}\\qrcode[height=3.5cm]{{{poster['url']}}}\\end{{center}}"
 
-    if contact_bits:
-        body.append(
-            f"\\section*{{{labels['contact']}}}\n"
-            + "\\\\\n".join(contact_bits)
-            + ("\n" + qr if qr else "")
-        )
 
     authors = escape_latex(poster.get("authors", "")).replace("\n", ", ")
-    affil = "\\\\".join(escape_latex(ln.strip()) for ln in poster.get("affiliations", "").split("\n") if ln.strip())
+    affil_bits = [escape_latex(ln.strip()) for ln in poster.get("affiliations", "").split("\n") if ln.strip()]
+    if poster.get("email"):
+        affil_bits.append(escape_latex(poster["email"]))
+    affil = "\\\\".join(affil_bits)
 
     header_logos = [images[p] for p in poster.get("logos_header", []) if p in images]
     logo_boxes = ""

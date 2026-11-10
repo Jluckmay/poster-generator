@@ -60,13 +60,6 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     if _QR_OK.match(poster.get("url", "")):
         qr = f"\\begin{{center}}\\qrcode[height=3.5cm]{{{poster['url']}}}\\end{{center}}"
 
-    if contact_bits:
-        sections.append({
-            "id": "contact",
-            "title": labels["contact"],
-            "content": "\\\\\n".join(contact_bits) + ("\n" + qr if qr else ""),
-            "images": []
-        })
 
     cols = split_columns(sections, cols_count)
     col_width = f"{0.96 / len(cols):.3f}\\textwidth"
@@ -101,7 +94,10 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         )
 
     authors = escape_latex(poster.get("authors", "")).replace("\n", ", ")
-    affil = "\\\\".join(escape_latex(ln.strip()) for ln in poster.get("affiliations", "").split("\n") if ln.strip())
+    affil_bits = [escape_latex(ln.strip()) for ln in poster.get("affiliations", "").split("\n") if ln.strip()]
+    if poster.get("email"):
+        affil_bits.append(escape_latex(poster["email"]))
+    affil = "\\\\".join(affil_bits)
 
     header_logos = [images[p] for p in poster.get("logos_header", []) if p in images]
     logo_boxes = ""
