@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' http://127.0.0.1:5000 http://localhost:5000 https://painel-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' * http://127.0.0.1:5000 http://localhost:5000 https://painel-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>poster-generator | Gerador de Pôsteres Acadêmicos</title>
@@ -986,6 +986,8 @@ button.sm {
 .draft-block-body p {
   margin: 0 0 4px;
 }
+.draft-fig { margin: 4px 0; text-align: center; }
+.draft-fig figcaption { font-size: 0.85em; font-style: italic; margin-top: 2px; }
 .draft-block-body table.draft-table {
   width: 100%;
   border-collapse: collapse;
@@ -2703,6 +2705,7 @@ const $ = s => document.querySelector(s);
 let CFG = DEFAULT_CFG, uiLang = "pt-BR", posterLang = "pt-BR", sections = [], logosH = [], logosF = [], uid = 0, pdfBlob = null, docFile = null;
 let customTexFileObj = null;
 const files = new Map(); // field id -> File
+let backendAvailable = false;
 const state = {
   template: "classic",
   pdfDoc: null,
@@ -2830,8 +2833,16 @@ function updateServerBadge(status, label) {
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} was blocked by your browser (AdBlock / Brave Shields). Disable blocking for this site or use local backend.`
       : `Backend: ${serverName} foi bloqueado pelo navegador (AdBlock / Brave Shields / Extensão). Desative o bloqueador nesta página para conectar ao Render.`;
+    backendAvailable = false;
     showBlockedBanner();
+  } else if (status === "online") {
+    backendAvailable = true;
+    hideBlockedBanner();
+    badge.title = (uiLang === "en-US")
+      ? `Backend: ${serverName} (${status}). Interface is fully functional while connection is established.`
+      : `Backend: ${serverName} (${status}). A interface está totalmente liberada para edição enquanto a conexão é estabelecida.`;
   } else {
+    backendAvailable = false;
     hideBlockedBanner();
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} (${status}). Interface is fully functional while connection is established.`
@@ -3584,7 +3595,7 @@ function updateDraftPreview() {
   const emailVal = ($("#email") && $("#email").value.trim()) || "";
   draftTitle.textContent = titleVal;
   draftAuthors.textContent = authorsVal;
-  draftAffil.textContent = emailVal ? affilVal + " · " + emailVal : affilVal;
+  draftAffil.innerHTML = [emailVal, ...affilVal.split(/\n/).map(x => x.trim())].filter(Boolean).map(escapeHtml).join("<br>");
 
   // Logotipos no Header
   const headerLogosEl = $("#draftHeaderLogos");
@@ -3629,7 +3640,7 @@ function updateDraftPreview() {
       }
     }
 
-    grid.innerHTML = colBuckets.map(colSecs => `
+    let figN = 0;`r`n    grid.innerHTML = colBuckets.map(colSecs => `
       <div class="draft-col">
         ${colSecs.map(s => {
           const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
@@ -3637,7 +3648,7 @@ function updateDraftPreview() {
           const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
           const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody);
           const imgHtml = (s.images && s.images.length > 0)
-            ? `<div class="draft-block-imgs">${s.images.map(im => `<img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">`).join("")}</div>`
+            ? `<div class="draft-block-imgs">${s.images.map(im => `<figure class="draft-fig"><img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">${im.caption ? `<figcaption>${escapeHtml(posterLang === "en" ? "Figure" : "Figura")} ${++figN}: ${escapeHtml(im.caption)}</figcaption>` : (figN++, "")}</figure>`).join("")}</div>`
             : "";
 
           const isDccOrUzh = tplId === "dcc" || tplId === "uzh";
@@ -3781,10 +3792,39 @@ function renderArrowPipelineToHtml(text) {
   `;
 }
 
-function renderDraftBody(text) {
-  if (!text) return "";
+function explodeInlineTables(text) {
+  const sepRe = /(?:\|\s*:?-{2,}:?\s*){2,}\|/;
+  return text.split("\n").map(ln => {
+    const m = ln.match(sepRe);
+    if (!m || !ln.slice(0, m.index).replace(/[\s|]/g, "")) return ln;
+    const ncols = m[0].split("|").filter(c => c.trim()).length;
+    const pre = ln.slice(0, m.index).split("|").map(c => c.trim());
+    while (pre.length && !pre[pre.length - 1]) pre.pop();
+    if (ncols < 2 || pre.length < ncols) return ln;
+    const header = pre.slice(-ncols);
+    const lead = pre.slice(0, pre.length - ncols).join(" ").trim();
+    const cells = ln.slice(m.index + m[0].length).split("|").map(c => c.trim());
+    const rows = [];
+    let i = 0;
+    while (i < cells.length) {
+      if (!cells[i] && i + 1 < cells.length && cells[i + 1]) { i++; continue; }
+      const chunk = cells.slice(i, i + ncols);
+      if (chunk.length < ncols || !chunk.some(Boolean)) break;
+      rows.push(chunk);
+      i += ncols;
+    }
+    const res = [];
+    if (lead) res.push(lead, "");
+    res.push("| " + header.join(" | ") + " |", "|" + header.map(() => " --- ").join("|") + "|");
+    rows.forEach(r => res.push("| " + r.join(" | ") + " |"));
+    res.push("");
+    return res.join("\n");
+  }).join("\n");
+}
+
+function renderDraftBody(text) {  if (!text) return "";
   // Pré-processa para garantir que tabelas e fluxogramas fiquem separados de listas
-  let normalized = text.trim().replace(/(\n)?(\\begin\{(?:center|tabular\*?|tabularx|tikzpicture)\}[\s\S]*?\\end\{(?:center|tabular\*?|tabularx|tikzpicture)\})(\n)?/g, "\n\n$2\n\n");
+  let normalized = explodeInlineTables(text.trim()).replace(/(\n)?(\\begin\{(?:center|tabular\*?|tabularx|tikzpicture)\}[\s\S]*?\\end\{(?:center|tabular\*?|tabularx|tikzpicture)\})(\n)?/g, "\n\n$2\n\n");
   
   // Isola pipelines de setas [A] -> [B] e tabelas Markdown mesmo que coladas em itens
   normalized = normalized.replace(/(\n|^)(?:\[[^\[\]]+\]\s*(?:->|→|=>)\s*\[[^\[\]]+\][\s\S]*?)(\n|$)/g, "\n\n$0\n\n");
@@ -4279,6 +4319,16 @@ function buildForm() {
 
 async function generate(fmt) {
   const msg = $("#genMsg");
+
+  if (!backendAvailable) {
+    const offlineMsg = (uiLang === "en-US")
+      ? "Backend indisponível. Configure a URL do servidor ou use o modo local para compilar o pôster."
+      : "Backend indisponível. Configure a URL do servidor ou use o modo local para compilar o pôster.";
+    showMsg(msg, offlineMsg, "err");
+    $("#loadingOverlay").classList.add("hidden");
+    return;
+  }
+
   showMsg(msg, t("working"), "ok");
   $("#genBtn").disabled = true;
   $("#loadingOverlay").classList.remove("hidden");

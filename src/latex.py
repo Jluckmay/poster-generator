@@ -189,7 +189,7 @@ def _markdown_table_to_latex(lines: List[str]) -> str:
     col_count = len(header_cells)
     if col_count == 0:
         return ""
-    col_spec = "|" + "c|" * col_count
+    col_spec = "|l|" + "c|" * (col_count - 1) if col_count > 1 else "|l|"
     header_tex = " & ".join(f"\\textbf{{{_inline(c)}}}" for c in header_cells) + r" \\ \hline"
     rows: List[str] = []
     for ln in lines[2:]:
@@ -217,6 +217,54 @@ def _markdown_table_to_latex(lines: List[str]) -> str:
 
 _BULLET = re.compile(r"^\s*(?:[-*•–]\s+)(.*)$")
 _NUMBERED = re.compile(r"^\s*\d{1,2}[.)]\s+(.*)$")
+
+
+_INLINE_SEP_RE = re.compile(r"(?:\|\s*:?-{2,}:?\s*){2,}\|")
+_SEP_CELL_RE = re.compile(r"^\s*:?-{2,}:?\s*$")
+
+
+def explode_inline_tables(text: str) -> str:
+    """Reconstrói tabelas Markdown achatadas em uma única linha (comum em texto vindo de LLM/PDF)."""
+    out: List[str] = []
+    for ln in text.split("\n"):
+        m = _INLINE_SEP_RE.search(ln)
+        if not m or not ln[: m.start()].strip(' |'):
+            out.append(ln)
+            continue
+        ncols = len([c for c in m.group(0).split("|") if c.strip()])
+        pre = [c.strip() for c in ln[: m.start()].split("|")]
+        while pre and not pre[-1]:
+            pre.pop()
+        if len(pre) < ncols + 0 or ncols < 2:
+            out.append(ln)
+            continue
+        header = pre[-ncols:]
+        lead = " | ".join(pre[:-ncols]).strip()
+        if len(pre) == ncols and ln[: m.start()].lstrip().startswith("|"):
+            lead = ""
+        elif len(pre) > ncols:
+            lead = " ".join(pre[:-ncols]).strip()
+        cells = [c.strip() for c in ln[m.end():].split("|")]
+        rows: List[List[str]] = []
+        i = 0
+        while i < len(cells):
+            if not cells[i] and (i == 0 or len(rows) == 0 or True) and (i + 1 < len(cells)) and cells[i + 1]:
+                i += 1
+                continue
+            chunk = cells[i : i + ncols]
+            if len(chunk) < ncols or not any(chunk):
+                break
+            rows.append(chunk)
+            i += ncols
+        if lead:
+            out.append(lead)
+            out.append("")
+        out.append("| " + " | ".join(header) + " |")
+        out.append("|" + "|".join(" --- " for _ in header) + "|")
+        for r in rows:
+            out.append("| " + " | ".join(r) + " |")
+        out.append("")
+    return "\n".join(out)
 
 
 def _preprocess_structured_blocks(text: str) -> str:
@@ -263,7 +311,7 @@ def _preprocess_structured_blocks(text: str) -> str:
 
 def text_to_latex(text: str) -> str:
     """Converte texto simples, listas, tabelas e diagramas em LaTeX."""
-    normalized = _preprocess_structured_blocks(text.strip())
+    normalized = _preprocess_structured_blocks(explode_inline_tables(text.strip()))
     blocks = re.split(r"\n\s*\n", normalized)
     out: List[str] = []
     for block in blocks:
@@ -484,7 +532,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     authors = escape_latex(poster["authors"]).replace("\n", ", ")
     institute_bits = [escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip()]
     if poster["email"]:
-        institute_bits.append(_inline(poster["email"]))
+        institute_bits.insert(0, _inline(poster["email"]))
     institute = "\\\\".join(institute_bits)
 
     return f"""\\documentclass[{poster.get('_font') or paper['font']},a0paper,margin=20mm,innermargin=12mm,blockverticalspace=12mm,colspace=12mm,subcolspace=8mm]{{tikzposter}}

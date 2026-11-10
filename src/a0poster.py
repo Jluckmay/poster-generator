@@ -74,7 +74,7 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     authors = escape_latex(poster.get("authors", "")).replace("\n", ", ")
     affil_bits = [escape_latex(ln.strip()) for ln in poster.get("affiliations", "").split("\n") if ln.strip()]
     if poster.get("email"):
-        affil_bits.append(escape_latex(poster["email"]))
+        affil_bits.insert(0, escape_latex(poster["email"]))
     affil = "\\\\".join(affil_bits)
 
     header_logos = [images[p] for p in poster.get("logos_header", []) if p in images]

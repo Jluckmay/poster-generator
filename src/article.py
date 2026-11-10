@@ -92,7 +92,7 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     authors = escape_latex(poster["authors"]).replace("\n", ", ")
     affil_bits = [escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip()]
     if poster["email"]:
-        affil_bits.append(_inline(poster["email"]))
+        affil_bits.insert(0, _inline(poster["email"]))
     affil = "\\\\".join(affil_bits)
     rule8 = f"\\textcolor{{accent}}{{\\rule{{\\textwidth}}{{{_pt(8 * s)}pt}}}}"
     cols = max(1, poster["columns"])
