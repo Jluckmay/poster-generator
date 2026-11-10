@@ -1,4 +1,4 @@
-"""Desktop Launcher for banner-generator (Standalone Executable)."""
+"""Desktop Launcher for poster-generator (Standalone Executable)."""
 
 from __future__ import annotations
 
@@ -30,7 +30,7 @@ def main() -> None:
     port = int(os.environ.get("PORT", "5000"))
     threading.Thread(target=_open_browser, args=(port,), daemon=True).start()
     print("=" * 64)
-    print("  banner-generator | Academic Poster & Banner Compiler")
+    print("  poster-generator | Academic Poster Compiler")
     print("=" * 64)
     print(f"  [+] Servidor local ativo em: http://127.0.0.1:{port}")
     print("  [+] Abrindo navegador padrao automaticamente...")
@@ -39,7 +39,7 @@ def main() -> None:
     try:
         app.run(host="127.0.0.1", port=port, debug=False)
     except KeyboardInterrupt:
-        print("\nEncerrando banner-generator. Ate logo!")
+        print("\nEncerrando poster-generator. Ate logo!")
 
 
 if __name__ == "__main__":

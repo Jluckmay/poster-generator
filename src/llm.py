@@ -145,7 +145,7 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
             "Authorization": f"Bearer {api_key}",
             "Accept": "application/json",
             "Content-Type": "application/json",
-            "User-Agent": "Mozilla/5.0 (compatible; BannerGenerator/1.0)",
+            "User-Agent": "Mozilla/5.0 (compatible; PosterGenerator/1.0)",
         }
 
         last_exc: Exception | None = None

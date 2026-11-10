@@ -36,13 +36,13 @@ jobs:
 
       - name: Package Executable into ZIP
         run: |
-          Compress-Archive -Path dist/banner-generator.exe -DestinationPath banner-generator-windows-x64.zip
+          Compress-Archive -Path dist/poster-generator.exe -DestinationPath poster-generator-windows-x64.zip
 
       - name: Upload Release Asset
         uses: softprops/action-gh-release@v2
         if: startsWith(github.ref, 'refs/tags/') || github.event_name == 'workflow_dispatch'
         with:
-          files: banner-generator-windows-x64.zip
+          files: poster-generator-windows-x64.zip
           draft: false
           prerelease: false
           generate_release_notes: true

@@ -1,4 +1,4 @@
-"""Script para gerar executável standalone do banner-generator usando PyInstaller."""
+"""Script para gerar executável standalone do poster-generator usando PyInstaller."""
 
 from __future__ import annotations
 
@@ -21,7 +21,7 @@ def build() -> None:
         "--noconfirm",
         "--clean",
         "--name",
-        "banner-generator",
+        "poster-generator",
         "--onefile",
         "--icon",
         str(icon_path),
@@ -37,7 +37,7 @@ def build() -> None:
     res = subprocess.run(cmd, cwd=str(ROOT))
     if res.returncode == 0:
         exe_ext = ".exe" if os.name == "nt" else ""
-        out_file = ROOT / "dist" / f"banner-generator{exe_ext}"
+        out_file = ROOT / "dist" / f"poster-generator{exe_ext}"
         print(f"\n[OK] Executavel gerado com sucesso em: {out_file}")
     else:
         print(f"\n[ERRO] Falha na compilacao do executavel (codigo {res.returncode}).")

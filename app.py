@@ -1,4 +1,4 @@
-"""Gerador de Banners Acadêmicos — Versão Local em Streamlit."""
+"""Gerador de Pôsteres Acadêmicos — Versão Local em Streamlit."""
 
 from __future__ import annotations
 
@@ -25,7 +25,7 @@ from src.templates import TEMPLATES, default_paper_for, papers_for
 
 # ── Configuração da Página ──
 st.set_page_config(
-    page_title="banner-generator | Academic Poster & LaTeX Compiler",
+    page_title="poster-generator | Academic Poster & LaTeX Compiler",
     page_icon="🎓",
     layout="wide",
     initial_sidebar_state="collapsed",
@@ -156,7 +156,7 @@ st.markdown(
 # ── Dicionário de Textos da Interface (i18n) ──
 UI_TEXT = {
     "pt-BR": {
-        "title": "banner-generator",
+        "title": "poster-generator",
         "tagline": "01 // PÔSTER ACADÊMICO & COMPILADOR LATEX",
         "s_mode": "01 // MODO DE PREENCHIMENTO",
         "mode_manual": "Preencher manualmente",
@@ -220,22 +220,22 @@ UI_TEXT = {
         "ph_caption": "Legenda da figura",
     },
     "en-US": {
-        "title": "banner-generator",
-        "tagline": "01 // ACADEMIC BANNER & LATEX COMPILER",
+        "title": "poster-generator",
+        "tagline": "01 // ACADEMIC POSTER & LATEX COMPILER",
         "s_mode": "01 // INPUT MODE",
         "mode_manual": "Fill manually",
         "mode_upload": "Upload paper",
         "drop_work": "Upload your paper file (PDF, DOCX, TXT, MD, TEX)",
-        "use_ai": "Use AI to condense and structure paper into banner format",
+        "use_ai": "Use AI to condense and structure paper into poster format",
         "provider": "AI Provider",
         "model": "Model (optional)",
         "api_key": "API Key (optional if configured in environment)",
         "extract_btn": "Extract Paper Content",
         "extracting": "Analyzing and structuring paper...",
-        "s_lang": "02 // BANNER LANGUAGE",
+        "s_lang": "02 // POSTER LANGUAGE",
         "lang_desc": "Sets the default section headings and corresponding LaTeX babel package.",
         "s_template": "03 // TEMPLATE AND FORMAT",
-        "paper": "Banner Dimensions",
+        "paper": "Poster Dimensions",
         "orientation": "Orientation",
         "portrait": "Portrait (Vertical)",
         "landscape": "Landscape (Horizontal)",
@@ -249,28 +249,28 @@ UI_TEXT = {
         "color_bg": "Background",
         "use_custom_tex": "Use custom LaTeX template (.tex)",
         "s_info": "04 // MAIN INFORMATION",
-        "work_title": "Banner Title",
+        "work_title": "Poster Title",
         "authors": "Authors",
         "affiliations": "Institutional Affiliations (one per line)",
         "email": "Contact Email",
         "url": "Paper / Repository URL (generates QR Code)",
         "logos_header": "Header Logos (PNG/JPG, max 2)",
         "logos_footer": "Footer Logos (PNG/JPG, max 5)",
-        "s_sections": "05 // BANNER SECTIONS",
+        "s_sections": "05 // POSTER SECTIONS",
         "add_section": "Add New Section",
         "sec_title": "Section Title",
         "sec_content": "Content (supports '- ' bullets, **bold**, *italic*, $math$)",
         "sec_img": "Add Figure/Plot to this section",
         "sec_caption": "Figure Caption",
-        "s_preview": "BANNER PREVIEW",
+        "s_preview": "POSTER PREVIEW",
         "load_sample": "Load Demo Sample",
-        "gen_btn": "🚀 Generate Banner (PDF)",
-        "download_pdf": "⬇️ Download Banner (PDF)",
+        "gen_btn": "🚀 Generate Poster (PDF)",
+        "download_pdf": "⬇️ Download Poster (PDF)",
         "download_zip": "📦 Download LaTeX Source (.zip)",
-        "working": "Compiling LaTeX banner with pdflatex...",
-        "success": "Banner successfully compiled!",
+        "working": "Compiling LaTeX poster with pdflatex...",
+        "success": "Poster successfully compiled!",
         "overflow": "⚠️ Warning: Content exceeded space. Font size reduced automatically.",
-        "err_title": "Please provide the banner title.",
+        "err_title": "Please provide the poster title.",
         "err_sec": "Please add content to at least one section.",
         "ph_title": "e.g. Optimizing Deep Neural Networks for Edge Devices",
         "ph_authors": "e.g. Jane Doe, John Smith, Advisor: Prof. Dr. Alan Turing",

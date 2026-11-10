@@ -1,12 +1,12 @@
 <div align="center">
 
-# ~/ banner-generator
+# ~/ poster-generator
 
-**Academic Poster & Banner Compiler · LaTeX to High-Resolution PDF**
+**Academic Poster Compiler · LaTeX to High-Resolution PDF**
 
-[![CI & Test Suite](https://github.com/Jluckmay/banner-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/Jluckmay/banner-generator/actions/workflows/ci.yml)
-[![Deploy GitHub Pages](https://github.com/Jluckmay/banner-generator/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Jluckmay/banner-generator/actions/workflows/deploy-pages.yml)
-[![Release & Executable](https://github.com/Jluckmay/banner-generator/actions/workflows/release.yml/badge.svg)](https://github.com/Jluckmay/banner-generator/actions/workflows/release.yml)
+[![CI & Test Suite](https://github.com/Jluckmay/poster-generator/actions/workflows/ci.yml/badge.svg)](https://github.com/Jluckmay/poster-generator/actions/workflows/ci.yml)
+[![Deploy GitHub Pages](https://github.com/Jluckmay/poster-generator/actions/workflows/deploy-pages.yml/badge.svg)](https://github.com/Jluckmay/poster-generator/actions/workflows/deploy-pages.yml)
+[![Release & Executable](https://github.com/Jluckmay/poster-generator/actions/workflows/release.yml/badge.svg)](https://github.com/Jluckmay/poster-generator/actions/workflows/release.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://www.python.org/)
 
@@ -20,19 +20,19 @@
 <a name="english"></a>
 # English
 
-**banner-generator** is an automated academic banner and poster compiler that converts structured content or scientific publications directly into print-ready **LaTeX → PDF** documents. Supporting multiple underlying LaTeX engines (`tikzposter`, `article`, `sciposter`, `a0poster`, `beamerposter`), it provides rigorous, consistent localization in **en-US** ("banner") and **pt-BR** ("pôster").
+**poster-generator** is an automated academic poster compiler that converts structured content or scientific publications directly into print-ready **LaTeX → PDF** documents. Supporting multiple underlying LaTeX engines (`tikzposter`, `article`, `sciposter`, `a0poster`, `beamerposter`), it provides rigorous, consistent localization in **en-US** ("poster") and **pt-BR** ("pôster").
 
 The project includes three complete and integrated interfaces:
 1. **Web SPA Frontend (`index.html`)**: Responsive HTML5 + CSS3 + vanilla JavaScript application with PDF.js viewer, real-time draft rendering, dark/light theme awareness, and GitHub Pages compatibility.
 2. **Local Streamlit Application (`app.py`)**: Native Python interactive application for local generation, AI extraction, custom palette management, and instant compilation.
-3. **Standalone Desktop Executable (`banner-generator.exe`)**: Self-contained Windows application packaged via PyInstaller that starts a secure local backend and automatically opens the browser at `http://127.0.0.1:5000`.
+3. **Standalone Desktop Executable (`poster-generator.exe`)**: Self-contained Windows application packaged via PyInstaller that starts a secure local backend and automatically opens the browser at `http://127.0.0.1:5000`.
 
 ---
 
 ## 📁 Project Structure
 
 ```
-banner-generator/
+poster-generator/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml               # Automated test suite and security checks on GitHub Actions
@@ -43,7 +43,7 @@ banner-generator/
 │   └── README.md                # Asset design specifications
 ├── examples/                    # Sample payloads and API usage files
 │   ├── sample_poster.json       # Portuguese sample poster payload (60x90 cm)
-│   ├── sample_poster_en.json    # English sample banner payload (60x90 cm)
+│   ├── sample_poster_en.json    # English sample poster payload (60x90 cm)
 │   └── README.md                # cURL API testing guide
 ├── scripts/                     # Utility scripts and deployment tooling
 │   └── build_exe.py             # PyInstaller standalone desktop compiler script
@@ -166,23 +166,23 @@ banner-generator/
 
 ```bash
 # 1. Clone the repository
-git clone https://github.com/Jluckmay/banner-generator.git
-cd banner-generator
+git clone https://github.com/Jluckmay/poster-generator.git
+cd poster-generator
 
 # 2. Install dependencies
 pip install -r requirements.txt
 ```
 
 ### Option A: Standalone Windows Executable (.exe)
-1. Download `banner-generator-windows-x64.zip` from the latest [GitHub Release](https://github.com/Jluckmay/banner-generator/releases).
-2. Extract the ZIP and double-click `banner-generator.exe`.
+1. Download `poster-generator-windows-x64.zip` from the latest [GitHub Release](https://github.com/Jluckmay/poster-generator/releases).
+2. Extract the ZIP and double-click `poster-generator.exe`.
 3. The app starts a local server and opens `http://127.0.0.1:5000` in your default browser.
 
 To compile the executable yourself:
 ```bash
 python scripts/build_exe.py
 ```
-Output is created in `dist/banner-generator.exe`.
+Output is created in `dist/poster-generator.exe`.
 
 ### Option B: Local Streamlit Application (`app.py`)
 Run the interactive Streamlit interface:
@@ -220,7 +220,7 @@ export DEEPSEEK_API_KEY="your-key"
 
 ## 🌐 Hosting & Architecture
 
-- **GitHub Pages Frontend (`https://jluckmay.github.io/banner-generator/`)**:
+- **GitHub Pages Frontend (`https://jluckmay.github.io/poster-generator/`)**:
   - Static SPA deployed via `.github/workflows/deploy-pages.yml`.
   - **Dynamic Backend Resolution**: Points to Render production backend on GitHub Pages, and to `http://127.0.0.1:5000` when running locally.
   - **Non-Blocking Initialization**: Background server wake-up never blocks UI editing or draft preview.
@@ -244,19 +244,19 @@ This project is licensed under the [MIT License](LICENSE).
 <a name="português"></a>
 # Português
 
-O **banner-generator** é um compilador e gerador automatizado de pôsteres e banners acadêmicos que converte dados estruturados ou artigos científicos diretamente em documentos **LaTeX → PDF** prontos para impressão. Com suporte a múltiplos motores LaTeX (`tikzposter`, `article`, `sciposter`, `a0poster`, `beamerposter`), oferece localização completa e consistente em **pt-BR** ("pôster") e **en-US** ("banner").
+O **poster-generator** é um compilador e gerador automatizado de pôsteres acadêmicos que converte dados estruturados ou artigos científicos diretamente em documentos **LaTeX → PDF** prontos para impressão. Com suporte a múltiplos motores LaTeX (`tikzposter`, `article`, `sciposter`, `a0poster`, `beamerposter`), oferece localização completa e consistente em **pt-BR** ("pôster") e **en-US** ("poster").
 
 O projeto conta com três interfaces completas e integradas:
 1. **Aplicação Web SPA (`index.html`)**: Aplicação responsiva em HTML5 + CSS3 + JavaScript puro com visualizador PDF.js integrado, rascunho em tempo real, suporte dinâmico a temas claro/escuro e deploy no GitHub Pages.
 2. **Aplicação Local Streamlit (`app.py`)**: Interface interativa nativa em Python para geração direta, extração por IA, customização de paleta e compilação instantânea.
-3. **Executável Desktop Standalone (`banner-generator.exe`)**: Aplicativo autônomo para Windows gerado via PyInstaller que inicia o servidor local seguro e abre automaticamente o navegador padrão em `http://127.0.0.1:5000`.
+3. **Executável Desktop Standalone (`poster-generator.exe`)**: Aplicativo autônomo para Windows gerado via PyInstaller que inicia o servidor local seguro e abre automaticamente o navegador padrão em `http://127.0.0.1:5000`.
 
 ---
 
 ## 📁 Estrutura do Projeto
 
 ```
-banner-generator/
+poster-generator/
 ├── .github/
 │   └── workflows/
 │       ├── ci.yml               # Pipeline de testes automatizados e lint no GitHub Actions
@@ -390,23 +390,23 @@ banner-generator/
 
 ```bash
 # 1. Clonar o repositório
-git clone https://github.com/Jluckmay/banner-generator.git
-cd banner-generator
+git clone https://github.com/Jluckmay/poster-generator.git
+cd poster-generator
 
 # 2. Instalar dependências
 pip install -r requirements.txt
 ```
 
 ### Opção A: Executável Windows Standalone (.exe)
-1. Baixe o arquivo `banner-generator-windows-x64.zip` na aba [GitHub Releases](https://github.com/Jluckmay/banner-generator/releases).
-2. Extraia o ZIP e execute `banner-generator.exe`.
+1. Baixe o arquivo `poster-generator-windows-x64.zip` na aba [GitHub Releases](https://github.com/Jluckmay/poster-generator/releases).
+2. Extraia o ZIP e execute `poster-generator.exe`.
 3. A aplicação inicia o servidor local seguro e abre automaticamente `http://127.0.0.1:5000` no seu navegador padrão.
 
 Para compilar o executável na sua própria máquina:
 ```bash
 python scripts/build_exe.py
 ```
-O arquivo final é salvo em `dist/banner-generator.exe`.
+O arquivo final é salvo em `dist/poster-generator.exe`.
 
 ### Opção B: Interface Local em Streamlit (`app.py`)
 Inicia a aplicação Python interativa:
@@ -444,7 +444,7 @@ export DEEPSEEK_API_KEY="sua-chave"
 
 ## 🌐 Hospedagem & Arquitetura
 
-- **Frontend no GitHub Pages (`https://jluckmay.github.io/banner-generator/`)**:
+- **Frontend no GitHub Pages (`https://jluckmay.github.io/poster-generator/`)**:
   - SPA estática hospedada via `.github/workflows/deploy-pages.yml`.
   - **Resolução Dinâmica de Backend**: Conecta automaticamente ao backend Render no GitHub Pages e ao servidor local (`http://127.0.0.1:5000`) em execuções locais.
   - **Inicialização Sem Travamento**: Verificações de servidor em background nunca bloqueiam a navegação ou o rascunho em tempo real.

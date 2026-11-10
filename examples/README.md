@@ -1,6 +1,6 @@
 # Exemplos / Examples
 
-Este diretório contém exemplos de dados estruturados para geração de banners/pôsteres.
+Este diretório contém exemplos de dados estruturados para geração de pôsteres.
 
 ## Arquivos
 - `sample_poster.json`: Dados completos de um pôster acadêmico de demonstração pronto para envio à API.

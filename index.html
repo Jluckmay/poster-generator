@@ -7,7 +7,7 @@
 <meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' http://127.0.0.1:5000 http://localhost:5000 https://poster-generator-nkqh.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="strict-origin-when-cross-origin">
-<title>banner-generator | Gerador de Pôsteres Acadêmicos</title>
+<title>poster-generator | Gerador de Pôsteres Acadêmicos</title>
 <link rel="icon" href="./assets/icons/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="./assets/icons/favicon-32.png" sizes="32x32" type="image/png">
 <link rel="icon" href="./assets/icons/favicon-16.png" sizes="16x16" type="image/png">
@@ -1865,7 +1865,7 @@ button.sm {
     <div class="brand">
       <div class="brand-terminal-title">
         <span class="prompt-prefix">~/</span>
-        <span id="brandName">banner-generator</span>
+        <span id="brandName">poster-generator</span>
       </div>
     </div>
     <div class="header-right">
@@ -1927,7 +1927,7 @@ button.sm {
     </div>
   </section>
 
-  <!-- 2. Idioma do Banner -->
+  <!-- 2. Idioma do Poster -->
   <section class="card">
     <div class="card-meta">
       <h2><span class="card-sec-number">02 //</span> <span data-i18n="s_lang">IDIOMA DO PÔSTER</span></h2>
@@ -2267,7 +2267,7 @@ button.sm {
 <script>
 const T = {
   "pt-BR": {
-    app_title: "banner-generator",
+    app_title: "poster-generator",
     tagline: "01 / PÔSTER ACADÊMICO & COMPILADOR LATEX",
     s_mode: "MODO DE PREENCHIMENTO",
     mode_manual: "Preencher manualmente",
@@ -2352,29 +2352,29 @@ const T = {
     server_retry_tip: "Clique para testar conexão com o servidor"
   },
   "en-US": {
-    app_title: "banner-generator",
-    tagline: "01 / ACADEMIC BANNER & LATEX COMPILER",
+    app_title: "poster-generator",
+    tagline: "01 / ACADEMIC POSTER & LATEX COMPILER",
     s_mode: "INPUT MODE",
     mode_manual: "Fill manually",
     mode_upload: "Upload paper",
     drop_work: "Click or drag your paper here (PDF, DOCX, TXT, MD, TEX)",
-    use_ai: "Use AI to condense and structure paper into banner format",
+    use_ai: "Use AI to condense and structure paper into poster format",
     provider: "AI Provider",
     model: "Model (optional)",
     api_key: "API Key",
     key_hint: "Key is used solely for this request and never persisted to disk. Without key, heuristic extraction is used.",
     extract: "Extract paper content",
-    s_lang: "BANNER LANGUAGE",
+    s_lang: "POSTER LANGUAGE",
     lang_hint: "Sets the default section headings and corresponding LaTeX babel package.",
     s_template: "TEMPLATE AND FORMAT",
-    paper: "Banner Dimensions",
+    paper: "Poster Dimensions",
     orientation: "Orientation",
     portrait: "Portrait (Vertical)",
     landscape: "Landscape (Horizontal)",
     columns: "Columns",
     accent: "Custom accent color:",
     s_info: "MAIN INFORMATION",
-    title: "Banner Title",
+    title: "Poster Title",
     authors: "Authors",
     affiliations: "Institutional Affiliations (one per line)",
     email: "Contact E-mail",
@@ -2391,20 +2391,20 @@ const T = {
     caption: "Figure caption",
     remove: "Remove",
     s_generate: "GENERATE & EXPORT",
-    generate: "⚡ Generate / Refresh Banner",
-    dl_pdf: "⬇ Download Banner (PDF)",
+    generate: "⚡ Generate / Refresh Poster",
+    dl_pdf: "⬇ Download Poster (PDF)",
     dl_zip: "📦 LaTeX Source (.zip)",
-    preview_title: "Banner Preview",
-    preview_empty: "The interactive preview of your academic banner will appear here after clicking 'Generate Banner'.",
+    preview_title: "Poster Preview",
+    preview_empty: "The interactive preview of your academic poster will appear here after clicking 'Generate Poster'.",
     load_sample: "Load Demo Sample",
     open_tab: "↗ New Tab",
-    dl_quick: "⬇ Download Banner (PDF)",
+    dl_quick: "⬇ Download Poster (PDF)",
     fit_width: "Fit Width",
     fit_page: "Fit Page",
-    working: "Compiling high-resolution LaTeX banner...",
+    working: "Compiling high-resolution LaTeX poster...",
     extracted: "Content successfully extracted! Review and edit the fields below.",
     no_file: "Please select a paper file before extracting.",
-    overflow: "Warning: content exceeded banner boundaries at selected banner size. Please shorten text/images for ideal fit.",
+    overflow: "Warning: content exceeded poster boundaries at selected poster size. Please shorten text/images for ideal fit.",
     custom: "New Section",
     custom_colors: "Custom color palette",
     color_accent: "Accent",
@@ -2419,7 +2419,7 @@ const T = {
     custom_tex_hint: "The .tex file will be compiled directly with pdflatex. Ensure it is self-contained with all required packages and content.",
     view_draft: "📐 Live Draft",
     view_pdf: "📄 Compiled PDF",
-    draft_badge: "Live Real-Time Banner Preview",
+    draft_badge: "Live Real-Time Poster Preview",
     backend_config: "Backend Server (API) Settings",
     backend_url_label: "Backend Server URL:",
     backend_url_hint: "Leave empty for auto-detection (Render/Local).",
@@ -2553,8 +2553,8 @@ const TPL_TAGS = {
   corner: { "pt-BR": "Ondas / Orgânico", "en-US": "Organic Leaf / Waves" },
   dcc: { "pt-BR": "Artigo / Duas Colunas", "en-US": "Article / Two Columns" },
   mostra_ic: { "pt-BR": "Simpósio / SciPoster", "en-US": "Symposium / SciPoster" },
-  uzh: { "pt-BR": "Suíço / Pôster A0", "en-US": "Swiss / A0 Banner" },
-  tudelft: { "pt-BR": "Delft / Beamer Banner", "en-US": "Delft / Beamer Banner" }
+  uzh: { "pt-BR": "Suíço / Pôster A0", "en-US": "Swiss / A0 Poster" },
+  tudelft: { "pt-BR": "Delft / Beamer Poster", "en-US": "Delft / Beamer Poster" }
 };
 
 const $ = s => document.querySelector(s);
@@ -2635,7 +2635,7 @@ function getServerDisplayName() {
 }
 
 function getApiBase() {
-  const custom = localStorage.getItem("banner_api_base");
+  const custom = localStorage.getItem("poster_api_base");
   if (custom !== null && custom.trim() !== "") return custom.trim().replace(/\/+$/, "");
 
   // Página HTML local: utiliza servidor local
@@ -2772,7 +2772,7 @@ async function wakeUpServer() {
       // a requisição é rejeitada pelo navegador quase instantaneamente (<80ms) com ERR_BLOCKED_BY_CLIENT
       if (elapsed < 80) {
         updateServerBadge("blocked", (uiLang === "en-US") ? `${serverName}: Blocked (AdBlock)` : `${serverName}: Bloqueado (AdBlock)`);
-        console.warn("[BannerGenerator] Conexão bloqueada no navegador (ERR_BLOCKED_BY_CLIENT). AdBlockers ou Brave Shields frequentemente bloqueiam URLs com 'banner' ou domínios onrender.com.");
+        console.warn("[PosterGenerator] Conexão bloqueada no navegador (ERR_BLOCKED_BY_CLIENT). AdBlockers ou Brave Shields frequentemente bloqueiam URLs com 'poster' ou domínios onrender.com.");
         return;
       }
     }
@@ -3220,7 +3220,7 @@ $("#quickSampleBtn").onclick = () => {
     $("#authors").value = "Maria Silva, Carlos Santos, Orientadora: Profa. Dra. Elena Rostova";
     $("#affiliations").value = "Departamento de Botânica e Computação Aplicada\nUniversidade Federal de Pesquisa";
     $("#email").value = "contato.pesquisa@universidade.edu.br";
-    $("#url").value = "https://github.com/exemplo/banner-pesquisa";
+    $("#url").value = "https://github.com/exemplo/poster-pesquisa";
   }
 
   const sampleTexts = isEn ? {
@@ -3407,8 +3407,8 @@ function updateDraftPreview() {
       content: "Conteúdo descritivo da seção de pesquisa."
     },
     "en-US": {
-      title: "Research Banner Title",
-      authors: "Authors of the Banner",
+      title: "Research Poster Title",
+      authors: "Authors of the Poster",
       affil: "Institutional Affiliation",
       section: "Section",
       content: "Descriptive content of the research section."
@@ -4295,9 +4295,9 @@ $("#dlZip").onclick = () => generate("zip");
 function init() {
   const beInput = $("#backendUrlInput");
   if (beInput) {
-    beInput.value = localStorage.getItem("banner_api_base") || "";
+    beInput.value = localStorage.getItem("poster_api_base") || "";
     beInput.oninput = () => {
-      localStorage.setItem("banner_api_base", beInput.value.trim());
+      localStorage.setItem("poster_api_base", beInput.value.trim());
       wakeUpServer();
     };
   }

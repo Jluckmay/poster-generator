@@ -15,8 +15,8 @@
   <rect width="64" height="64" rx="15" fill="url(#bg)"/>
   <rect x="0.75" y="0.75" width="62.5" height="62.5" rx="14.25" fill="none" stroke="#252d42" stroke-width="1.5"/>
 
-  <!-- Academic Banner / Poster Silhouette -->
-  <!-- Top Header Banner in radiant gradient -->
+  <!-- Academic Poster Silhouette -->
+  <!-- Top Header Poster in radiant gradient -->
   <rect x="14" y="12" width="36" height="12" rx="3" fill="url(#glow)"/>
 
   <!-- Left Column (Crisp ivory/white card with structural lines) -->

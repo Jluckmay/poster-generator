@@ -1,6 +1,6 @@
 # 🎨 Identidade Visual & Ícones Oficiais / Brand Assets
 
-Este diretório armazena todos os arquivos oficiais da identidade visual do projeto **Academic Banner Generator**:
+Este diretório armazena todos os arquivos oficiais da identidade visual do projeto **Academic Poster Generator**:
 
 ```
 assets/
@@ -26,7 +26,7 @@ assets/
   - `Branco Puro`: `#FFFFFF` (cartão de conteúdo e alto contraste em abas compactas)
 - **Conceito & Geometria Minimalista**:
   - *Squircle* escuro com proporção perfeitamente balanceada para abas de 16px a 512px.
-  - Silhueta arquitetural de **Pôster / Banner Acadêmico**:
+  - Silhueta arquitetural de **Pôster Acadêmico**:
     - Barra de título/cabeçalho superior em gradiente neon contínuo (`#FF2A40` → `#FBBF24`).
     - Estrutura de colunas paralelas (duas colunas estruturadas em contraste claro e escuro) representando o layout científico e a divisão em blocos.
     - Máxima legibilidade e reconhecimento instantâneo mesmo nas menores resoluções (16×16 e 32×32).

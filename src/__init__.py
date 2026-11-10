@@ -1,1 +1,1 @@
-"""Gerador de banners/pôsteres acadêmicos."""
+"""Gerador de pôsteres acadêmicos."""
