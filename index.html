@@ -3600,11 +3600,16 @@ function renderDraftReferences(text) {
 
   if (!items.length) return `<p style="margin:0 0 4px;">${formatInlineText(clean)}</p>`;
 
+  let nextSeq = 1;
   return `<ol class="draft-refs-list">` +
     items.map((it, i) => {
       // Se já tem [n] forte, não adiciona número extra
-      if (it.startsWith("<strong>[</strong>")) return `<li>${it}</li>`;
-      return `<li>[${i + 1}] ${it}</li>`;
+      if (it.startsWith("<strong>[</strong>")) {
+        const m = it.match(/\[(\d+)\]/);
+        if (m) nextSeq = Math.max(nextSeq, parseInt(m[1]) + 1);
+        return `<li>${it}</li>`;
+      }
+      return `<li>[${nextSeq}] ${it}</li>`;
     }).join("") +
     `</ol>`;
 }

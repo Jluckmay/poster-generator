@@ -338,8 +338,14 @@ def references_to_latex(text: str, small: bool = True) -> str:
     numbered.sort(key=lambda x: x[0] if x[0] > 0 else 999999)
     max_refs = 20
     out_items = []
+    next_seq = 1
     for idx, (num, content) in enumerate(numbered[:max_refs], start=1):
-        display_num = num if num > 0 else idx
+        if num > 0:
+            display_num = num
+            next_seq = max(next_seq, num + 1)
+        else:
+            display_num = next_seq
+            next_seq += 1
         out_items.append(f"\\item [{display_num}] {_inline(content)}")
     return (
         ("{\\small" if small else "{")
@@ -390,33 +396,20 @@ def split_columns(
             cols.append([])
         return cols
 
-    weights = [_weight(s) for s in sections]
-
-    # Busca exaustiva da partição contígua que minimiza a variância dos pesos entre as colunas
-    import itertools
-
-    best_cuts = None
-    best_score = float("inf")
-
-    for cuts in itertools.combinations(range(1, k), n - 1):
-        bounds = [0] + list(cuts) + [k]
-        col_weights = []
-        for i in range(n):
-            cw = sum(weights[bounds[i] : bounds[i + 1]])
-            col_weights.append(cw)
-        mean_w = sum(col_weights) / n
-        score = sum((w - mean_w) ** 2 for w in col_weights)
-        if score < best_score:
-            best_score = score
-            best_cuts = bounds
-
-    if best_cuts:
-        return [sections[best_cuts[i] : best_cuts[i + 1]] for i in range(n)]
-
-    cols_fallback: List[List[Dict[str, Any]]] = [[] for _ in range(n)]
-    for i, s in enumerate(sections):
-        cols_fallback[min(i * n // k, n - 1)].append(s)
-    return cols_fallback
+    # Divisão simples e determinística, idêntica à do preview JS:
+    # 2 colunas -> split no meio; demais -> divisão igual com ceil
+    cols: List[List[Dict[str, Any]]] = [[] for _ in range(n)]
+    if n == 2:
+        split_idx = max(1, min(k - 1, k // 2))
+        cols[0] = sections[:split_idx]
+        cols[1] = sections[split_idx:]
+    else:
+        per_col = (k + n - 1) // n  # ceil(k/n)
+        for c in range(n):
+            start = c * per_col
+            end = min(start + per_col, k)
+            cols[c] = sections[start:end]
+    return cols
 
 
 _QR_OK = re.compile(r"^https?://[A-Za-z0-9\-._~:/?=@+]+$")
