@@ -51,11 +51,6 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         for sec in poster["sections"]
     ]
 
-    contact_bits = []
-    if poster.get("email"):
-        contact_bits.append(escape_latex(poster["email"]))
-    if poster.get("url"):
-        contact_bits.append(escape_latex(poster["url"]))
     qr = ""
     if _QR_OK.match(poster.get("url", "")):
         qr = f"\\begin{{center}}\\qrcode[height=3.5cm]{{{poster['url']}}}\\end{{center}}"
@@ -70,13 +65,11 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         blocks_in_col: List[str] = []
         for sec in col:
             title = _inline(sec["title"])
-            if sec["id"] not in _UNNUMBERED and sec["id"] != "contact":
+            if sec["id"] not in _UNNUMBERED:
                 counter += 1
                 title = f"{counter}. {title}"
             if sec["id"] == "references":
                 text = references_to_latex(sec["content"], small=True)
-            elif sec["id"] == "contact":
-                text = sec["content"]
             else:
                 text = text_to_latex(sec["content"])
 

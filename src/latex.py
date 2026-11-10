@@ -377,7 +377,6 @@ def _weight(sec: Dict[str, Any]) -> int:
 def split_columns(
     sections: List[Dict[str, Any]],
     n: int,
-    contact_weight: int = 0,
 ) -> List[List[Dict[str, Any]]]:
     """Distribui seções contíguas em n colunas de forma otimizada e equilibrada."""
     n = max(1, min(n, len(sections) or 1))
@@ -404,8 +403,6 @@ def split_columns(
         col_weights = []
         for i in range(n):
             cw = sum(weights[bounds[i] : bounds[i + 1]])
-            if i == n - 1:
-                cw += contact_weight
             col_weights.append(cw)
         mean_w = sum(col_weights) / n
         score = sum((w - mean_w) ** 2 for w in col_weights)

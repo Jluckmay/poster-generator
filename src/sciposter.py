@@ -65,11 +65,6 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             f"{img_tex}\n"
         )
 
-    contact_bits = []
-    if poster.get("email"):
-        contact_bits.append(escape_latex(poster["email"]))
-    if poster.get("url"):
-        contact_bits.append(escape_latex(poster["url"]))
     qr = ""
     if _QR_OK.match(poster.get("url", "")):
         qr = f"\\begin{{center}}\\qrcode[height=2.5cm]{{{poster['url']}}}\\end{{center}}"
