@@ -35,28 +35,22 @@ CRITICAL MANDATORY RULES:
    - If the source paper is written in English (or any other language) and the target language is Brazilian Portuguese, you MUST TRANSLATE and synthesize ALL sections into clear, fluent, academic Brazilian Portuguese (PT-BR).
    - NEVER leave English sentences, paragraphs, or table headers in a Brazilian Portuguese poster (except universal acronyms such as IoT, AI, F1, 2PL, LSTM, CUDA, etc.).
 
-3. MANDATORY VISUAL ELEMENTS IN METHODS & RESULTS (TABLES, DIAGRAMS & CHARTS):
-   - In "methods": YOU MUST generate a methodology pipeline diagram or architecture flowchart using TikZ (\\begin{tikzpicture}...\\end{tikzpicture}) or a structured sequence with boxes and arrows (e.g. [Entrada] -> [Processamento] -> [Classificação]), based on the paper's actual methodology!
-   - In "results": If the paper contains ANY quantitative data, benchmarks, metrics, accuracy/F1 comparisons, or model calibrations, YOU MUST synthesize them into a clean, compact LaTeX table using the tabular environment (or Markdown table syntax):
-     \\begin{center}
-     \\small
-     \\begin{tabular}{|l|c|c|}
-     \\hline
-     \\textbf{Modelo / Método} & \\textbf{Macro F1} & \\textbf{Calibração} \\\\
-     \\hline
-     Random Forest & 0.965 & Alta \\\\
-     Transformer & 0.892 & Moderada \\\\
-     LSTM & 0.824 & Estável \\\\
-     Baseline & 0.731 & Padrão \\\\
-     \\hline
-     \\end{tabular}
-     \\end{center}
-     DO NOT bury quantitative results inside a long block of text. Readers MUST see data visualized in a table or chart!
+3. MANDATORY VISUAL ELEMENTS IN METHODS & RESULTS (TABLES & PIPELINE DIAGRAMS):
+   - In "methods": YOU MUST include a clean methodology pipeline / architecture flowchart on its own paragraph (separated by a blank line) using bracketed stages connected by `->`, with 3 to 5 concise stages (3 to 6 words per stage), based on the paper's actual methodology:
+     [1. Entrada: CICIoT2023 & Edge-IIoTset] -> [2. Treino Multiseed (LR, RF, LSTM, Transformer)] -> [3. Respostas Binárias (6.56M itens)] -> [4. Calibração IRT (Rasch & 2PL)] -> [5. Análise de Validade & Estabilidade]
+   - In "results": If the paper contains ANY quantitative data, benchmarks, metrics, accuracy/F1 comparisons, or model calibrations, YOU MUST synthesize them into a clean Markdown table on its own paragraph (separated by a blank line) with 3 to 4 concise columns and 4 to 6 key rows:
+     | Escala / Dataset | Modelo | Macro F1 | Capacidade 2PL |
+     | :--- | :--- | :---: | :---: |
+     | CIC Features | Random Forest | **0.699** | **+1.039** |
+     | CIC Features | Transformer | 0.625 | +0.157 |
+     | Edge Features | Random Forest | **0.489** | **+0.626** |
+     | Edge Features | Transformer | 0.477 | +0.265 |
+     DO NOT bury quantitative results inside a wall of text. Always separate the table or pipeline from bullet points with a blank line (`\n\n`)!
 
-4. CITATIONS IN TEXT AS COMPACT SUPERSCRIPT NUMBERS:
-   - Citations in the text MUST appear as compact bracketed numbers corresponding to the references list, e.g. [1], [2], [1, 3].
-   - They will be typeset as floating superscripts to save poster space.
-   - Example: "...modelos calibrados com curvas IRT [1], demonstrando superioridade de generalização [2]."
+4. NATURAL INLINE CITATIONS IN TEXT (NO STANDALONE "KEY REFERENCES" BULLETS):
+   - Weave bracketed citation numbers `[1]`, `[2]`, `[3]`, `[4]` NATURALLY inside the sentences of "introduction", "methods", and "results" right where the corresponding concepts, datasets, or prior works are mentioned!
+   - Example: "...benchmarks de detecção de intrusão IoT como CICIoT2023 [3] e Edge-IIoTset [4] classificam modelos sem estabelecer validade de construto [2], motivando calibrações via Teoria de Resposta ao Item (IRT) no nível de instância [1]."
+   - NEVER create a standalone bullet point such as `- **Referências-chave:** [1], [2], [3]` or `- **Key references:** [1, 2, 3]`. Every reference in "references" MUST be cited naturally in context within the text!
 
 5. REFERENCES FILTERING (STRICTLY 3 TO 4 KEY REFERENCES):
    - Posters have strictly limited space. Include ONLY the 3 to 4 most relevant references cited in the paper (e.g. seminal papers, key datasets).

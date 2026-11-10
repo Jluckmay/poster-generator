@@ -85,6 +85,12 @@ def test_markdown_and_latex_tables_and_diagrams():
     assert r"\begin{tikzpicture}" in tikz_out
     assert r"\node (a)" in tikz_out
 
+    pipeline = "[Entrada: Dados] -> [Classificadores] -> [Avaliacao] -> [Analise]"
+    pipe_out = text_to_latex(pipeline)
+    assert r"\fbox" in pipe_out
+    assert r"\rightarrow" in pipe_out
+    assert r"\resizebox{\linewidth}" in pipe_out
+
     injected = "\\begin{tabular}{c}\n\\input{/etc/passwd}\n\\end{tabular}"
     safe_out = text_to_latex(injected)
     assert r"\input" not in safe_out.replace(r"\textbackslash{}input", "")

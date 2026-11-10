@@ -931,22 +931,26 @@ button.sm {
 .draft-block-body table.draft-table {
   width: 100%;
   border-collapse: collapse;
-  margin: 6px 0;
-  font-size: 0.82em;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid #cbd5e1;
+  margin: 8px 0;
+  font-size: 9px;
+  line-height: 1.35;
+  background: rgba(255, 255, 255, 0.98);
+  border: 1.5px solid #1e293b;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .draft-block-body table.draft-table th {
-  background: #f1f5f9;
+  background: #f8fafc;
   color: #0f172a;
-  font-weight: 700;
-  padding: 4px 6px;
-  border: 1px solid #cbd5e1;
+  font-weight: 800;
+  padding: 5px 6px;
+  border: 1px solid #334155;
   text-align: center;
+  font-size: 9.5px;
+  letter-spacing: -0.01em;
 }
 .draft-block-body table.draft-table td {
-  padding: 3px 6px;
-  border: 1px solid #e2e8f0;
+  padding: 4px 6px;
+  border: 1px solid #64748b;
   color: #1e293b;
   text-align: center;
 }
@@ -957,25 +961,25 @@ button.sm {
   justify-content: center;
   gap: 6px;
   padding: 8px 6px;
-  margin: 6px 0;
+  margin: 8px 0;
   background: #f8fafc;
-  border: 1px dashed #94a3b8;
+  border: 1.5px solid #cbd5e1;
   border-radius: 4px;
-  font-size: 0.8em;
+  font-size: 8.5px;
 }
 .draft-block-body .draft-diag-node {
   padding: 4px 8px;
   background: #ffffff;
   border: 1.5px solid var(--tpl-accent, #2563eb);
   border-radius: 4px;
-  font-weight: 600;
-  color: #1e293b;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  font-weight: 700;
+  color: #0f172a;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
 }
 .draft-block-body .draft-diag-arrow {
-  color: #64748b;
-  font-weight: 800;
-  font-size: 1.1em;
+  color: var(--tpl-accent, #2563eb);
+  font-weight: 900;
+  font-size: 1.15em;
 }
 .draft-block-imgs {
   display: flex;
@@ -1213,21 +1217,68 @@ button.sm {
   height: 3.5px;
   margin: 4px 0 14px 0;
 }
+.draft-poster.tpl-dcc {
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  background: #ffffff !important;
+}
+.draft-poster.tpl-dcc .draft-header {
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+  padding: 14px 20px 10px 20px;
+}
+.draft-poster.tpl-dcc .draft-title {
+  color: #000000 !important;
+  font-weight: 900;
+  font-size: 19px;
+  text-transform: uppercase;
+  border-bottom: none !important;
+  letter-spacing: -0.01em;
+}
+.draft-poster.tpl-dcc .draft-authors {
+  color: #000000 !important;
+  font-weight: 800;
+  font-size: 12px;
+  margin-top: 6px;
+}
+.draft-poster.tpl-dcc .draft-affil {
+  color: #444444 !important;
+  font-weight: 500;
+  font-size: 10px;
+  margin-top: 4px;
+}
+.draft-poster.tpl-dcc .draft-top-bar {
+  display: none !important;
+}
+.draft-poster.tpl-dcc .draft-divider {
+  display: block !important;
+  background: var(--tpl-accent, #CC0000) !important;
+  height: 4px;
+  margin: 6px 0 16px 0;
+}
 .draft-poster.tpl-dcc .draft-block {
-  border: 1px solid #E5E7EB;
-  border-top: 3.5px solid #CC0000;
-  border-radius: 2px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
-  background: #ffffff;
-  padding: 10px 12px;
+  border: none;
+  border-top: 3.5px solid var(--tpl-accent, #CC0000);
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+  padding: 10px 0 16px 0;
+  margin-bottom: 6px;
 }
 .draft-poster.tpl-dcc .draft-block-title {
-  color: #CC0000;
-  font-family: 'Consolas', 'Courier New', monospace;
-  font-size: 11px;
-  font-weight: 700;
-  border-bottom: 1px solid #F3F4F6;
+  color: var(--tpl-accent, #CC0000);
+  font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
+  font-size: 13px;
+  font-weight: 900;
+  text-transform: uppercase;
+  border-bottom: none;
   padding-bottom: 4px;
+  letter-spacing: 0.02em;
+}
+.draft-poster.tpl-dcc .draft-block-body {
+  font-size: 9.8px;
+  color: #111827;
+  line-height: 1.5;
 }
 
 /* 7. Mostra IC (UFOP Simpósio) */
@@ -3484,10 +3535,16 @@ function updateDraftPreview() {
             ? `<div class="draft-block-imgs">${s.images.slice(0, 2).map(im => `<img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">`).join("")}</div>`
             : "";
 
+          const isDccOrUzh = tplId === "dcc" || tplId === "uzh";
+          let displayTitle = sTitle;
+          if (isDccOrUzh && !isRef && s.id !== "contact" && !/^\d+\./.test(sTitle)) {
+            const secIdx = activeSections.filter(x => x.id !== "references" && x.id !== "contact").indexOf(s);
+            if (secIdx >= 0) displayTitle = `${secIdx + 1}. ${sTitle}`;
+          }
           return `
             <div class="draft-block">
               <div class="draft-block-title">
-                ${escapeHtml(sTitle)}
+                ${escapeHtml(displayTitle)}
               </div>
               <div class="draft-block-body" style="color: ${bodyColor};">
                 ${bodyHtml}
@@ -3590,10 +3647,32 @@ function renderMarkdownTableToHtml(lines) {
   return html;
 }
 
+function renderArrowPipelineToHtml(text) {
+  let nodes = [...text.matchAll(/\[([^\[\]]+)\]/g)].map(m => m[1].trim());
+  if (nodes.length < 2) {
+    nodes = text.split(/\s*(?:->|→|=>)\s*/).map(s => s.trim().replace(/^\[|\]$/g, "")).filter(Boolean);
+  }
+  if (nodes.length < 2) return `<p style="margin:0 0 4px;">${formatInlineText(text)}</p>`;
+  return `
+    <div class="draft-diagram">
+      ${nodes.map((n, i) => `
+        <div class="draft-diag-node">${formatInlineText(n)}</div>
+        ${i < nodes.length - 1 ? '<span class="draft-diag-arrow">→</span>' : ''}
+      `).join("")}
+    </div>
+  `;
+}
+
 function renderDraftBody(text) {
   if (!text) return "";
-  const blocks = text.trim().split(/\n\s*\n/);
-  return blocks.map(block => {
+  // Pré-processa para garantir que tabelas e fluxogramas fiquem separados de listas
+  let normalized = text.trim().replace(/(\n)?(\\begin\{(?:center|tabular\*?|tabularx|tikzpicture)\}[\s\S]*?\\end\{(?:center|tabular\*?|tabularx|tikzpicture)\})(\n)?/g, "\n\n$2\n\n");
+  
+  // Isola pipelines de setas [A] -> [B] e tabelas Markdown mesmo que coladas em itens
+  normalized = normalized.replace(/(\n|^)(?:\[[^\[\]]+\]\s*(?:->|→|=>)\s*\[[^\[\]]+\][\s\S]*?)(\n|$)/g, "\n\n$0\n\n");
+
+  const rawBlocks = normalized.split(/\n\s*\n/);
+  return rawBlocks.map(block => {
     const trimmed = block.trim();
     if (!trimmed) return "";
 
@@ -3605,18 +3684,22 @@ function renderDraftBody(text) {
     if (/\\begin\{tikzpicture\}/i.test(trimmed)) {
       return renderTikzToHtml(trimmed);
     }
-    // 3. Tabela Markdown
+    // 3. Diagrama de fluxo com setas [A] -> [B]
+    if (/\[[^\[\]]+\]\s*(?:->|→|=>)\s*\[[^\[\]]+\]/.test(trimmed)) {
+      return renderArrowPipelineToHtml(trimmed);
+    }
+    // 4. Tabela Markdown
     const lines = trimmed.split("\n").map(l => l.trim()).filter(Boolean);
     if (lines.length >= 2 && lines[0].includes("|") && /^\s*\|?\s*:?-+:?\s*(\|:?-+:?\s*)+\|?\s*$/.test(lines[1])) {
       return renderMarkdownTableToHtml(lines);
     }
-    // 4. Lista de itens
+    // 5. Lista de itens
     const isList = lines.every(l => /^[-*•–]\s+/.test(l) || /^\d+[.)]\s+/.test(l));
     if (isList) {
       const items = lines.map(l => l.replace(/^[-*•–\d.)]\s+/, ""));
       return `<ul style="margin:2px 0 4px 14px;padding:0;">${items.map(it => `<li>${formatInlineText(it)}</li>`).join("")}</ul>`;
     }
-    // 5. Parágrafo simples
+    // 6. Parágrafo simples
     return `<p style="margin:0 0 4px;">${formatInlineText(trimmed)}</p>`;
   }).join("");
 }

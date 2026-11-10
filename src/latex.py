@@ -113,7 +113,7 @@ _LATEX_ENV_PAT = re.compile(
 
 
 def _safe_latex_env(block: str) -> str | None:
-    """Verifica se o bloco é um ambiente LaTeX estruturado seguro (tabular, tikzpicture, etc.)."""
+    """Verifica se o bloco é um ambiente LaTeX estruturado seguro (tabular, tikzpicture, etc.) e aplica escala responsiva."""
     s = block.strip()
     if not _LATEX_ENV_PAT.search(s):
         return None
@@ -121,9 +121,57 @@ def _safe_latex_env(block: str) -> str | None:
         return None
     # Protege símbolos de porcentagem não escapados para não truncar linhas como comentário TeX
     safe = re.sub(r"(?<!\\)%", r"\%", s)
-    if not safe.startswith(r"\begin{center}") and (r"\begin{tabular" in safe or r"\begin{tikzpicture" in safe):
+    # Remove \small / \footnotesize / \tiny internos que encolhem tabelas em pôsteres A0/60x90
+    safe = re.sub(r"\\(?:small|footnotesize|scriptsize|tiny)\b", "", safe)
+    # Envolve tabular ou tikzpicture em \resizebox{\linewidth}{!}{...} se ainda não estiver redimensionado
+    if r"\resizebox" not in safe:
+        safe = re.sub(
+            r"(\\begin\{tabular\*?\}[\s\S]*?\\end\{tabular\*?\})",
+            r"{\\renewcommand{\\arraystretch}{1.28}\\setlength{\\tabcolsep}{7pt}\\resizebox{\\linewidth}{!}{\1}}",
+            safe,
+        )
+        safe = re.sub(
+            r"(\\begin\{tikzpicture\}[\s\S]*?\\end\{tikzpicture\})",
+            r"\\resizebox{\\linewidth}{!}{\1}",
+            safe,
+        )
+    if not safe.startswith(r"\begin{center}") and (r"\begin{tabular" in safe or r"\begin{tikzpicture" in safe or r"\resizebox" in safe):
         return f"\\begin{{center}}\n{safe}\n\\end{{center}}"
     return safe
+
+
+_ARROW_FLOW_RE = re.compile(r"\[[^\[\]]+\]\s*(?:->|→|=>)\s*\[[^\[\]]+\]")
+
+
+def _is_arrow_pipeline(text: str) -> bool:
+    s = text.strip()
+    if s.startswith(("-", "*", "•", "–")):
+        return False
+    return bool(_ARROW_FLOW_RE.search(s))
+
+
+def _arrow_pipeline_to_latex(text: str) -> str:
+    bracket_nodes = [m.strip() for m in re.findall(r"\[([^\[\]]+)\]", text) if m.strip()]
+    if len(bracket_nodes) < 2:
+        parts = [p.strip().strip("[]") for p in re.split(r"\s*(?:->|→|=>)\s*", text.strip()) if p.strip()]
+        bracket_nodes = parts
+    if len(bracket_nodes) < 2:
+        return _inline(text)
+
+    boxes: List[str] = []
+    for st in bracket_nodes[:6]:
+        boxes.append(
+            f"\\fbox{{\\begin{{tabular}}{{@{{}}c@{{}}}}\\textbf{{{_inline(st)}}}\\end{{tabular}}}}"
+        )
+    joined = "\n  $\\boldsymbol{\\rightarrow}$\n  ".join(boxes)
+    return (
+        "\\begin{center}\n"
+        "{\\setlength{\\fboxsep}{7pt}\\setlength{\\fboxrule}{1.4pt}\n"
+        "\\resizebox{\\linewidth}{!}{%\n"
+        f"  {joined}%\n"
+        "}}\n"
+        "\\end{center}"
+    )
 
 
 def _is_markdown_table(lines: List[str]) -> bool:
@@ -155,12 +203,14 @@ def _markdown_table_to_latex(lines: List[str]) -> str:
     body = "\n".join(rows)
     return (
         f"\\begin{{center}}\n"
-        f"\\small\n"
+        f"{{\\renewcommand{{\\arraystretch}}{{1.28}}\\setlength{{\\tabcolsep}}{{7pt}}\n"
+        f"\\resizebox{{\\linewidth}}{{!}}{{%\n"
         f"\\begin{{tabular}}{{{col_spec}}}\n"
         f"\\hline\n"
         f"{header_tex}\n"
         f"{body}\n"
-        f"\\end{{tabular}}\n"
+        f"\\end{{tabular}}%\n"
+        f"}}}}\n"
         f"\\end{{center}}"
     )
 
@@ -169,11 +219,56 @@ _BULLET = re.compile(r"^\s*(?:[-*•–]\s+)(.*)$")
 _NUMBERED = re.compile(r"^\s*\d{1,2}[.)]\s+(.*)$")
 
 
+def _preprocess_structured_blocks(text: str) -> str:
+    """Garante que tabelas Markdown/LaTeX e fluxogramas fiquem separados de listas por linha em branco."""
+    text = re.sub(
+        r"(\n)?(\\begin\{(?:center|tabular\*?|tabularx|tikzpicture)\}[\s\S]*?\\end\{(?:center|tabular\*?|tabularx|tikzpicture)\})(\n)?",
+        r"\n\n\2\n\n",
+        text,
+    )
+    lines = text.split("\n")
+    out: List[str] = []
+    in_md_table = False
+    for idx, ln in enumerate(lines):
+        s = ln.strip()
+        next_s = lines[idx + 1].strip() if idx + 1 < len(lines) else ""
+        is_tbl_start = (
+            not in_md_table
+            and ("|" in s)
+            and bool(re.match(r"^\s*\|?\s*:?-+:?\s*(\|:?-+:?\s*)+\|?\s*$", next_s))
+        )
+        if is_tbl_start:
+            if out and out[-1].strip():
+                out.append("")
+            in_md_table = True
+            out.append(ln)
+            continue
+        if in_md_table:
+            if "|" in s:
+                out.append(ln)
+                continue
+            else:
+                in_md_table = False
+                if s:
+                    out.append("")
+        if _is_arrow_pipeline(s):
+            if out and out[-1].strip():
+                out.append("")
+            out.append(ln)
+            out.append("")
+            continue
+        out.append(ln)
+    return "\n".join(out)
+
+
 def text_to_latex(text: str) -> str:
     """Converte texto simples, listas, tabelas e diagramas em LaTeX."""
-    blocks = re.split(r"\n\s*\n", text.strip())
+    normalized = _preprocess_structured_blocks(text.strip())
+    blocks = re.split(r"\n\s*\n", normalized)
     out: List[str] = []
     for block in blocks:
+        if not block.strip():
+            continue
         raw_env = _safe_latex_env(block)
         if raw_env:
             out.append(raw_env + "\n")
@@ -182,8 +277,15 @@ def text_to_latex(text: str) -> str:
         if _is_markdown_table(lines):
             out.append(_markdown_table_to_latex(lines) + "\n")
             continue
+        if len(lines) == 1 and _is_arrow_pipeline(lines[0]):
+            out.append(_arrow_pipeline_to_latex(lines[0]) + "\n")
+            continue
         i = 0
         while i < len(lines):
+            if _is_arrow_pipeline(lines[i]):
+                out.append(_arrow_pipeline_to_latex(lines[i]) + "\n")
+                i += 1
+                continue
             kind = "ul" if _BULLET.match(lines[i]) else "ol" if _NUMBERED.match(lines[i]) else None
             if kind:
                 rx = _BULLET if kind == "ul" else _NUMBERED
@@ -199,10 +301,20 @@ def text_to_latex(text: str) -> str:
                 )
             else:
                 para: List[str] = []
-                while i < len(lines) and not _BULLET.match(lines[i]) and not _NUMBERED.match(lines[i]):
+                while (
+                    i < len(lines)
+                    and not _BULLET.match(lines[i])
+                    and not _NUMBERED.match(lines[i])
+                    and not _is_arrow_pipeline(lines[i])
+                ):
                     para.append(lines[i].strip())
                     i += 1
-                out.append(_inline(" ".join(para)) + "\n")
+                if para:
+                    joined_para = " ".join(para)
+                    if _is_arrow_pipeline(joined_para):
+                        out.append(_arrow_pipeline_to_latex(joined_para) + "\n")
+                    else:
+                        out.append(_inline(joined_para) + "\n")
     return "\n".join(out)
 
 
