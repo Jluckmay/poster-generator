@@ -255,6 +255,64 @@ header {
   background-color: #ef4444;
   box-shadow: 0 0 8px #ef4444;
 }
+.server-status-badge.status-blocked .status-dot {
+  background-color: #ef4444;
+  box-shadow: 0 0 8px #ef4444;
+}
+
+/* Banner de bloqueio AdBlock */
+.blocked-banner {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid var(--red);
+  border-left: 4px solid var(--red);
+  color: var(--fg-bright);
+  padding: 12px 16px;
+  margin: 16px auto 0;
+  max-width: 1800px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.blocked-banner.hidden {
+  display: none !important;
+}
+.blocked-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+.blocked-banner-icon {
+  font-size: 20px;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.blocked-banner-text {
+  flex: 1;
+}
+.blocked-banner-text strong {
+  display: block;
+  font-size: 13px;
+  margin-bottom: 4px;
+  color: var(--red);
+}
+.blocked-banner-text p {
+  margin: 0 0 8px 0;
+  font-size: 12px;
+  color: var(--fg);
+}
+.blocked-banner-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.blocked-banner-actions button {
+  font-size: 11px;
+  padding: 6px 12px;
+  min-height: 32px;
+}
+
 @keyframes statusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.85); }
@@ -1940,6 +1998,21 @@ button.sm {
   </div>
 </header>
 
+<!-- Banner de bloqueio AdBlock -->
+<div id="blockedBanner" class="blocked-banner hidden" role="alert">
+  <div class="blocked-banner-content">
+    <span class="blocked-banner-icon">⚠️</span>
+    <div class="blocked-banner-text">
+      <strong id="blockedBannerTitle" data-i18n="blocked_title">Backend bloqueado por AdBlock</strong>
+      <p id="blockedBannerMsg" data-i18n="blocked_msg"></p>
+    </div>
+    <div class="blocked-banner-actions">
+      <button id="btnUseLocal" class="btn-toggle sm" data-i18n="blocked_local">Usar Servidor Local</button>
+      <button id="btnOpenBackend" class="pri sm" data-i18n="blocked_custom">Configurar URL</button>
+    </div>
+  </div>
+</div>
+
 <main>
 <div id="form">
 
@@ -2402,7 +2475,15 @@ const T = {
     server_online: "Render: Online",
     server_connecting: "Render: Acordando...",
     server_offline: "Render: Desconectado",
-    server_retry_tip: "Clique para testar conexão com o servidor"
+    server_retry_tip: "Clique para testar conexão com o servidor",
+    blocked_title: "Backend bloqueado por AdBlock",
+    blocked_msg: "Sua extensão de bloqueio de anúncios está impedindo a conexão com o servidor Render. O domínio contém 'poster' e é filtrado por AdBlock/uBlock/Brave Shields.",
+    blocked_fix: "Como resolver:",
+    blocked_fix1: "Desative o AdBlock/Brave Shields para este site, ou",
+    blocked_fix2: "Configure uma URL de backend personalizada abaixo (ex: http://127.0.0.1:5000 para servidor local), ou",
+    blocked_fix3: "Use o botão 'Servidor Local' abaixo.",
+    blocked_local: "Usar Servidor Local (http://127.0.0.1:5000)",
+    blocked_custom: "Configurar URL personalizada"
   },
   "en-US": {
     app_title: "poster-generator",
@@ -2487,7 +2568,15 @@ const T = {
     server_online: "Render: Online",
     server_connecting: "Render: Waking up...",
     server_offline: "Render: Offline",
-    server_retry_tip: "Click to test server connection"
+    server_retry_tip: "Click to test server connection",
+    blocked_title: "Backend blocked by AdBlock",
+    blocked_msg: "Your ad blocker extension is preventing connection to the Render server. The domain contains 'poster' and is filtered by AdBlock/uBlock/Brave Shields.",
+    blocked_fix: "How to fix:",
+    blocked_fix1: "Disable AdBlock/Brave Shields for this site, or",
+    blocked_fix2: "Configure a custom backend URL below (e.g. http://127.0.0.1:5000 for local server), or",
+    blocked_fix3: "Use the 'Local Server' button below.",
+    blocked_local: "Use Local Server (http://127.0.0.1:5000)",
+    blocked_custom: "Configure custom URL"
   }
 };
 
@@ -2741,11 +2830,25 @@ function updateServerBadge(status, label) {
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} was blocked by your browser (AdBlock / Brave Shields). Disable blocking for this site or use local backend.`
       : `Backend: ${serverName} foi bloqueado pelo navegador (AdBlock / Brave Shields / Extensão). Desative o bloqueador nesta página para conectar ao Render.`;
+    showBlockedBanner();
   } else {
+    hideBlockedBanner();
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} (${status}). Interface is fully functional while connection is established.`
       : `Backend: ${serverName} (${status}). A interface está totalmente liberada para edição enquanto a conexão é estabelecida.`;
   }
+}
+
+function showBlockedBanner() {
+  const banner = $("#blockedBanner");
+  if (banner) banner.classList.remove("hidden");
+  const details = $("#backendSettingsDetails");
+  if (details) details.open = true;
+}
+
+function hideBlockedBanner() {
+  const banner = $("#blockedBanner");
+  if (banner) banner.classList.add("hidden");
 }
 
 async function robustFetch(url, options = {}, { maxRetries = 6, retryDelay = 4000, onStatusUpdate = null, timeout = 120000 } = {}) {
@@ -4432,6 +4535,24 @@ function init() {
   const statusBadge = $("#serverStatusBadge");
   if (statusBadge) {
     statusBadge.onclick = () => wakeUpServer();
+  }
+
+  // Botões do banner de bloqueio AdBlock
+  const btnLocal = $("#btnUseLocal");
+  if (btnLocal) {
+    btnLocal.onclick = () => {
+      $("#backendUrlInput").value = "http://127.0.0.1:5000";
+      localStorage.setItem("poster_api_base", "http://127.0.0.1:5000");
+      wakeUpServer();
+    };
+  }
+  const btnCustom = $("#btnOpenBackend");
+  if (btnCustom) {
+    btnCustom.onclick = () => {
+      const details = $("#backendSettingsDetails");
+      if (details) details.open = true;
+      $("#backendUrlInput").focus();
+    };
   }
 }
 init();
