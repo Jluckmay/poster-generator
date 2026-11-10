@@ -1061,6 +1061,8 @@ button.sm {
   font-weight: 900;
   font-size: 1.15em;
 }
+.draft-fig { margin: 4px 0; text-align: center; }
+.draft-fig figcaption { font-size: 0.85em; font-style: italic; margin-top: 2px; }
 .draft-block-imgs {
   display: flex;
   flex-wrap: wrap;
@@ -3692,6 +3694,8 @@ function updateDraftPreview() {
       }
     }
 
+    let figN = 0;
+
     grid.innerHTML = colBuckets.map(colSecs => `
       <div class="draft-col">
         ${colSecs.map(s => {
@@ -3700,7 +3704,7 @@ function updateDraftPreview() {
           const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
           const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody);
           const imgHtml = (s.images && s.images.length > 0)
-            ? `<div class="draft-block-imgs">${s.images.map(im => `<img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">`).join("")}</div>`
+            ? `<div class="draft-block-imgs">${s.images.map(im => `<figure class="draft-fig"><img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">${im.caption ? `<figcaption>${posterLang === "en-US" || posterLang === "en" ? "Figure" : "Figura"} ${++figN}: ${escapeHtml(im.caption)}</figcaption>` : (figN++, "")}</figure>`).join("")}</div>`
             : "";
 
           const isDccOrUzh = tplId === "dcc" || tplId === "uzh";
