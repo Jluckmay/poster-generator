@@ -499,3 +499,93 @@ Al Nuaimi, T., Al Zaabi, S., Alyilieli, M., AlMaskari, M. (2023). A comparative 
     ref_lines = [l for l in ref_sec["content"].split("\n") if l.strip()]
     assert len(ref_lines) == 3
     assert "Degen, P.-B." in ref_lines[1]
+
+
+def test_parse_json_object_nemotron_thinking_and_latex():
+    from src.llm import parse_json_object
+
+    raw = (
+        '<think>\nWe need to format {title} and use \\textbf{bold} in sections.\n</think>\n'
+        'Here is the JSON result:\n'
+        '```json\n'
+        '{\n'
+        '  "title": "IoT Intrusion Detection",\n'
+        '  "authors": "Author A, Author B",\n'
+        '  "affiliations": "UFMG",\n'
+        '  "email": "a@ufmg.br",\n'
+        '  "sections": {\n'
+        '    "introduction": "- **Contexto:** Teste [1].",\n'
+        '    "methods": "\\begin{tikzpicture}\n\\node {Entrada};\n\\end{tikzpicture}",\n'
+        '    "results": "\\begin{tabular}{|l|c|}\\hline \\textbf{Modelo} & \\frac{1}{2} \\\\ \\hline\\end{tabular}",\n'
+        '    "conclusions": "Conclusão final.",\n'
+        '    "references": "[1] Ref A (2025)."\n'
+        '  }\n'
+        '}\n'
+        '```\n'
+        'Note: generated according to rules.'
+    )
+    obj = parse_json_object(raw)
+    assert obj["title"] == "IoT Intrusion Detection"
+    assert "\\begin{tikzpicture}" in obj["sections"]["methods"]
+    assert "\\node" in obj["sections"]["methods"]
+    assert "\\textbf{Modelo}" in obj["sections"]["results"]
+    assert "\\frac{1}{2}" in obj["sections"]["results"]
+
+
+def test_nvidia_chat_skips_non_json_reasoning_and_disables_thinking(monkeypatch):
+    import requests
+    from src.llm import chat
+
+    calls = []
+
+    class DummyResp:
+        def __init__(self, status_code, data):
+            self.status_code = status_code
+            self._data = data
+            self.text = json.dumps(data)
+
+        def raise_for_status(self):
+            if self.status_code >= 400:
+                err = requests.HTTPError(f"HTTP {self.status_code}")
+                err.response = self
+                raise err
+
+        def json(self):
+            return self._data
+
+    def fake_post(url, headers=None, json=None, timeout=None):
+        calls.append(json)
+        if len(calls) == 1:
+            return DummyResp(
+                200,
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": None,
+                                "reasoning_content": "Thinking about how to summarize {paper}...",
+                            }
+                        }
+                    ]
+                },
+            )
+        return DummyResp(
+            200,
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"title": "OK", "sections": {"introduction": "A"}}',
+                            "reasoning_content": None,
+                        }
+                    }
+                ]
+            },
+        )
+
+    monkeypatch.setattr(requests, "post", fake_post)
+    out = chat("nvidia", "nvapi-test", "nvidia/nemotron-3.5-super-vl-120b-a12b", "sys", "usr")
+    assert '"title": "OK"' in out
+    assert len(calls) == 2
+    assert calls[0].get("chat_template_kwargs") == {"enable_thinking": False}
+    assert calls[0].get("max_tokens") == 8192

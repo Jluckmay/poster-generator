@@ -150,24 +150,33 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
 
         last_exc: Exception | None = None
         for idx, m_name in enumerate(models_to_try):
-            req_timeout = 35 if idx == 0 else 20
-            # Alguns modelos/gateways da NVIDIA NIM rejeitam mensagens com role='system' ou exigem payload padrão
-            message_variants = [
-                [{"role": "system", "content": system}, {"role": "user", "content": user}],
-                [{"role": "user", "content": f"{system}\n\n{user}"}],
+            req_timeout = 75 if idx == 0 else 45
+            is_nemotron = "nemotron" in m_name.lower()
+            # Modelos Nemotron 3.5 possuem raciocínio (thinking) ativo por padrão, podendo consumir
+            # todos os tokens em reasoning_content e deixar content nulo se max_tokens for baixo.
+            payload_variants = [
+                {
+                    "model": m_name,
+                    "temperature": 0.2,
+                    "max_tokens": 8192 if is_nemotron else 4096,
+                    "stream": False,
+                    "messages": [{"role": "system", "content": system}, {"role": "user", "content": user}],
+                    **({"chat_template_kwargs": {"enable_thinking": False}} if is_nemotron else {}),
+                },
+                {
+                    "model": m_name,
+                    "temperature": 0.2,
+                    "max_tokens": 16384 if is_nemotron else 4096,
+                    "stream": False,
+                    "messages": [{"role": "user", "content": f"{system}\n\n{user}"}],
+                },
             ]
-            for msgs in message_variants:
+            for payload in payload_variants:
                 try:
                     r = requests.post(
                         cfg["url"],
                         headers=headers,
-                        json={
-                            "model": m_name,
-                            "temperature": 0.2,
-                            "max_tokens": 4096,
-                            "stream": False,
-                            "messages": msgs,
-                        },
+                        json=payload,
                         timeout=req_timeout,
                     )
                     r.raise_for_status()
@@ -178,12 +187,16 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
                     first_choice = choices[0]
                     msg = first_choice.get("message") or {}
                     content = msg.get("content")
-                    if not content and msg.get("reasoning_content"):
-                        content = msg.get("reasoning_content")
                     if not content and first_choice.get("text"):
                         content = first_choice.get("text")
+                    # Só aproveita reasoning_content se content vier vazio E reasoning_content contiver o JSON
+                    if (not content or not str(content).strip()) and msg.get("reasoning_content"):
+                        rc = str(msg.get("reasoning_content"))
+                        if "{" in rc and "}" in rc and '"sections"' in rc:
+                            content = rc
                     if content and isinstance(content, str) and content.strip():
-                        return content.strip()
+                        if "{" in content and "}" in content:
+                            return content.strip()
                     continue
                 except requests.HTTPError as exc:
                     last_exc = exc
@@ -210,27 +223,98 @@ def chat(provider: str, api_key: str, model: str | None, system: str, user: str)
         raise LLMError("Falha ao consultar o provedor de IA.") from None
 
 
+_LATEX_CMD_ESCAPE_RE = re.compile(
+    r'(?<!\\)\\(begin|textbf|textit|textrm|texttt|textsc|text|beta|bottomrule|bullet|bar|bf|'
+    r'frac|footnotesize|forall|right|rightarrow|rho|renewcommand|node|noindent|neq|nabla|natural|'
+    r'tikzpicture|tabularx?|toprule|times|theta|tau)(?![a-zA-Z])'
+)
+
+
+def _escape_control_chars_in_json_strings(s: str) -> str:
+    out: list[str] = []
+    in_str = False
+    i = 0
+    n = len(s)
+    while i < n:
+        ch = s[i]
+        if ch == '"':
+            bs = 0
+            k = i - 1
+            while k >= 0 and s[k] == "\\":
+                bs += 1
+                k -= 1
+            if bs % 2 == 0:
+                in_str = not in_str
+            out.append(ch)
+            i += 1
+            continue
+        if in_str:
+            if ch == "\n":
+                out.append("\\n")
+            elif ch == "\r":
+                out.append("\\r")
+            elif ch == "\t":
+                out.append("\\t")
+            elif ord(ch) < 0x20:
+                out.append(" ")
+            else:
+                out.append(ch)
+        else:
+            out.append(ch)
+        i += 1
+    return "".join(out)
+
+
+def _repair_json_candidate(snippet: str) -> str:
+    s = _LATEX_CMD_ESCAPE_RE.sub(r"\\\\\1", snippet)
+    s = re.sub(r'(?<!\\)\\(?![/"\\bfnrtu]|u[0-9a-fA-F]{4})', r"\\\\", s)
+    s = _escape_control_chars_in_json_strings(s)
+    s = re.sub(r",\s*([}\]])", r"\1", s)
+    return s
+
+
 def parse_json_object(raw: Any) -> Dict[str, Any]:
     if not raw or not isinstance(raw, str):
         raise LLMError("Resposta da IA está vazia ou nula.")
     clean_raw = raw.strip()
+    # Remove blocos de raciocínio <think>...</think>
+    clean_raw = re.sub(r"<think>[\s\S]*?</think>", "", clean_raw, flags=re.I).strip()
+    if "</think>" in clean_raw.lower():
+        idx_think = clean_raw.lower().rfind("</think>")
+        clean_raw = clean_raw[idx_think + 8 :].strip()
     clean_raw = re.sub(r"^```(?:json)?|```$", "", clean_raw, flags=re.M).strip()
-    start, end = clean_raw.find("{"), clean_raw.rfind("}")
-    if start < 0 or end <= start:
+
+    # Coleta possíveis índices de início do objeto JSON principal
+    starts: list[int] = []
+    for m in re.finditer(r'\{\s*"(?:title|sections|authors)"', clean_raw):
+        starts.append(m.start())
+    first_brace = clean_raw.find("{")
+    if first_brace >= 0 and first_brace not in starts:
+        starts.append(first_brace)
+
+    end = clean_raw.rfind("}")
+    if not starts or end <= min(starts):
         raise LLMError("Resposta da IA não contém JSON válido.")
-    snippet = clean_raw[start : end + 1]
-    try:
-        obj = json.loads(snippet)
-    except json.JSONDecodeError:
-        # Repara escapes de contrabarra do LaTeX em strings JSON (ex: \begin, \hline, \alpha)
-        repaired = re.sub(r'\\(?![/"\\bfnrtu]|u[0-9a-fA-F]{4})', r'\\\\', snippet)
-        try:
-            obj = json.loads(repaired)
-        except json.JSONDecodeError:
-            raise LLMError("Resposta da IA não contém JSON válido.") from None
-    if not isinstance(obj, dict):
-        raise LLMError("Resposta da IA inválida.")
-    return obj
+
+    decoder = json.JSONDecoder()
+    for st in starts:
+        if end <= st:
+            continue
+        snippet = clean_raw[st : end + 1]
+        for candidate in (snippet, _repair_json_candidate(snippet)):
+            try:
+                obj = json.loads(candidate)
+                if isinstance(obj, dict):
+                    return obj
+            except json.JSONDecodeError:
+                try:
+                    obj, _ = decoder.raw_decode(candidate)
+                    if isinstance(obj, dict):
+                        return obj
+                except json.JSONDecodeError:
+                    continue
+
+    raise LLMError("Resposta da IA não contém JSON válido.")
 
 
 def ai_extract(text: str, language: str, provider: str, api_key: str, model: str | None) -> Dict[str, Any]:
