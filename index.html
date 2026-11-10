@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' http://127.0.0.1:5000 http://localhost:5000 https://poster-generator-nkqh.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' http://127.0.0.1:5000 http://localhost:5000 https://painel-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>poster-generator | Gerador de Pôsteres Acadêmicos</title>
@@ -2281,7 +2281,7 @@ button.sm {
       <summary style="cursor:pointer;font-family:var(--font-mono);user-select:none;">⚙️ <span data-i18n="backend_config">Configuração do Servidor Backend (API)</span></summary>
       <div style="margin-top:8px;">
         <label for="backendUrlInput" style="font-size:11px;" data-i18n="backend_url_label">URL do Servidor Backend:</label>
-        <input type="text" id="backendUrlInput" data-i18n-ph="ph_backend_url" placeholder="http://127.0.0.1:5000 ou https://poster-generator-nkqh.onrender.com" style="margin-top:4px;font-size:12px;font-family:var(--font-mono);" autocomplete="off">
+        <input type="text" id="backendUrlInput" data-i18n-ph="ph_backend_url" placeholder="http://127.0.0.1:5000 ou https://painel-generator.onrender.com" style="margin-top:4px;font-size:12px;font-family:var(--font-mono);" autocomplete="off">
         <div class="hint" data-i18n="backend_url_hint">Deixe vazio para detecção automática (Render/Local).</div>
       </div>
     </details>
@@ -2471,7 +2471,7 @@ const T = {
     ph_affiliations: "Ex: Departamento de Ciência da Computação - Universidade Federal",
     ph_email: "contato@universidade.edu.br",
     ph_url: "https://github.com/usuario/projeto",
-    ph_backend_url: "http://127.0.0.1:5000 ou https://poster-generator-nkqh.onrender.com",
+    ph_backend_url: "http://127.0.0.1:5000 ou https://painel-generator.onrender.com",
     server_online: "Render: Online",
     server_connecting: "Render: Acordando...",
     server_offline: "Render: Desconectado",
@@ -2564,7 +2564,7 @@ const T = {
     ph_affiliations: "e.g. Department of Computer Science - Stanford University",
     ph_email: "contact@university.edu",
     ph_url: "https://github.com/username/project",
-    ph_backend_url: "http://127.0.0.1:5000 or https://poster-generator-nkqh.onrender.com",
+    ph_backend_url: "http://127.0.0.1:5000 or https://painel-generator.onrender.com",
     server_online: "Render: Online",
     server_connecting: "Render: Waking up...",
     server_offline: "Render: Offline",
@@ -2765,7 +2765,7 @@ function newSec(id, title = "", content = "") {
   return { key: "s" + (++uid), id: id || ("custom" + uid), title, content, images: [] };
 }
 
-const PROD_RENDER_API = "https://poster-generator-nkqh.onrender.com";
+const PROD_RENDER_API = "https://painel-generator.onrender.com";
 
 function isLocalEnvironment() {
   const host = window.location.hostname;
