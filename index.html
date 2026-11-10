@@ -618,8 +618,8 @@ button.sm {
 /* Visualizador de Pôster */
 #preview {
   position: sticky;
-  top: 78px;
-  height: calc(100vh - 100px);
+  top: 22px;
+  height: auto;
   min-height: 600px;
   background: var(--bg-card);
   border: 1px solid var(--line);
@@ -627,7 +627,7 @@ button.sm {
   border-radius: var(--card-radius);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  overflow: visible;
   box-shadow: var(--shadow-card);
 }
 #preview-header {
@@ -673,13 +673,14 @@ button.sm {
 
 #pdf-viewport-container {
   flex: 1;
-  overflow: auto;
+  overflow: visible;
   position: relative;
   background: var(--viewer-bg);
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 24px;
+  border-radius: 0 0 var(--card-radius) var(--card-radius);
 }
 .empty-state {
   margin: auto;
@@ -734,7 +735,7 @@ button.sm {
   align-items: center;
 }
 .pdf-page-canvas { display: block; border-radius: 2px; max-width: none; }
-#pdf-iframe { width: 100%; height: 100%; border: none; background: #fff; display: none; }
+#pdf-iframe { width: 100%; min-height: 900px; height: 100%; border: none; background: #fff; display: none; }
 .hidden { display: none !important; }
 
 /* ── Preview Mode Switcher (Draft vs PDF) ── */
@@ -1743,7 +1744,7 @@ button.sm {
   #preview {
     order: 4;
     position: static !important;
-    height: clamp(480px, 72vh, 640px) !important;
+    height: auto !important;
     margin-top: 0;
     margin-bottom: 18px;
     width: 100% !important;
@@ -1780,7 +1781,7 @@ button.sm {
   .card h2 { font-size: 13px; }
 
   #preview {
-    height: clamp(420px, 70vh, 560px) !important;
+    height: auto !important;
     margin-bottom: 14px;
     width: 100%;
     box-sizing: border-box;
@@ -1835,7 +1836,7 @@ button.sm {
   .tpl { padding: 6px 4px; font-size: 10.5px; }
   .tpl .sw { height: 26px; }
   .tpl .tpl-tag { font-size: 8.5px; }
-  #preview { height: clamp(400px, 68vh, 520px) !important; margin-bottom: 12px; }
+  #preview { height: auto !important; margin-bottom: 12px; }
   .draft-poster.portrait { min-height: 340px; }
   .draft-poster.landscape { min-height: 260px; }
   .draft-title { font-size: 13px; }
@@ -3255,6 +3256,12 @@ function setDraftZoom(newScale) {
   if (poster) {
     poster.style.transform = `scale(${draftScale})`;
     poster.style.transformOrigin = "top center";
+    const naturalH = poster.offsetHeight;
+    if (naturalH > 0 && draftScale !== 1.0) {
+      poster.style.marginBottom = `${Math.round(naturalH * (draftScale - 1))}px`;
+    } else {
+      poster.style.marginBottom = "0px";
+    }
   }
   const zd = $("#zoomDisplay");
   if (zd) zd.textContent = Math.round(draftScale * 100) + "%";
@@ -4185,7 +4192,7 @@ function renderPosterPages() {
     if (state.fitMode === "width") {
       state.scale = availWidth / unscaled.width;
     } else if (state.fitMode === "page") {
-      const availHeight = Math.max(400, container.clientHeight - 48);
+      const availHeight = Math.max(400, window.innerHeight - 160);
       state.scale = Math.min(availWidth / unscaled.width, availHeight / unscaled.height);
     }
 
@@ -4256,10 +4263,9 @@ $("#btnFitWidth").onclick = () => {
 };
 $("#btnFitPage").onclick = () => {
   if (currentViewMode === "draft") {
-    const container = $("#pdf-viewport-container");
     const poster = $("#draftPoster");
-    if (container && poster && poster.offsetHeight > 0) {
-      const availH = container.clientHeight - 80;
+    if (poster && poster.offsetHeight > 0) {
+      const availH = Math.max(400, window.innerHeight - 180);
       const s = Math.max(0.35, Math.min(1.0, availH / poster.offsetHeight));
       setDraftZoom(s);
     } else {
