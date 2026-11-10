@@ -313,6 +313,28 @@ header {
   min-height: 32px;
 }
 
+/* Offline mode indicator */
+.offline-indicator {
+  background: rgba(251, 191, 36, 0.15);
+  border: 1px solid var(--amber);
+  border-left: 4px solid var(--amber);
+  color: var(--fg-bright);
+  padding: 8px 16px;
+  margin: 10px auto 0;
+  max-width: 1800px;
+  width: 100%;
+  box-sizing: border-box;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  display: none;
+}
+.offline-indicator.visible {
+  display: block;
+}
+.offline-indicator strong {
+  color: var(--amber);
+}
+
 @keyframes statusPulse {
   0%, 100% { opacity: 1; transform: scale(1); }
   50% { opacity: 0.35; transform: scale(0.85); }
@@ -986,8 +1008,6 @@ button.sm {
 .draft-block-body p {
   margin: 0 0 4px;
 }
-.draft-fig { margin: 4px 0; text-align: center; }
-.draft-fig figcaption { font-size: 0.85em; font-style: italic; margin-top: 2px; }
 .draft-block-body table.draft-table {
   width: 100%;
   border-collapse: collapse;
@@ -2015,6 +2035,12 @@ button.sm {
   </div>
 </div>
 
+<!-- Indicador de modo offline -->
+<div id="offlineIndicator" class="offline-indicator" role="status">
+  <strong id="offlineIndicatorTitle" data-i18n="offline_title">Backend indisponível</strong>
+  <span id="offlineIndicatorMsg" data-i18n="offline_msg"></span>
+</div>
+
 <main>
 <div id="form">
 
@@ -2485,7 +2511,9 @@ const T = {
     blocked_fix2: "Configure uma URL de backend personalizada abaixo (ex: http://127.0.0.1:5000 para servidor local), ou",
     blocked_fix3: "Use o botão 'Servidor Local' abaixo.",
     blocked_local: "Usar Servidor Local (http://127.0.0.1:5000)",
-    blocked_custom: "Configurar URL personalizada"
+    blocked_custom: "Configurar URL personalizada",
+    offline_title: "Backend indisponível",
+    offline_msg: "O servidor backend não está acessível. A pré-visualização continua funcionando, mas a geração de PDF requer um servidor backend."
   },
   "en-US": {
     app_title: "poster-generator",
@@ -2578,7 +2606,9 @@ const T = {
     blocked_fix2: "Configure a custom backend URL below (e.g. http://127.0.0.1:5000 for local server), or",
     blocked_fix3: "Use the 'Local Server' button below.",
     blocked_local: "Use Local Server (http://127.0.0.1:5000)",
-    blocked_custom: "Configure custom URL"
+    blocked_custom: "Configure custom URL",
+    offline_title: "Backend unavailable",
+    offline_msg: "The backend server is not accessible. Preview still works, but PDF generation requires a backend server."
   }
 };
 
@@ -2835,19 +2865,32 @@ function updateServerBadge(status, label) {
       : `Backend: ${serverName} foi bloqueado pelo navegador (AdBlock / Brave Shields / Extensão). Desative o bloqueador nesta página para conectar ao Render.`;
     backendAvailable = false;
     showBlockedBanner();
+    showOfflineIndicator();
   } else if (status === "online") {
     backendAvailable = true;
     hideBlockedBanner();
+    hideOfflineIndicator();
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} (${status}). Interface is fully functional while connection is established.`
       : `Backend: ${serverName} (${status}). A interface está totalmente liberada para edição enquanto a conexão é estabelecida.`;
   } else {
     backendAvailable = false;
     hideBlockedBanner();
+    showOfflineIndicator();
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} (${status}). Interface is fully functional while connection is established.`
       : `Backend: ${serverName} (${status}). A interface está totalmente liberada para edição enquanto a conexão é estabelecida.`;
   }
+}
+
+function showOfflineIndicator() {
+  const indicator = $("#offlineIndicator");
+  if (indicator) indicator.classList.add("visible");
+}
+
+function hideOfflineIndicator() {
+  const indicator = $("#offlineIndicator");
+  if (indicator) indicator.classList.remove("visible");
 }
 
 function showBlockedBanner() {
@@ -2910,7 +2953,7 @@ async function wakeUpServer() {
   const apiBase = getApiBase();
   const serverName = getServerDisplayName();
 
-  const maxWakeAttempts = isLocalEnvironment() ? 4 : 25;
+  const maxWakeAttempts = isLocalEnvironment() ? 4 : 6;
   for (let attempt = 1; attempt <= maxWakeAttempts; attempt++) {
     const t0 = Date.now();
     try {
@@ -3067,6 +3110,15 @@ function setDoc(f) {
 
 $("#extractBtn").onclick = async () => {
   const msg = $("#extractMsg");
+
+  if (!backendAvailable) {
+    const offlineMsg = (uiLang === "en-US")
+      ? "Backend indisponível. Configure a URL do servidor para extrair conteúdo."
+      : "Backend indisponível. Configure a URL do servidor para extrair conteúdo.";
+    showMsg(msg, offlineMsg, "err");
+    return;
+  }
+
   if (!docFile) return showMsg(msg, t("no_file"), "err");
   const fd = new FormData();
   fd.append("file", docFile);
@@ -3640,7 +3692,7 @@ function updateDraftPreview() {
       }
     }
 
-    let figN = 0;`r`n    grid.innerHTML = colBuckets.map(colSecs => `
+    grid.innerHTML = colBuckets.map(colSecs => `
       <div class="draft-col">
         ${colSecs.map(s => {
           const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
@@ -3648,7 +3700,7 @@ function updateDraftPreview() {
           const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
           const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody);
           const imgHtml = (s.images && s.images.length > 0)
-            ? `<div class="draft-block-imgs">${s.images.map(im => `<figure class="draft-fig"><img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">${im.caption ? `<figcaption>${escapeHtml(posterLang === "en" ? "Figure" : "Figura")} ${++figN}: ${escapeHtml(im.caption)}</figcaption>` : (figN++, "")}</figure>`).join("")}</div>`
+            ? `<div class="draft-block-imgs">${s.images.map(im => `<img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">`).join("")}</div>`
             : "";
 
           const isDccOrUzh = tplId === "dcc" || tplId === "uzh";
