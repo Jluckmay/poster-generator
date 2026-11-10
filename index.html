@@ -3594,7 +3594,7 @@ function renderDraftReferences(text) {
   // Extrai número de citação [n] se presente, mantém prefixo na exibição
   const items = entries.slice(0, 20).map(ln => {
     const m = ln.match(/^\s*\[(\d+)\]\s*(.*)$/);
-    if (m) return `<strong>[${m.group(1)}]</strong> ${formatInlineText(m.group(2).trim())}`;
+    if (m) return `<strong>[${m[1]}]</strong> ${formatInlineText(m[2].trim())}`;
     return formatInlineText(ln.replace(/^\s*(?:\[\d+\]|\d+[.)]|[-*•])\s*/, "").trim());
   }).filter(Boolean);
 
