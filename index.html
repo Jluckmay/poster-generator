@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' * http://127.0.0.1:5000 http://localhost:5000 https://painel-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' * http://127.0.0.1:5000 http://localhost:5000 https://academic-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>poster-generator | Gerador de Pôsteres Acadêmicos</title>
@@ -2828,7 +2828,7 @@ function getServerDisplayName() {
 // BackendEnclave: URL do backend ofuscada com rotação polinomial + salt + XOR,
 // idêntica à técnica usada em https://jluckmay.github.io/resume-generator/.
 // A URL real nunca aparece como string literal no código-fonte frontend.
-const _BACKEND_CIPHER = [226, 187, 207, 192, 222, 41, 45, 30, 226, 24, 253, 244, 12, 6, 81, 36, 35, 59, 91, 55, 66, 58, 72, 95, 172, 92, 122, 133, 135, 114, 137, 141, 158, 235, 159, 184, 225];
+const _BACKEND_CIPHER = [226, 187, 207, 192, 222, 41, 45, 30, 241, 22, 5, 254, 12, 7, 21, 32, 91, 50, 91, 67, 62, 64, 74, 89, 107, 113, 186, 160, 130, 142, 138, 134, 136, 164, 176, 249, 211, 192, 180];
 const _BACKEND_KEY = [0x53, 0x79, 0x6E, 0x74, 0x68, 0x65, 0x73, 0x69, 0x73]; // 'Synthesis'
 const _BACKEND_SALT = 0xA7; // 167
 let _backendResolved = null;
