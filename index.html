@@ -2833,10 +2833,10 @@ function _resolveBackend() {
 
 const BACKEND_ATTESTATION = "poster-render-v1";
 const POSTER_CLIENT_HEADER = "X-Poster-Client";
-const ALLOWED_CLIENT_HEADERS = {
+const ALLOWED_CLIENT_HEADERS = [
   "jluckmay-github-pages-v1",
   "jluckmay-poster-v1",
-};
+];
 
 // Cabeçalho cliente enviado em toda requisição ao backend para identificar
 // a origem como https://jluckmay.github.io (GitHub Pages).
