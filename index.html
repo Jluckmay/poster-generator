@@ -2809,11 +2809,27 @@ function getServerDisplayName() {
   return isLocalEnvironment() ? (uiLang === "en-US" ? "Local Server" : "Servidor Local") : "Render";
 }
 
+// URL do backend do Render ofuscada: não aparece em texto simples no código-fonte,
+// impedindo que extensões de bloqueio (AdBlock / Brave Shields) identifiquem e
+// bloqueiem a requisição por correspondência de padrão de URL.
+const _RENDER_BACKEND_C1 = [56, 27, 7, 4, 22, 72, 127, 64, 3, 21, 12, 28, 53, 3, 94, 19, 0, 28, 53, 29, 18, 0, 10, 0, 126, 0, 29, 6, 0, 28, 52, 10, 1, 90, 6, 29, 61];
+const _RENDER_BACKEND_KEY = [0x50, 0x6F, 0x73, 0x74, 0x65, 0x72]; // 'Poster'
+let _renderBackendResolved = null;
+
+function _resolveRenderBackend() {
+  if (_renderBackendResolved) return _renderBackendResolved;
+  let res = "";
+  for (let i = 0; i < _RENDER_BACKEND_C1.length; i++) {
+    const k = _RENDER_BACKEND_KEY[i % _RENDER_BACKEND_KEY.length];
+    res += String.fromCharCode(_RENDER_BACKEND_C1[i] ^ k);
+  }
+  _renderBackendResolved = res;
+  return res;
+}
+
 function getApiBase() {
   const custom = localStorage.getItem("poster_api_base");
   if (custom !== null && custom.trim() !== "") return custom.trim().replace(/\/+$/, "");
-
-  const RENDER_BACKEND = "https://painel-generator.onrender.com";
 
   // Página HTML local: utiliza servidor local por padrão
   if (isLocalEnvironment()) {
@@ -2825,9 +2841,9 @@ function getApiBase() {
   }
 
   // Fora do ambiente local (ex: GitHub Pages), conecta ao backend do Render.
-  // O navegador bloqueia a requisição apenas se uma extensão (AdBlock/Brave Shields)
-  // estiver ativa — detectado em wakeUpServer() via ERR_BLOCKED_BY_CLIENT.
-  return RENDER_BACKEND;
+  // A URL é descriptografada em tempo de execução para evitar bloqueio por
+  // extensões de AdBlock que fazem correspondência de padrão de URL estática.
+  return _resolveRenderBackend();
 }
 
 function timeoutSignal(ms) {
