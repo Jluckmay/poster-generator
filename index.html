@@ -2507,7 +2507,7 @@ const T = {
     server_offline: "Render: Desconectado",
     server_retry_tip: "Clique para testar conexão com o servidor",
     blocked_title: "Backend bloqueado por AdBlock",
-    blocked_msg: "Sua extensão de bloqueio de anúncios está impedindo a conexão com o servidor Render. O domínio contém 'poster' e é filtrado por AdBlock/uBlock/Brave Shields.",
+    blocked_msg: "Sua extensão de bloqueio de anúncios está impedindo a conexão com o servidor backend. Tente usar o Servidor Local ou configure uma URL personalizada abaixo.",
     blocked_fix: "Como resolver:",
     blocked_fix1: "Desative o AdBlock/Brave Shields para este site, ou",
     blocked_fix2: "Configure uma URL de backend personalizada abaixo (ex: http://127.0.0.1:5000 para servidor local), ou",
@@ -2602,7 +2602,7 @@ const T = {
     server_offline: "Render: Offline",
     server_retry_tip: "Click to test server connection",
     blocked_title: "Backend blocked by AdBlock",
-    blocked_msg: "Your ad blocker extension is preventing connection to the Render server. The domain contains 'poster' and is filtered by AdBlock/uBlock/Brave Shields.",
+    blocked_msg: "Your ad blocker extension is preventing connection to the backend server. Try using Local Server or configure a custom URL below.",
     blocked_fix: "How to fix:",
     blocked_fix1: "Disable AdBlock/Brave Shields for this site, or",
     blocked_fix2: "Configure a custom backend URL below (e.g. http://127.0.0.1:5000 for local server), or",
@@ -2800,8 +2800,6 @@ function newSec(id, title = "", content = "") {
   return { key: "s" + (++uid), id: id || ("custom" + uid), title, content, images: [] };
 }
 
-const PROD_RENDER_API = "https://painel-generator.onrender.com";
-
 function isLocalEnvironment() {
   const host = window.location.hostname;
   return host === "localhost" || host === "127.0.0.1" || window.location.protocol === "file:";
@@ -2815,7 +2813,7 @@ function getApiBase() {
   const custom = localStorage.getItem("poster_api_base");
   if (custom !== null && custom.trim() !== "") return custom.trim().replace(/\/+$/, "");
 
-  // Página HTML local: utiliza servidor local
+  // Página HTML local: utiliza servidor local por padrão (onrender.com é bloqueado por AdBlock)
   if (isLocalEnvironment()) {
     if (window.location.protocol === "http:" || window.location.protocol === "https:") {
       if (window.location.port === "5000") return "";
@@ -2824,8 +2822,8 @@ function getApiBase() {
     return "http://127.0.0.1:5000";
   }
 
-  // Página HTML hospedada no GitHub Pages (jluckmay.github.io): conecta exclusivamente ao Render
-  return PROD_RENDER_API;
+  // Fora do ambiente local, tenta servidor local primeiro (onrender.com é bloqueado por AdBlock)
+  return "http://127.0.0.1:5000";
 }
 
 function timeoutSignal(ms) {
