@@ -3629,7 +3629,7 @@ function updateDraftPreview() {
   const orient = $("#orientation") ? $("#orientation").value : "portrait";
   const cols = $("#columns") ? Math.max(1, Math.min(5, +$("#columns").value || 2)) : 2;
 
-  // Dimensões e Proporção (Aspect Ratio)
+  // Dimensões e Proporção (Aspect Ratio) exatas do pôster conforme formato e orientação
   const sizes = (CFG.sizes && CFG.sizes[paper]) || [84.1, 118.9];
   const isLandscape = orient === "landscape";
   const allTplClasses = Object.keys(CFG.templates || {}).map(k => `tpl-${k}`);
@@ -3637,8 +3637,8 @@ function updateDraftPreview() {
   poster.classList.toggle("landscape", isLandscape);
   poster.classList.toggle("portrait", !isLandscape);
   poster.classList.add(`tpl-${tplId}`);
-  // Mantém proporção fluida sem forçar altura artificial vazia no rascunho
-  poster.style.aspectRatio = "";
+  const aspect = isLandscape ? (sizes[1] / sizes[0]) : (sizes[0] / sizes[1]);
+  poster.style.aspectRatio = `${aspect}`;
 
   // Cores
   const useColors = $("#useColors") && $("#useColors").checked;
