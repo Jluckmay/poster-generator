@@ -140,14 +140,20 @@ def _safe_latex_env(block: str) -> str | None:
     return safe
 
 
-_ARROW_FLOW_RE = re.compile(r"\[[^\[\]]+\]\s*(?:->|→|=>)\s*\[[^\[\]]+\]")
+_ARROW_FLOW_RE = re.compile(r"(?:->|→|=>)")
 
 
 def _is_arrow_pipeline(text: str) -> bool:
     s = text.strip()
     if s.startswith(("-", "*", "•", "–")):
         return False
-    return bool(_ARROW_FLOW_RE.search(s))
+    if not _ARROW_FLOW_RE.search(s):
+        return False
+    bracket_nodes = [m.strip() for m in re.findall(r"\[([^\[\]]+)\]", s) if m.strip()]
+    if len(bracket_nodes) >= 2:
+        return True
+    parts = [p.strip().strip("[]") for p in re.split(r"\s*(?:->|→|=>)\s*", s) if p.strip()]
+    return len(parts) >= 2
 
 
 def _arrow_pipeline_to_latex(text: str) -> str:
@@ -166,8 +172,8 @@ def _arrow_pipeline_to_latex(text: str) -> str:
     joined = "\n  $\\boldsymbol{\\rightarrow}$\n  ".join(boxes)
     return (
         "\\begin{center}\n"
-        "{\\setlength{\\fboxsep}{7pt}\\setlength{\\fboxrule}{1.4pt}\n"
-        "\\resizebox{\\linewidth}{!}{%\n"
+        "{\\setlength{\\fboxsep}{8pt}\\setlength{\\fboxrule}{1.5pt}\n"
+        "\\resizebox{0.98\\linewidth}{!}{%\n"
         f"  {joined}%\n"
         "}}\n"
         "\\end{center}"
@@ -181,7 +187,8 @@ def _is_markdown_table(lines: List[str]) -> bool:
     l1 = lines[1].strip()
     if not (l0.startswith("|") or "|" in l0):
         return False
-    return bool(re.match(r"^\s*\|?\s*:?-+:?\s*(\|:?-+:?\s*)+\|?\s*$", l1))
+    return bool(re.match(r"^\s*\|?(\s*:?[-—–]{2,}:?\s*\|)+\s*:?[-—–]{2,}:?\s*\|?\s*$", l1))
+
 
 
 def _markdown_table_to_latex(lines: List[str]) -> str:
@@ -219,8 +226,8 @@ _BULLET = re.compile(r"^\s*(?:[-*•–]\s+)(.*)$")
 _NUMBERED = re.compile(r"^\s*\d{1,2}[.)]\s+(.*)$")
 
 
-_INLINE_SEP_RE = re.compile(r"(?:\|\s*:?-{2,}:?\s*){2,}\|")
-_SEP_CELL_RE = re.compile(r"^\s*:?-{2,}:?\s*$")
+_INLINE_SEP_RE = re.compile(r"(?:\|\s*:?[-—–]+:?\s*){2,}\|?")
+_SEP_CELL_RE = re.compile(r"^\s*:?[-—–]{2,}:?\s*$")
 
 
 def explode_inline_tables(text: str) -> str:
@@ -228,29 +235,40 @@ def explode_inline_tables(text: str) -> str:
     out: List[str] = []
     for ln in text.split("\n"):
         m = _INLINE_SEP_RE.search(ln)
-        if not m or not ln[: m.start()].strip(' |'):
+        if not m:
             out.append(ln)
             continue
-        ncols = len([c for c in m.group(0).split("|") if c.strip()])
-        pre = [c.strip() for c in ln[: m.start()].split("|")]
+        before = ln[: m.start()]
+        if not before.strip(' |'):
+            out.append(ln)
+            continue
+        raw_sep = m.group(0).strip('|')
+        sep_cells = [c.strip() for c in raw_sep.split('|') if c.strip()]
+        ncols = len(sep_cells)
+        if ncols < 2:
+            out.append(ln)
+            continue
+        pre = [c.strip() for c in before.split('|')]
         while pre and not pre[-1]:
             pre.pop()
-        if len(pre) < ncols + 0 or ncols < 2:
+        while pre and not pre[0]:
+            pre.pop(0)
+        if len(pre) < ncols:
             out.append(ln)
             continue
         header = pre[-ncols:]
         lead = " | ".join(pre[:-ncols]).strip()
-        if len(pre) == ncols and ln[: m.start()].lstrip().startswith("|"):
-            lead = ""
-        elif len(pre) > ncols:
-            lead = " ".join(pre[:-ncols]).strip()
-        cells = [c.strip() for c in ln[m.end():].split("|")]
+        raw_after = ln[m.end():]
+        cells = [c.strip() for c in raw_after.split('|')]
+        if cells and not cells[0]:
+            cells.pop(0)
+        if cells and not cells[-1]:
+            cells.pop()
         rows: List[List[str]] = []
         i = 0
         while i < len(cells):
-            if not cells[i] and (i == 0 or len(rows) == 0 or True) and (i + 1 < len(cells)) and cells[i + 1]:
+            while i < len(cells) and not cells[i]:
                 i += 1
-                continue
             chunk = cells[i : i + ncols]
             if len(chunk) < ncols or not any(chunk):
                 break
@@ -283,7 +301,7 @@ def _preprocess_structured_blocks(text: str) -> str:
         is_tbl_start = (
             not in_md_table
             and ("|" in s)
-            and bool(re.match(r"^\s*\|?\s*:?-+:?\s*(\|:?-+:?\s*)+\|?\s*$", next_s))
+            and bool(re.match(r"^\s*\|?(\s*:?[-—–]{2,}:?\s*\|)+\s*:?[-—–]{2,}:?\s*\|?\s*$", next_s))
         )
         if is_tbl_start:
             if out and out[-1].strip():
