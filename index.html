@@ -924,10 +924,10 @@ button.sm {
   box-sizing: border-box;
 }
 .draft-poster.portrait {
-  min-height: 520px;
+  min-height: auto;
 }
 .draft-poster.landscape {
-  min-height: 420px;
+  min-height: auto;
 }
 
 .draft-top-bar {
@@ -3636,8 +3636,8 @@ function updateDraftPreview() {
   poster.classList.toggle("landscape", isLandscape);
   poster.classList.toggle("portrait", !isLandscape);
   poster.classList.add(`tpl-${tplId}`);
-  const aspect = isLandscape ? (sizes[1] / sizes[0]) : (sizes[0] / sizes[1]);
-  poster.style.aspectRatio = `${aspect}`;
+  // Mantém proporção fluida sem forçar altura artificial vazia no rascunho
+  poster.style.aspectRatio = "";
 
   // Cores
   const useColors = $("#useColors") && $("#useColors").checked;
@@ -3818,15 +3818,15 @@ function formatInlineText(str) {
 function renderDraftReferences(text) {
   if (!text) return "";
   let clean = text.trim();
-  // Quebra linhas em entradas de referência separadas
-  clean = clean.replace(/\s*(\[\d{1,3}\])\s*/g, "\n$1 ");
+  clean = clean.replace(/(?:^|\s+)(\d{1,2}\.\s*(?:\[\d{1,3}\]\s*)+)/g, "\n$1 ");
+  clean = clean.replace(/(?:^|\s+)((?:\[\d{1,3}\]\s*)+)/g, "\n$1 ");
   clean = clean.replace(/(?<=[.\s])(\d{1,2}\.\s+[A-ZÀ-ÿ])/g, "\n$1");
   clean = clean.replace(/(?<=[.\d\n])\s+([A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+,\s+[A-ZÀ-ÿ]\.)/g, "\n$1");
 
   const lines = clean.split("\n").map(l => l.trim()).filter(Boolean);
   if (!lines.length) return "";
 
-  const startRx = /^(?:\[\d{1,3}\]|\d{1,2}\.\s+[A-ZÀ-ÿ]|[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+,\s+[A-ZÀ-ÿ]\.|\b[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+\s+et\s+al\.)/;
+  const startRx = /^(?:\[\d{1,3}\]|\d{1,2}[.)]\s+[A-ZÀ-ÿ]|\d{1,2}\s+[A-ZÀ-ÿ]|[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+,\s+[A-ZÀ-ÿ]\.|\b[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+\s+et\s+al\.)/;
   const entries = [];
   for (const ln of lines) {
     if (entries.length && !startRx.test(ln)) {
@@ -3836,28 +3836,25 @@ function renderDraftReferences(text) {
     }
   }
 
-  // Extrai número de citação [n] se presente, mantém prefixo na exibição
+  let nextSeq = 1;
   const items = entries.slice(0, 20).map(ln => {
-    const m = ln.match(/^\s*\[(\d+)\]\s*(.*)$/);
-    if (m) return `<strong>[${m[1]}]</strong> ${formatInlineText(m[2].trim())}`;
-    return formatInlineText(ln.replace(/^\s*(?:\[\d+\]|\d+[.)]|[-*•])\s*/, "").trim());
+    const m = ln.match(/^(?:(?:\[\d+\]|\d+[.)])\s*)+/);
+    let num = null;
+    let body = ln;
+    if (m) {
+      const nums = (m[0].match(/\d+/g) || []).map(Number);
+      if (nums.length) num = nums.length > 1 ? nums[nums.length - 1] : nums[0];
+      body = ln.slice(m[0].length).trim();
+    }
+    const displayNum = num || nextSeq;
+    nextSeq = Math.max(nextSeq, displayNum + 1);
+    return `<li><strong>[${displayNum}]</strong> ${formatInlineText(body)}</li>`;
   }).filter(Boolean);
 
   if (!items.length) return `<p style="margin:0 0 4px;">${formatInlineText(clean)}</p>`;
-
-  let nextSeq = 1;
-  return `<ol class="draft-refs-list">` +
-    items.map((it, i) => {
-      // Se já tem [n] forte, não adiciona número extra
-      if (it.startsWith("<strong>[</strong>")) {
-        const m = it.match(/\[(\d+)\]/);
-        if (m) nextSeq = Math.max(nextSeq, parseInt(m[1]) + 1);
-        return `<li>${it}</li>`;
-      }
-      return `<li>[${nextSeq}] ${it}</li>`;
-    }).join("") +
-    `</ol>`;
+  return `<ol class="draft-refs-list">${items.join("")}</ol>`;
 }
+
 
 function renderLatexTabularToHtml(tex) {
   const match = tex.match(/\\begin\{(?:tabular\*?|tabularx)\}(?:\{[^}]*\})*([\s\S]*?)\\end\{(?:tabular\*?|tabularx)\}/i);

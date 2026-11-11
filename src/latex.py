@@ -165,19 +165,36 @@ def _arrow_pipeline_to_latex(text: str) -> str:
         return _inline(text)
 
     boxes: List[str] = []
-    for st in bracket_nodes[:6]:
-        boxes.append(
-            f"\\fbox{{\\begin{{tabular}}{{@{{}}c@{{}}}}\\textbf{{{_inline(st)}}}\\end{{tabular}}}}"
+    # If 4 or more nodes, stacked presentation ensures excellent readability in column
+    if len(bracket_nodes) >= 4:
+        for st in bracket_nodes[:6]:
+            boxes.append(
+                f"\\fbox{{\\parbox{{0.92\\linewidth}}{{\\centering\\large\\textbf{{{_inline(st)}}}}}}}"
+            )
+        joined = "\n  \\par\\vspace{6pt}$}\\boldsymbol{\\downarrow}$\\par\\vspace{6pt}\n  ".join(boxes)
+        # Note: fix typo in macro
+        joined = "\n  \\par\\vspace{6pt}$\\boldsymbol{\\downarrow}$\\par\\vspace{6pt}\n  ".join(boxes)
+        return (
+            "\\begin{center}\n"
+            "{\\setlength{\\fboxsep}{9pt}\\setlength{\\fboxrule}{1.6pt}\n"
+            f"  {joined}%\n"
+            "}\n"
+            "\\end{center}"
         )
-    joined = "\n  $\\boldsymbol{\\rightarrow}$\n  ".join(boxes)
-    return (
-        "\\begin{center}\n"
-        "{\\setlength{\\fboxsep}{8pt}\\setlength{\\fboxrule}{1.5pt}\n"
-        "\\resizebox{0.98\\linewidth}{!}{%\n"
-        f"  {joined}%\n"
-        "}}\n"
-        "\\end{center}"
-    )
+    else:
+        for st in bracket_nodes:
+            boxes.append(
+                f"\\fbox{{\\begin{{tabular}}{{@{{}}c@{{}}}}\\large\\textbf{{{_inline(st)}}}\\end{{tabular}}}}"
+            )
+        joined = "\n  $\\boldsymbol{\\rightarrow}$\n  ".join(boxes)
+        return (
+            "\\begin{center}\n"
+            "{\\setlength{\\fboxsep}{9pt}\\setlength{\\fboxrule}{1.6pt}\n"
+            "\\resizebox{0.98\\linewidth}{!}{%\n"
+            f"  {joined}%\n"
+            "}}\n"
+            "\\end{center}"
+        )
 
 
 def _is_markdown_table(lines: List[str]) -> bool:
@@ -210,7 +227,7 @@ def _markdown_table_to_latex(lines: List[str]) -> str:
     body = "\n".join(rows)
     return (
         f"\\begin{{center}}\n"
-        f"{{\\renewcommand{{\\arraystretch}}{{1.28}}\\setlength{{\\tabcolsep}}{{7pt}}\n"
+        f"{{\\large\\renewcommand{{\\arraystretch}}{{1.35}}\\setlength{{\\tabcolsep}}{{9pt}}\n"
         f"\\resizebox{{\\linewidth}}{{!}}{{%\n"
         f"\\begin{{tabular}}{{{col_spec}}}\n"
         f"\\hline\n"
@@ -385,33 +402,29 @@ def text_to_latex(text: str) -> str:
 
 
 def references_to_latex(text: str, small: bool = True) -> str:
-    items = [ln.strip() for ln in text.split("\n") if ln.strip()]
-    # Extrai o número de citação [n] do início de cada item, se houver
+    raw_lines = [ln.strip() for ln in text.split("\n") if ln.strip()]
     numbered: List[tuple[int, str]] = []
-    for it in items:
-        m = re.match(r"^\s*\[(\d+)\]\s*(.*)$", it, re.IGNORECASE)
+    for it in raw_lines:
+        cleaned = it
+        num = 0
+        # Remove marcadores repetidos como '1. [1] [1]', '[1] [2]', '1.'
+        m = re.match(r"^(?:(?:\[\d+\]|\d+[.)])\s*)+", cleaned)
         if m:
-            numbered.append((int(m.group(1)), m.group(2).strip()))
-        else:
-            m2 = re.match(r"^\s*\d+[.)]\s*(.*)$", it)
-            if m2:
-                numbered.append((0, m2.group(1).strip()))
-            else:
-                numbered.append((0, it))
+            prefix = m.group(0)
+            nums = [int(n) for n in re.findall(r"\d+", prefix)]
+            if nums:
+                num = nums[-1] if len(nums) > 1 else nums[0]
+            cleaned = cleaned[len(prefix):].strip()
+        numbered.append((num, cleaned))
     if not numbered:
         return ""
-    # Ordena pelos números de citação quando disponíveis, mantendo ordem original para os não-numerados
     numbered.sort(key=lambda x: x[0] if x[0] > 0 else 999999)
     max_refs = 20
     out_items = []
     next_seq = 1
     for idx, (num, content) in enumerate(numbered[:max_refs], start=1):
-        if num > 0:
-            display_num = num
-            next_seq = max(next_seq, num + 1)
-        else:
-            display_num = next_seq
-            next_seq += 1
+        display_num = num if num > 0 else next_seq
+        next_seq = max(next_seq, display_num + 1)
         out_items.append(f"\\item [{display_num}] {_inline(content)}")
     return (
         ("{\\small" if small else "{")

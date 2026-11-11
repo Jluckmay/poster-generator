@@ -110,7 +110,9 @@ def clean_hyphens(text: str) -> str:
 def _format_references(raw: str, max_refs: int = 4) -> str:
     """Formata referências bibliográficas uma por linha, suportando formatos numéricos [1], 1. e autor-ano (APA/SBC/Harvard), limitadas a max_refs."""
     text = clean_hyphens(raw)
-    text = re.sub(r"\s*(\[\d{1,3}\])\s*", r"\n\1 ", text)
+    # Quebra em novas linhas antes de marcadores numerados ou entre colchetes
+    text = re.sub(r"(?:^|\s+)(\d{1,2}\.\s*(?:\[\d{1,3}\]\s*)+)", r"\n\1", text)
+    text = re.sub(r"(?:^|\s+)((?:\[\d{1,3}\]\s*)+)", r"\n\1", text)
     text = re.sub(r"(?<=[.\s])(\d{1,2}\.\s+[A-ZÀ-ÿ])", r"\n\1", text)
     text = re.sub(r"(?<=[.\d\n])\s+([A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+,\s+[A-ZÀ-ÿ]\.)", r"\n\1", text)
 
@@ -119,7 +121,7 @@ def _format_references(raw: str, max_refs: int = 4) -> str:
         return ""
 
     _START = re.compile(
-        r"^(?:\[\d{1,3}\]|\d{1,2}\.\s+[A-ZÀ-ÿ]|[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+,\s+[A-ZÀ-ÿ]\.|\b[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+\s+et\s+al\.)"
+        r"^(?:\[\d{1,3}\]|\d{1,2}[.)]\s+[A-ZÀ-ÿ]|\d{1,2}\s+[A-ZÀ-ÿ]|[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+,\s+[A-ZÀ-ÿ]\.|\b[A-ZÀ-ÿ][a-zA-ZÀ-ÿ'-]+\s+et\s+al\.)"
     )
     entries: List[str] = []
     for ln in lines:
@@ -134,8 +136,19 @@ def _format_references(raw: str, max_refs: int = 4) -> str:
         c = re.sub(r"\bdoi:\s*\S+", "", c, flags=re.IGNORECASE)
         c = re.sub(r"\bURL\b:?", "", c)
         c = re.sub(r"[ \t]+", " ", c).strip(" ,.-")
-        if c:
-            cleaned.append(c)
+        if not c:
+            continue
+        # Limpa duplicação de prefixos como '1. [1] [1] ' -> '[1] '
+        m = re.match(r"^(?:(?:\[\d+\]|\d+[.)])\s*)+", c)
+        num = None
+        body = c
+        if m:
+            prefix = m.group(0)
+            nums = [int(n) for n in re.findall(r"\d+", prefix)]
+            if nums:
+                num = nums[-1] if len(nums) > 1 else nums[0]
+            body = c[len(prefix):].strip()
+        cleaned.append(f"[{num}] {body}" if num else body)
 
     return "\n".join(cleaned)
 
