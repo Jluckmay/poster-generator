@@ -199,11 +199,24 @@ def _heading(line: str) -> tuple[str, str] | None:
     if sid:
         return sid, ""
 
-    # 3. Fallback por palavras-chave:
-    # Apenas aceitável se for uma seção numerada curta (ex: "3. AI Measurement Science Framework") OU
-    # se for uma linha muito curta e isolada de título (<= 6 palavras, <= 50 chars, sem ponto final de frase)
+    # 3. Fallback por palavras-chave (prefixo do corpo):
+    # Cabeçalhos numerados podem vir fundidos ao corpo do texto na extração de
+    # PDF (ex: "2. METODOLOGIA Foram usados..."). Só aceita se a palavra-chave da
+    # seção estiver no INÍCIO do corpo; o restante da linha vira conteúdo inline.
+    # Isso evita confundir subseções como "4.1. Conditional Performance..." com
+    # cabeçalho de seção (a palavra "performance" aparece no meio da linha).
+    if has_num:
+        body_words_norm = norm_body.split()
+        body_words_orig = body.split()
+        for target_sid, kw_set in _SECTION_KEYWORDS.items():
+            for kw in kw_set:
+                kw_words = kw.split()
+                if len(body_words_norm) >= len(kw_words) and body_words_norm[: len(kw_words)] == kw_words:
+                    remaining = " ".join(body_words_orig[len(kw_words) :]).strip()
+                    return target_sid, remaining
+    # Títulos curtos não numerados (ex: "Metodologia", "Resultados")
     is_short_title = len(body.split()) <= 6 and len(raw) <= 50 and not raw.endswith((".", ",", ";", ":"))
-    if (has_num and len(body.split()) <= 8 and not raw.endswith((".", ",", ";", ":"))) or is_short_title:
+    if is_short_title:
         words = set(norm_body.split())
         for target_sid, kw_set in _SECTION_KEYWORDS.items():
             if words & kw_set:
@@ -279,6 +292,27 @@ def heuristic_parse(text: str) -> Dict[str, Any]:
     text = re.sub(
         r"(?:,\s*|\.\s+|\s{2,})\b(Abstract|Resumo|Introduction|Introdução|Methods|Metodologia|Results|Resultados|Discussion|Discussão|Conclusions?|Conclus[oõ]es?|References|Referências)\s*[:.—–-]\s*",
         lambda m: f"\n{m.group(1)}: ",
+        text,
+        flags=re.IGNORECASE,
+    )
+    # Insere quebra de linha antes de cabeçalhos de seção numerados que aparecem
+    # no meio de uma linha (comum em PDFs de duas colunas onde a extração de texto
+    # funde o final de uma seção com o cabeçalho da próxima, ex: "...conclusão.2. Métodos"
+    # ou "...introdução 2. METODOLOGIA ..."). Isso evita que a primeira seção
+    # consuma todo o documento como conteúdo.
+    _HEADING_KEYWORDS = (
+        "Abstract|Resumo|Introduction|Introdução|Methods|Metodologia|Results|Resultados|"
+        "Discussion|Discussão|Conclusions?|Conclus[oõ]es?|References|Referências"
+    )
+    text = re.sub(
+        r"\.\s*(?=\d+(?:\.\d+)*\.?\s+(?:" + _HEADING_KEYWORDS + r")\b)",
+        ".\n",
+        text,
+        flags=re.IGNORECASE,
+    )
+    text = re.sub(
+        r"(?<=\w)\s+(?=\d+(?:\.\d+)*\.?\s+(?:" + _HEADING_KEYWORDS + r")\b)",
+        "\n",
         text,
         flags=re.IGNORECASE,
     )
