@@ -492,6 +492,40 @@ button.sm {
   border-color: var(--red);
 }
 
+/* Botão fixo de gerar pôster (canto superior direito da página) */
+.btn-gen-fixed {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  background: var(--grad-primary-btn);
+  color: #ffffff;
+  border: 1px solid var(--red);
+  box-shadow: 0 4px 20px var(--red-glow);
+  font-family: var(--font-mono);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  padding: 10px 16px;
+  border-radius: var(--btn-radius);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  transition: all 0.15s ease;
+}
+.btn-gen-fixed:hover:not(:disabled) {
+  filter: brightness(1.15);
+  box-shadow: 0 6px 24px rgba(255, 42, 64, 0.55);
+  transform: translateY(-1px);
+}
+.btn-gen-fixed:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  filter: grayscale(1);
+}
+
 /* Grid & Segmented Controls */
 .row { display: flex; gap: 10px; flex-wrap: wrap; }
 .row > * { flex: 1; min-width: 120px; }
@@ -2036,6 +2070,9 @@ button.sm {
     </div>
   </div>
 </header>
+
+<!-- Botão fixo de gerar pôster (canto superior direito) -->
+<button id="genBtnFixed" class="btn-gen-fixed" type="button" title="Gerar / Atualizar Pôster" aria-label="Gerar / Atualizar Pôster">⚡ Gerar / Atualizar Pôster</button>
 
 <!-- Banner de bloqueio AdBlock -->
 <div id="blockedBanner" class="blocked-banner hidden" role="alert">
@@ -4464,6 +4501,7 @@ async function generate(fmt) {
 
   showMsg(msg, t("working"), "ok");
   $("#genBtn").disabled = true;
+  $("#genBtnFixed").disabled = true;
   $("#loadingOverlay").classList.remove("hidden");
   $("#loadingText").textContent = t("working");
 
@@ -4509,6 +4547,7 @@ async function generate(fmt) {
     $("#loadingOverlay").classList.add("hidden");
   } finally {
     $("#genBtn").disabled = false;
+    $("#genBtnFixed").disabled = false;
   }
 }
 
@@ -4677,6 +4716,7 @@ function saveBlob(blob, name) {
 }
 
 $("#genBtn").onclick = () => generate("pdf");
+$("#genBtnFixed").onclick = () => generate("pdf");
 $("#dlPdf").onclick = () => pdfBlob && saveBlob(pdfBlob, "poster.pdf");
 $("#prevDlBtn").onclick = () => pdfBlob && saveBlob(pdfBlob, "poster.pdf");
 $("#dlZip").onclick = () => generate("zip");
