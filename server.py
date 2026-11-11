@@ -92,8 +92,14 @@ def _validate_origin() -> Response | None:
         origin = request.headers.get("Origin")
         if origin and not _get_allowed_origin():
             return jsonify({"error": "Origem não permitida para conexões com este backend."}), 403
-        # Requer cabeçalho cliente válido em produção (não-local)
-        if origin == PROD_ALLOWED_ORIGIN and not _client_header_allowed():
+        # Requer cabeçalho cliente válido em produção (não-local) para requisições
+        # reais. OPTIONS (preflight CORS) não inclui cabeçalhos personalizados e
+        # é liberado pelo handler de OPTIONS com os cabeçalhos CORS apropriados.
+        if (
+            origin == PROD_ALLOWED_ORIGIN
+            and request.method != "OPTIONS"
+            and not _client_header_allowed()
+        ):
             return jsonify({"error": "Cabeçalho cliente não autorizado."}), 403
     return None
 
