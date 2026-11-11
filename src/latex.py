@@ -93,6 +93,12 @@ def _inline(text: str) -> str:
     esc = re.sub(r"(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])", r"\\textit{\1}", esc)
     # Citações numéricas flutuantes como expoente (superscript) para economizar espaço
     esc = re.sub(r"\[(\d+(?:[,\s–-]+\d+)*)\]", r"\\textsuperscript{[\1]}", esc)
+    # Citações estilo autor-ano [Truong and Koyejo 2026, Wang et al. 2026] como expoente
+    esc = re.sub(
+        r"\[([A-ZÀ-ÿ][^\[\]\n]*?\b(?:19|20)\d{2}[a-z]?[^\[\]\n]*?)\]",
+        r"\\textsuperscript{[\1]}",
+        esc,
+    )
     return re.sub(r"\x00M(\d+)\x00", lambda m: maths[int(m.group(1))], esc)
 
 
@@ -145,8 +151,8 @@ _ARROW_FLOW_RE = re.compile(r"(?:->|→|=>)")
 
 def _is_arrow_pipeline(text: str) -> bool:
     s = text.strip()
-    if s.startswith(("-", "*", "•", "–")):
-        return False
+    # Remove marcadores de lista e rótulos opcionais como "– Pipeline:", "• Fluxo:"
+    s = re.sub(r"^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?", "", s).strip()
     if not _ARROW_FLOW_RE.search(s):
         return False
     bracket_nodes = [m.strip() for m in re.findall(r"\[([^\[\]]+)\]", s) if m.strip()]
@@ -157,9 +163,11 @@ def _is_arrow_pipeline(text: str) -> bool:
 
 
 def _arrow_pipeline_to_latex(text: str) -> str:
-    bracket_nodes = [m.strip() for m in re.findall(r"\[([^\[\]]+)\]", text) if m.strip()]
+    s = text.strip()
+    s = re.sub(r"^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?", "", s).strip()
+    bracket_nodes = [m.strip() for m in re.findall(r"\[([^\[\]]+)\]", s) if m.strip()]
     if len(bracket_nodes) < 2:
-        parts = [p.strip().strip("[]") for p in re.split(r"\s*(?:->|→|=>)\s*", text.strip()) if p.strip()]
+        parts = [p.strip().strip("[]") for p in re.split(r"\s*(?:->|→|=>)\s*", s) if p.strip()]
         bracket_nodes = parts
     if len(bracket_nodes) < 2:
         return _inline(text)
@@ -171,8 +179,6 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             boxes.append(
                 f"\\fbox{{\\parbox{{0.92\\linewidth}}{{\\centering\\large\\textbf{{{_inline(st)}}}}}}}"
             )
-        joined = "\n  \\par\\vspace{6pt}$}\\boldsymbol{\\downarrow}$\\par\\vspace{6pt}\n  ".join(boxes)
-        # Note: fix typo in macro
         joined = "\n  \\par\\vspace{6pt}$\\boldsymbol{\\downarrow}$\\par\\vspace{6pt}\n  ".join(boxes)
         return (
             "\\begin{center}\n"
@@ -227,7 +233,7 @@ def _markdown_table_to_latex(lines: List[str]) -> str:
     body = "\n".join(rows)
     return (
         f"\\begin{{center}}\n"
-        f"{{\\large\\renewcommand{{\\arraystretch}}{{1.35}}\\setlength{{\\tabcolsep}}{{9pt}}\n"
+        f"{{\\renewcommand{{\\arraystretch}}{{1.4}}\\setlength{{\\tabcolsep}}{{9pt}}\n"
         f"\\resizebox{{\\linewidth}}{{!}}{{%\n"
         f"\\begin{{tabular}}{{{col_spec}}}\n"
         f"\\hline\n"

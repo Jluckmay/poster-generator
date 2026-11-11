@@ -3272,6 +3272,7 @@ function fillFromExtract(p) {
   kept.forEach(s => { if (!out.includes(s)) out.push(s); });
   sections = out.length ? out : sections;
   renderSections();
+  updateDraftPreview();
 }
 
 /* ---------- Templates e Formato ---------- */
@@ -3812,6 +3813,8 @@ function formatInlineText(str) {
   esc = esc.replace(/(?<!\w)\*([^*]+?)\*(?!\w)/g, "<em>$1</em>");
   // Citações flutuantes numéricas [1], [2, 3] como expoente (superscript)
   esc = esc.replace(/\[(\d+(?:[,\s–-]+\d+)*)\]/g, '<sup class="draft-cite">[$1]</sup>');
+  // Citações estilo autor-ano [Truong and Koyejo 2026] como expoente
+  esc = esc.replace(/\[([A-ZÀ-ÿ][^\[\]\n]*?\b(?:19|20)\d{2}[a-z]?[^\[\]\n]*?)\]/g, '<sup class="draft-cite">[$1]</sup>');
   return esc;
 }
 
@@ -3969,7 +3972,8 @@ function renderDraftBody(text) {
   const separated = [];
   for (let ln of preLines) {
     const s = ln.trim();
-    const isArrow = /(?:->|→|=>)/.test(s) && !s.startsWith("-") && !s.startsWith("*") && !s.startsWith("•") && !s.startsWith("–") && s.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2;
+    const stripped = s.replace(/^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?/, "").trim();
+    const isArrow = /(?:->|→|=>)/.test(stripped) && stripped.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2;
     if (isArrow) {
       if (separated.length && separated[separated.length - 1].trim()) separated.push("");
       separated.push(ln);
@@ -3993,9 +3997,10 @@ function renderDraftBody(text) {
     if (/\\begin\{tikzpicture\}/i.test(trimmed)) {
       return renderTikzToHtml(trimmed);
     }
-    // 3. Diagrama de fluxo com setas (independente de colchetes)
-    if (/(?:->|→|=>)/.test(trimmed) && trimmed.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2) {
-      return renderArrowPipelineToHtml(trimmed);
+    // 3. Diagrama de fluxo com setas (independente de marcadores de lista)
+    const strippedArrow = trimmed.replace(/^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?/, "").trim();
+    if (/(?:->|→|=>)/.test(strippedArrow) && strippedArrow.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2) {
+      return renderArrowPipelineToHtml(strippedArrow);
     }
     // 4. Tabela Markdown (suporta traços comuns e unicode - — –)
     const lines = trimmed.split("\n").map(l => l.trim()).filter(Boolean);

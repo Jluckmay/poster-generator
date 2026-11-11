@@ -444,7 +444,7 @@ def heuristic_parse(text: str) -> Dict[str, Any]:
         "title": title[:300].strip(),
         "authors": authors[:600].strip(),
         "affiliations": affiliations[:800].strip(),
-        "email": emails[0] if emails else "",
+        "email": ", ".join(emails[:3]) if emails else "",
         "sections": out_sections,
     }
 

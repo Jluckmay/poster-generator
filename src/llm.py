@@ -17,7 +17,7 @@ _LANG_NAME = {"pt-BR": "Brazilian Portuguese", "en-US": "American English"}
 
 SYSTEM_PROMPT = """You are an expert academic researcher and designer converting academic papers into structured, high-impact content for a scientific poster.
 Return ONLY a valid JSON object, no markdown fences, with this exact shape:
-{"title": str, "authors": str, "affiliations": str (one per line), "email": str,
+{"title": str, "authors": str, "affiliations": str (one per line), "email": str (all author emails, e.g. "email1@ufmg.br, email2@ufmg.br" or "{user1, user2}@ufmg.br"),
  "sections": {"introduction": str, "methods": str, "results": str, "conclusions": str, "references": str}}
 
 CRITICAL MANDATORY RULES:
@@ -49,6 +49,7 @@ CRITICAL MANDATORY RULES:
 
 4. NATURAL INLINE CITATIONS IN TEXT (NO STANDALONE "KEY REFERENCES" BULLETS):
    - Weave bracketed citation numbers `[1]`, `[2]`, `[3]`, `[4]` NATURALLY inside the sentences of "introduction", "methods", and "results" right where the corresponding concepts, datasets, or prior works are mentioned!
+   - MANDATORY: Always use numeric citations like `[1]`, `[2]`, `[3]`. NEVER write author-year citations like `[Truong and Koyejo 2026]` or `[Wang et al. 2026]` in the text!
    - Example: "...benchmarks de detecção de intrusão IoT como CICIoT2023 [3] e Edge-IIoTset [4] classificam modelos sem estabelecer validade de construto [2], motivando calibrações via Teoria de Resposta ao Item (IRT) no nível de instância [1]."
    - NEVER create a standalone bullet point such as `- **Referências-chave:** [1], [2], [3]` or `- **Key references:** [1, 2, 3]`. Every reference in "references" MUST be cited naturally in context within the text!
 
