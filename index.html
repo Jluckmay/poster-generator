@@ -2813,7 +2813,9 @@ function getApiBase() {
   const custom = localStorage.getItem("poster_api_base");
   if (custom !== null && custom.trim() !== "") return custom.trim().replace(/\/+$/, "");
 
-  // Página HTML local: utiliza servidor local por padrão (onrender.com é bloqueado por AdBlock)
+  const RENDER_BACKEND = "https://painel-generator.onrender.com";
+
+  // Página HTML local: utiliza servidor local por padrão
   if (isLocalEnvironment()) {
     if (window.location.protocol === "http:" || window.location.protocol === "https:") {
       if (window.location.port === "5000") return "";
@@ -2822,8 +2824,10 @@ function getApiBase() {
     return "http://127.0.0.1:5000";
   }
 
-  // Fora do ambiente local, tenta servidor local primeiro (onrender.com é bloqueado por AdBlock)
-  return "http://127.0.0.1:5000";
+  // Fora do ambiente local (ex: GitHub Pages), conecta ao backend do Render.
+  // O navegador bloqueia a requisição apenas se uma extensão (AdBlock/Brave Shields)
+  // estiver ativa — detectado em wakeUpServer() via ERR_BLOCKED_BY_CLIENT.
+  return RENDER_BACKEND;
 }
 
 function timeoutSignal(ms) {
