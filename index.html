@@ -2809,40 +2809,46 @@ function getServerDisplayName() {
   return isLocalEnvironment() ? (uiLang === "en-US" ? "Local Server" : "Servidor Local") : "Render";
 }
 
-// URL do backend do Render ofuscada (XOR com chave "Poster"): não aparece como
-// string literal no código-fonte, dificultando o bloqueio por correspondência
-// de padrão estático em extensões de AdBlock / Brave Shields.
-const _RENDER_BACKEND_C1 = [56, 27, 7, 4, 22, 72, 127, 64, 3, 21, 12, 28, 53, 3, 94, 19, 0, 28, 53, 29, 18, 0, 10, 0, 126, 0, 29, 6, 0, 28, 52, 10, 1, 90, 6, 29, 61];
-const _RENDER_BACKEND_KEY = [0x50, 0x6F, 0x73, 0x74, 0x65, 0x72]; // 'Poster'
-let _renderBackendResolved = null;
+// BackendEnclave: URL do backend ofuscada com rotação polinomial + salt + XOR,
+// idêntica à técnica usada em https://jluckmay.github.io/resume-generator/.
+// A URL real nunca aparece como string literal no código-fonte frontend.
+const _BACKEND_CIPHER = [226, 187, 207, 192, 222, 41, 45, 30, 226, 24, 253, 244, 12, 6, 81, 36, 35, 59, 91, 55, 66, 58, 72, 95, 172, 92, 122, 133, 135, 114, 137, 141, 158, 235, 159, 184, 225];
+const _BACKEND_KEY = [0x53, 0x79, 0x6E, 0x74, 0x68, 0x65, 0x73, 0x69, 0x73]; // 'Synthesis'
+const _BACKEND_SALT = 0xA7; // 167
+let _backendResolved = null;
 
-function _resolveRenderBackend() {
-  if (_renderBackendResolved) return _renderBackendResolved;
+function _resolveBackend() {
+  if (_backendResolved) return _backendResolved;
+  const cipher = _BACKEND_CIPHER;
   let res = "";
-  for (let i = 0; i < _RENDER_BACKEND_C1.length; i++) {
-    const k = _RENDER_BACKEND_KEY[i % _RENDER_BACKEND_KEY.length];
-    res += String.fromCharCode(_RENDER_BACKEND_C1[i] ^ k);
+  for (let i = 0; i < cipher.length; i++) {
+    const k = _BACKEND_KEY[i % _BACKEND_KEY.length];
+    let diff = (cipher[i] - (i * 7) - _BACKEND_SALT) % 256;
+    if (diff < 0) diff += 256;
+    res += String.fromCharCode(diff ^ k);
   }
-  _renderBackendResolved = res;
+  _backendResolved = res;
   return res;
 }
 
-// Lista ordenada de backends candidatos. O primeiro que responder com sucesso
-// é usado para as requisições seguintes. Isso permite contornar bloqueios de
-// extensões (AdBlock) que bloqueiam domínios específicos (ex: .onrender.com).
-const BACKEND_CANDIDATES = [
-  _resolveRenderBackend(),   // Render (padrão, pode ser bloqueado por AdBlock)
-  "http://127.0.0.1:5000",   // Servidor local (fallback se Render estiver bloqueado)
-];
+const BACKEND_ATTESTATION = "poster-render-v1";
+const POSTER_CLIENT_HEADER = "X-Poster-Client";
+const ALLOWED_CLIENT_HEADERS = {
+  "jluckmay-github-pages-v1",
+  "jluckmay-poster-v1",
+};
 
-// Armazena o backend que foi verificado como funcional. Se não houver, usa o
-// primeiro da lista de candidatos.
+// Cabeçalho cliente enviado em toda requisição ao backend para identificar
+// a origem como https://jluckmay.github.io (GitHub Pages).
+function _clientHeaders() {
+  const h = {};
+  h[POSTER_CLIENT_HEADER] = "jluckmay-poster-v1";
+  return h;
+}
+
 function getApiBase() {
   const custom = localStorage.getItem("poster_api_base");
   if (custom !== null && custom.trim() !== "") return custom.trim().replace(/\/+$/, "");
-
-  const working = localStorage.getItem("poster_api_working");
-  if (working !== null && working.trim() !== "") return working.trim().replace(/\/+$/, "");
 
   // Página HTML local: utiliza servidor local por padrão
   if (isLocalEnvironment()) {
@@ -2853,20 +2859,10 @@ function getApiBase() {
     return "http://127.0.0.1:5000";
   }
 
-  // Fora do ambiente local: tenta o primeiro backend candidato.
-  return BACKEND_CANDIDATES[0] || "";
-}
-
-// Marca um backend como funcional para uso em requisições subsequentes.
-function setWorkingBackend(url) {
-  if (url && url.trim()) {
-    localStorage.setItem("poster_api_working", url.trim().replace(/\/+$/, ""));
-  }
-}
-
-// Remove a marca de backend funcional (força re-teste na próxima inicialização).
-function clearWorkingBackend() {
-  localStorage.removeItem("poster_api_working");
+  // Fora do ambiente local (GitHub Pages): URL do Render descriptografada em
+  // tempo de execução. Não há fallback para localhost (não estará ativo em
+  // produção).
+  return _resolveBackend();
 }
 
 function timeoutSignal(ms) {
@@ -2955,7 +2951,14 @@ async function robustFetch(url, options = {}, { maxRetries = 6, retryDelay = 400
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), timeout);
     try {
-      const res = await fetch(url, { ...options, signal: controller.signal });
+      const res = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+        headers: {
+          ...(options.headers || {}),
+          ..._clientHeaders(),
+        },
+      });
       clearTimeout(timer);
 
       // Render spin-down / gateway cold-start (502/503/504)
@@ -2991,15 +2994,25 @@ async function robustFetch(url, options = {}, { maxRetries = 6, retryDelay = 400
 
 let keepAliveTimer = null;
 
+async function _fetchWithClientHeader(url, options = {}) {
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...(options.headers || {}),
+      ..._clientHeaders(),
+    },
+  });
+}
+
 async function _tryBackend(baseUrl, maxAttempts) {
   const serverName = getServerDisplayName();
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const t0 = Date.now();
     try {
-      const res = await fetch((baseUrl || "") + "/healthz", { signal: timeoutSignal(6000) });
+      const res = await _fetchWithClientHeader((baseUrl || "") + "/healthz", { signal: timeoutSignal(6000) });
       if (res.ok) {
         try {
-          const cfgRes = await fetch((baseUrl || "") + "/api/config", { signal: timeoutSignal(5000) });
+          const cfgRes = await _fetchWithClientHeader((baseUrl || "") + "/api/config", { signal: timeoutSignal(5000) });
           if (cfgRes.ok) {
             const data = await cfgRes.json();
             CFG = data;
@@ -3007,12 +3020,11 @@ async function _tryBackend(baseUrl, maxAttempts) {
           }
         } catch (_) {}
 
-        setWorkingBackend(baseUrl);
         updateServerBadge("online");
 
         if (keepAliveTimer) clearInterval(keepAliveTimer);
         keepAliveTimer = setInterval(() => {
-          fetch((baseUrl || "") + "/healthz", { signal: timeoutSignal(5000) }).catch(() => {});
+          _fetchWithClientHeader((baseUrl || "") + "/healthz", { signal: timeoutSignal(5000) }).catch(() => {});
         }, 8 * 60 * 1000);
         return true;
       }
@@ -3020,7 +3032,6 @@ async function _tryBackend(baseUrl, maxAttempts) {
       const elapsed = Date.now() - t0;
       // Quando bloqueado por extensão (ex: AdBlock, uBlock, Brave Shields bloqueando .onrender.com),
       // a requisição é rejeitada pelo navegador quase instantaneamente (<80ms) com ERR_BLOCKED_BY_CLIENT.
-      // Tente o próximo backend da lista em vez de desistir imediatamente.
       if (elapsed < 80) {
         console.warn(`[PosterGenerator] Backend bloqueado pelo navegador (ERR_BLOCKED_BY_CLIENT): ${baseUrl}`);
         return false;
@@ -3036,25 +3047,13 @@ async function _tryBackend(baseUrl, maxAttempts) {
 async function wakeUpServer() {
   updateServerBadge("connecting");
 
-  // Fora do ambiente local, tenta cada backend candidato até encontrar um que funcione.
-  // Isso permite contornar bloqueios de extensões (AdBlock) que bloqueiam domínios
-  // específicos (ex: .onrender.com) fazendo fallback para servidor local.
-  const candidates = isLocalEnvironment()
-    ? ["http://127.0.0.1:5000"]
-    : BACKEND_CANDIDATES.filter(Boolean);
-
-  const maxWakeAttempts = isLocalEnvironment() ? 4 : 2;
-
-  for (const baseUrl of candidates) {
-    const ok = await _tryBackend(baseUrl, maxWakeAttempts);
-    if (ok) return;
-  }
-
-  // Nenhum backend funcionou.
   const apiBase = getApiBase();
-  const serverName = getServerDisplayName();
-  updateServerBadge("offline");
-  console.warn(`[PosterGenerator] Nenhum backend disponível. Tentados: ${candidates.join(", ")}`);
+  const ok = await _tryBackend(apiBase, isLocalEnvironment() ? 4 : 2);
+  if (!ok) {
+    const serverName = getServerDisplayName();
+    updateServerBadge("offline");
+    console.warn(`[PosterGenerator] Backend indisponível: ${apiBase || "(vazio)"}`);
+  }
 }
 
 function populateProviders() {

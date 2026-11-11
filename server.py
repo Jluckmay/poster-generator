@@ -33,6 +33,16 @@ _BUILD_SLOTS = threading.BoundedSemaphore(int(os.environ.get("MAX_CONCURRENT_BUI
 
 PROD_ALLOWED_ORIGIN = "https://jluckmay.github.io"
 
+# Cabeçalho cliente enviado pelo frontend para identificar a origem
+# como https://jluckmay.github.io (GitHub Pages), idêntico à técnica
+# usada em https://jluckmay.github.io/resume-generator/.
+POSTER_CLIENT_HEADER = "X-Poster-Client"
+ALLOWED_CLIENT_HEADERS = {
+    "jluckmay-github-pages-v1",
+    "jluckmay-poster-v1",
+}
+BACKEND_ATTESTATION = "poster-render-v1"
+
 
 def _err(msg: str, code: int = 400) -> Tuple[Response, int]:
     return jsonify({"error": msg}), code
@@ -55,6 +65,12 @@ def _get_allowed_origin() -> str | None:
     return None
 
 
+def _client_header_allowed() -> bool:
+    """Verifica se o cabeçalho cliente X-Poster-Client está presente e válido."""
+    client_hdr = (request.headers.get(POSTER_CLIENT_HEADER) or "").strip()
+    return client_hdr in ALLOWED_CLIENT_HEADERS
+
+
 @app.route("/api/<path:path>", methods=["OPTIONS"])
 def api_options(path: str) -> Response:
     origin = request.headers.get("Origin")
@@ -66,7 +82,7 @@ def api_options(path: str) -> Response:
         resp.headers["Access-Control-Allow-Origin"] = allowed
         resp.headers["Vary"] = "Origin"
     resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, " + POSTER_CLIENT_HEADER
     return resp
 
 
@@ -76,6 +92,9 @@ def _validate_origin() -> Response | None:
         origin = request.headers.get("Origin")
         if origin and not _get_allowed_origin():
             return jsonify({"error": "Origem não permitida para conexões com este backend."}), 403
+        # Requer cabeçalho cliente válido em produção (não-local)
+        if origin == PROD_ALLOWED_ORIGIN and not _client_header_allowed():
+            return jsonify({"error": "Cabeçalho cliente não autorizado."}), 403
     return None
 
 
@@ -86,8 +105,9 @@ def _headers(resp: Response) -> Response:
         resp.headers["Access-Control-Allow-Origin"] = allowed
         resp.headers["Vary"] = "Origin"
     resp.headers["Access-Control-Allow-Methods"] = "GET, POST, OPTIONS"
-    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization"
+    resp.headers["Access-Control-Allow-Headers"] = "Content-Type, Authorization, " + POSTER_CLIENT_HEADER
     resp.headers["Access-Control-Expose-Headers"] = "X-Poster-Overflow, Content-Disposition"
+    resp.headers["X-Backend-Attestation"] = BACKEND_ATTESTATION
     resp.headers["X-Content-Type-Options"] = "nosniff"
     resp.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
     resp.headers["Cache-Control"] = "no-store"
@@ -102,7 +122,7 @@ def _headers(resp: Response) -> Response:
         "img-src 'self' blob: data:; "
         "frame-src 'self' blob: data: chrome-extension:; "
         "object-src 'self' blob: data:; "
-        "connect-src 'self' http://127.0.0.1:5000 http://localhost:5000 https://poster-generator-nkqh.onrender.com https://cdnjs.cloudflare.com; "
+        "connect-src 'self' http://127.0.0.1:5000 http://localhost:5000 https://*.onrender.com https://cdnjs.cloudflare.com; "
         "base-uri 'none'; form-action 'self'; frame-ancestors 'self' https://jluckmay.github.io"
     )
     return resp
