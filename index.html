@@ -345,7 +345,7 @@ main {
   display: grid;
   grid-template-columns: minmax(380px, 520px) 1fr;
   gap: 22px;
-  padding: 22px 32px;
+  padding: 122px 32px 22px;
   max-width: 1800px;
   margin: 0 auto;
   width: 100%;
@@ -474,6 +474,26 @@ button.pri:hover:not(:disabled) {
   filter: brightness(1.15);
   box-shadow: 0 4px 20px rgba(255, 42, 64, 0.55);
 }
+
+/* Botão "Gerar Pôster" fixado no centro do topo da página */
+.gen-btn-fixed {
+  position: fixed;
+  top: 72px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 60;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.gen-btn-fixed .pri {
+  pointer-events: auto;
+  padding: 10px 26px;
+  min-height: 42px;
+  font-size: 13px;
+  border-radius: 9999px;
+  box-shadow: 0 4px 18px rgba(255, 42, 64, 0.45);
+}
 button.sm {
   padding: 3px 9px;
   min-height: 28px;
@@ -490,40 +510,6 @@ button.sm {
 }
 .btn-toggle:hover {
   border-color: var(--red);
-}
-
-/* Botão fixo de gerar pôster (canto superior direito da página) */
-.btn-gen-fixed {
-  position: fixed;
-  top: 20px;
-  right: 20px;
-  z-index: 1000;
-  background: var(--grad-primary-btn);
-  color: #ffffff;
-  border: 1px solid var(--red);
-  box-shadow: 0 4px 20px var(--red-glow);
-  font-family: var(--font-mono);
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
-  padding: 10px 16px;
-  border-radius: var(--btn-radius);
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  transition: all 0.15s ease;
-}
-.btn-gen-fixed:hover:not(:disabled) {
-  filter: brightness(1.15);
-  box-shadow: 0 6px 24px rgba(255, 42, 64, 0.55);
-  transform: translateY(-1px);
-}
-.btn-gen-fixed:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  filter: grayscale(1);
 }
 
 /* Grid & Segmented Controls */
@@ -2071,8 +2057,10 @@ button.sm {
   </div>
 </header>
 
-<!-- Botão fixo de gerar pôster (canto superior direito) -->
-<button id="genBtnFixed" class="btn-gen-fixed" type="button" title="Gerar / Atualizar Pôster" aria-label="Gerar / Atualizar Pôster">⚡ Gerar / Atualizar Pôster</button>
+<!-- Botão Gerar Pôster fixado no topo central da página -->
+<div id="genBtnFixed" class="gen-btn-fixed">
+  <button class="pri" id="genBtn" data-i18n="generate">⚡ Gerar / Atualizar Pôster</button>
+</div>
 
 <!-- Banner de bloqueio AdBlock -->
 <div id="blockedBanner" class="blocked-banner hidden" role="alert">
@@ -2354,7 +2342,6 @@ button.sm {
       <span class="card-icon-badge">🚀</span>
     </div>
     <div class="row">
-      <button class="pri" id="genBtn" style="flex:2;" data-i18n="generate">⚡ Gerar / Atualizar Pôster</button>
       <button id="dlPdf" disabled data-i18n="dl_pdf">⬇ Baixar Pôster (PDF)</button>
       <button id="dlZip" data-i18n="dl_zip">📦 Código LaTeX (.zip)</button>
     </div>
@@ -4501,7 +4488,6 @@ async function generate(fmt) {
 
   showMsg(msg, t("working"), "ok");
   $("#genBtn").disabled = true;
-  $("#genBtnFixed").disabled = true;
   $("#loadingOverlay").classList.remove("hidden");
   $("#loadingText").textContent = t("working");
 
@@ -4547,7 +4533,6 @@ async function generate(fmt) {
     $("#loadingOverlay").classList.add("hidden");
   } finally {
     $("#genBtn").disabled = false;
-    $("#genBtnFixed").disabled = false;
   }
 }
 
@@ -4716,7 +4701,6 @@ function saveBlob(blob, name) {
 }
 
 $("#genBtn").onclick = () => generate("pdf");
-$("#genBtnFixed").onclick = () => generate("pdf");
 $("#dlPdf").onclick = () => pdfBlob && saveBlob(pdfBlob, "poster.pdf");
 $("#prevDlBtn").onclick = () => pdfBlob && saveBlob(pdfBlob, "poster.pdf");
 $("#dlZip").onclick = () => generate("zip");
