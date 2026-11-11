@@ -959,6 +959,13 @@ button.sm {
   line-height: 1.3;
   margin-top: 2px;
 }
+.draft-title-divider {
+  display: none;
+  width: 100%;
+  height: 3px;
+  border-radius: 2px;
+  margin: 6px 0;
+}
 .draft-divider {
   height: 4px;
   margin: 0 0 14px 0;
@@ -1329,6 +1336,14 @@ button.sm {
   font-weight: 500;
   font-size: 10px;
   margin-top: 4px;
+}
+.draft-poster.tpl-dcc .draft-title-divider {
+  display: block !important;
+  width: 64%;
+  height: 3px;
+  background: var(--tpl-accent, #CC0000) !important;
+  margin: 8px auto 6px auto;
+  border-radius: 2px;
 }
 .draft-poster.tpl-dcc .draft-top-bar {
   display: none !important;
@@ -2366,6 +2381,7 @@ button.sm {
         <header id="draftHeader" class="draft-header">
           <div id="draftHeaderLogos" class="draft-logos-row hidden"></div>
           <h1 id="draftTitle" class="draft-title">Título do Trabalho</h1>
+          <div id="draftTitleDivider" class="draft-title-divider"></div>
           <div id="draftAuthors" class="draft-authors">Autores do Trabalho</div>
           <div id="draftAffil" class="draft-affil">Afiliação Institucional</div>
         </header>
