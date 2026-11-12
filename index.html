@@ -16,6 +16,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="./assets/tectonic-fallback.js"></script>
 <style>
 :root {
   color-scheme: dark;
@@ -965,11 +966,11 @@ button.sm {
   max-height: 48px;
   max-width: 140px;
   object-fit: contain;
-  background: #ffffff;
-  padding: 3px 6px;
-  border-radius: 6px;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  background: transparent;
+  padding: 0;
+  border-radius: 0;
+  box-shadow: none;
+  border: 0;
   box-sizing: border-box;
 }
 .draft-footer {
@@ -1033,12 +1034,10 @@ button.sm {
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
+  justify-content: space-between;
   gap: 12px;
   min-width: 0;
   align-self: stretch;
-}
-.draft-col > .draft-block:last-child {
-  flex-grow: 1;
 }
 .draft-block {
   background: var(--tpl-block-bg, #ffffff);
@@ -3920,14 +3919,12 @@ function updateDraftPreview() {
 
   // Converte a fonte física do documento para a largura exibida no preview.
   const paperFontPt = { a0: 25, "90x120": 25, "60x90": 20, a1: 20, a2: 17 }[paper] || 25;
-  const paperWidthCm = (sizes[0] || 84.1) * (isLandscape ? 1 : 1);
-  const widthCm = isLandscape ? (sizes[1] || 118.9) : paperWidthCm;
+  const widthCm = isLandscape ? (sizes[1] || 118.9) : (sizes[0] || 84.1);
   const fontScale = Math.max(0.5, Math.min(2, paperFontPt * 2.54 * poster.clientWidth / (72 * widthCm * 10)));
   poster.querySelectorAll("*").forEach(el => {
-    if (!el.dataset.previewBaseFont) {
-      el.dataset.previewBaseFont = getComputedStyle(el).fontSize.replace("px", "");
-    }
-    el.style.fontSize = `calc(${el.dataset.previewBaseFont}px * ${fontScale})`;
+    el.style.removeProperty("font-size");
+    const baseFontPx = parseFloat(getComputedStyle(el).fontSize) || 10;
+    el.style.fontSize = `calc(${baseFontPx}px * ${fontScale})`;
   });
 }
 
@@ -4686,7 +4683,7 @@ function buildForm() {
 async function generate(fmt) {
   const msg = $("#genMsg");
 
-  if (!backendAvailable) {
+  if (!backendAvailable && fmt !== "pdf") {
     const offlineMsg = (uiLang === "en-US")
       ? "Backend indisponível. Configure a URL do servidor ou use o modo local para compilar o pôster."
       : "Backend indisponível. Configure a URL do servidor ou use o modo local para compilar o pôster.";
@@ -4705,17 +4702,17 @@ async function generate(fmt) {
     if (p) p.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
+  const form = buildForm();
   try {
-    const r = await robustFetch(getApiBase() + "/api/generate?format=" + fmt, { method: "POST", body: buildForm() }, {
+    if (!backendAvailable) throw new Error("Backend unavailable; using local compiler.");
+    const r = await robustFetch(getApiBase() + "/api/generate?format=" + fmt, { method: "POST", body: form }, {
       onStatusUpdate: (stMsg) => {
         $("#loadingText").textContent = stMsg;
       }
     });
     if (!r.ok) {
       const j = await r.json().catch(() => ({ error: "HTTP " + r.status }));
-      showMsg(msg, j.error || "Erro ao compilar pôster", "err");
-      $("#loadingOverlay").classList.add("hidden");
-      return;
+      throw new Error(j.error || "Erro ao compilar pôster");
     }
     const blob = await r.blob();
     const isOverflow = r.headers.get("X-Poster-Overflow");
@@ -4738,8 +4735,37 @@ async function generate(fmt) {
       $("#loadingOverlay").classList.add("hidden");
     }
   } catch (e) {
-    showMsg(msg, String(e), "err");
-    $("#loadingOverlay").classList.add("hidden");
+    if (fmt !== "pdf") {
+      showMsg(msg, String(e), "err");
+      $("#loadingOverlay").classList.add("hidden");
+      return;
+    }
+    try {
+      const data = JSON.parse(form.get("data") || "{}");
+      const imageFiles = new Map();
+      for (const [key, value] of form.entries()) {
+        if (key !== "data" && key !== "custom_tex" && value instanceof File) imageFiles.set(key, value);
+      }
+      const blob = await window.compilePosterTectonicWasm({
+        data,
+        files: imageFiles,
+        theme: { sizes: CFG.sizes || {}, templates: CFG.templates || {} }
+      }, status => { $("#loadingText").textContent = status; });
+      showMsg(msg, uiLang === "en-US" ? "PDF compiled locally with Tectonic WASM." : "PDF compilado localmente com Tectonic WASM.", "ok");
+      pdfBlob = blob;
+      $("#dlPdf").disabled = false;
+      $("#prevDlBtn").classList.remove("hidden");
+      $("#openTabBtn").classList.remove("hidden");
+      const blobUrl = URL.createObjectURL(blob);
+      $("#openTabBtn").href = blobUrl;
+      const arrayBuffer = await blob.arrayBuffer();
+      state.pdfBytes = arrayBuffer;
+      renderPdfJsViewer(arrayBuffer, blobUrl);
+    } catch (fallbackError) {
+      const details = fallbackError && fallbackError.message ? fallbackError.message : String(fallbackError);
+      showMsg(msg, `${String(e)}; Tectonic WASM: ${details}`, "err");
+      $("#loadingOverlay").classList.add("hidden");
+    }
   } finally {
     $("#genBtn").disabled = false;
   }
