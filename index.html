@@ -3653,7 +3653,6 @@ $("#quickSampleBtn").onclick = () => {
   renderLogos();
   renderSections();
   updateDraftPreview();
-  generate("pdf");
 };
 
 /* ---------- Alternância de Visualização (Rascunho vs PDF) ---------- */
@@ -3958,7 +3957,7 @@ function updateDraftPreview() {
   fontElements.forEach(el => el.style.removeProperty("font-size"));
   const baseFontSizes = fontElements.map(el => parseFloat(getComputedStyle(el).fontSize) || 10);
   const applyDraftFontScale = () => fontElements.forEach((el, index) => {
-    el.style.fontSize = `calc(${baseFontSizes[index]}px * ${fontScale})`;
+    el.style.fontSize = `${baseFontSizes[index] * fontScale}px`;
   });
   applyDraftFontScale();
 
