@@ -938,6 +938,8 @@ button.sm {
   width: calc(100% + 44px);
 }
 .draft-header {
+  position: relative;
+  isolation: isolate;
   padding: 16px 18px;
   margin-bottom: 14px;
   border-radius: 4px;
@@ -948,6 +950,14 @@ button.sm {
   align-items: center;
   gap: 4px;
 }
+.draft-header > :not(.draft-logos-row) {
+  position: relative;
+  z-index: 1;
+  max-width: 70%;
+  margin-left: auto;
+  margin-right: auto;
+}
+.draft-header .draft-title-divider { max-width: 100%; }
 .draft-logos-row {
   display: flex;
   justify-content: space-between;
@@ -961,7 +971,17 @@ button.sm {
   display: none;
 }
 .draft-header .draft-logos-row {
-  padding: 0 4px;
+  position: absolute;
+  z-index: 2;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 1%;
+  pointer-events: none;
 }
 .draft-logo-img {
   max-height: 48px;
@@ -1457,6 +1477,11 @@ button.sm {
   border-bottom: 4.5px solid #0028A5 !important;
   border-radius: 0;
   padding: 10px 0 16px 0;
+}
+.draft-poster.tpl-uzh .draft-header > :not(.draft-logos-row) {
+  max-width: 58%;
+  margin-left: 0;
+  margin-right: auto;
 }
 .draft-poster.tpl-uzh .draft-title {
   text-align: left;
@@ -3873,23 +3898,35 @@ function updateDraftPreview() {
     footerLogosEl.innerHTML = "";
   }
 
-  const headerLogoAlignment = {
-    classic: "space-between", modern: "space-between", minimal: "flex-start", bold: "space-between",
-    corner: "space-between", dcc: "center", mostra_ic: "space-between", uzh: "flex-start", tudelft: "space-between"
-  }[tplId] || "space-between";
-  const fitLogoRow = (row, alignment, maxHeightRatio) => {
+  const fitLogoRow = (row, alignment, maxHeightRatio, isHeader = false) => {
     if (!row) return;
     const images = Array.from(row.querySelectorAll(".draft-logo-img"));
     const count = images.length;
-    row.style.justifyContent = count === 1 && alignment === "space-between" ? "center" : alignment;
+    const rightDock = isHeader && tplId === "uzh";
+    row.style.justifyContent = rightDock ? "space-between" : (isHeader && count === 1 ? "center" : alignment);
     row.style.gap = `${Math.max(8, poster.clientWidth * 0.012)}px`;
-    const widthPercent = count ? Math.max(20, (100 - (count - 1) * 5) / count) : 100;
+    if (isHeader) {
+      row.style.position = "absolute";
+      row.style.top = "0";
+      row.style.bottom = "0";
+      row.style.left = rightDock ? "60%" : "0";
+      row.style.right = "0";
+      row.style.width = "auto";
+      row.style.height = "100%";
+      row.style.margin = "0";
+      row.style.padding = "0 1%";
+      row.style.alignItems = "center";
+      row.style.zIndex = "2";
+    }
+    const widthPercent = !count ? 100 : !isHeader
+      ? Math.max(20, (100 - (count - 1) * 5) / count)
+      : rightDock ? Math.min(48, 96 / count) : Math.min(24, 48 / count);
     images.forEach(img => {
       img.style.maxWidth = `${widthPercent}%`;
       img.style.maxHeight = `${Math.max(18, poster.clientHeight * maxHeightRatio)}px`;
     });
   };
-  fitLogoRow(headerLogosEl, headerLogoAlignment, 0.06);
+  fitLogoRow(headerLogosEl, "space-between", 0.1, true);
   fitLogoRow(footerLogosEl, "space-around", 0.05);
 
   // Seções e Grade de Colunas (Fluxo em Colunas Acadêmicas)
