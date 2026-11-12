@@ -874,7 +874,8 @@ button.sm {
   width: 100%;
   display: flex;
   flex-direction: column;
-  align-items: center;
+  align-items: flex-start;
+  overflow-x: auto;
   gap: 14px;
   transition: opacity 0.2s ease;
 }
@@ -3657,14 +3658,14 @@ $("#quickSampleBtn").onclick = () => {
 
 /* ---------- Alternância de Visualização (Rascunho vs PDF) ---------- */
 let currentViewMode = "draft";
-let draftScale = 1.0;
+let draftScale = 1.5;
 
 function setDraftZoom(newScale) {
   draftScale = Math.max(0.35, Math.min(2.5, newScale));
   const poster = $("#draftPoster");
   if (poster) {
     poster.style.transform = `scale(${draftScale})`;
-    poster.style.transformOrigin = "top center";
+    poster.style.transformOrigin = "top left";
     const naturalH = poster.offsetHeight;
     if (naturalH > 0 && draftScale !== 1.0) {
       poster.style.marginBottom = `${Math.round(naturalH * (draftScale - 1))}px`;
@@ -3975,6 +3976,7 @@ function updateDraftPreview() {
       applyDraftFontScale();
     }
   }
+  setDraftZoom(draftScale);
 }
 
 function formatInlineText(str) {
