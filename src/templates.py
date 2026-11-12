@@ -19,35 +19,35 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
         "engine": "tikzposter",
         "block": "Default", "title": "Filled", "background": "Default",
         "colors": ("1F3A5F", "2E5C8A", "9DB9D8"), "bg": "EEF2F7", "sans": False,
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
     "modern": {
         "name": {"pt-BR": "Moderno", "en-US": "Modern"},
         "engine": "tikzposter",
         "block": "Basic", "title": "Basic", "background": "VerticalGradient",
         "colors": ("0F766E", "14B8A6", "99F6E4"), "bg": "F0FDFA", "sans": True,
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
     "minimal": {
         "name": {"pt-BR": "Minimalista", "en-US": "Minimal"},
         "engine": "tikzposter",
         "block": "Minimal", "title": "Empty", "background": "Default",
         "colors": ("1E293B", "475569", "94A3B8"), "bg": "FAFAFA", "sans": True,
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
     "bold": {
         "name": {"pt-BR": "Ousado", "en-US": "Bold"},
         "engine": "tikzposter",
         "block": "Envelope", "title": "Filled", "background": "Default",
         "colors": ("7C2D12", "EA580C", "FED7AA"), "bg": "FFF7ED", "sans": True,
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
     "corner": {
         "name": {"pt-BR": "Ondas Esmeralda", "en-US": "Emerald Waves"},
         "engine": "tikzposter",
         "block": "Corner", "title": "Wave", "background": "BottomVerticalGradient",
         "colors": ("064E3B", "059669", "A7F3D0"), "bg": "F0FDF4", "sans": False,
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
     "dcc": {
         "name": {"pt-BR": "Academic Red", "en-US": "Academic Red"},
@@ -63,7 +63,7 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
         "colors": ("0A3B75", "1F2937", "4B5563"), "bg": "FFFFFF", "sans": False,
         "default_columns": 2,
         "papers": None, "default_paper": "60x90",
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
     "uzh": {
         "name": {"pt-BR": "UZH / LiRI", "en-US": "UZH / LiRI"},
@@ -71,7 +71,7 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
         "colors": ("0028A5", "3353B7", "1F2937"), "bg": "FFFFFF", "sans": True,
         "default_columns": 2,
         "papers": None, "default_paper": "60x90",
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
     "tudelft": {
         "name": {"pt-BR": "TU Delft", "en-US": "TU Delft"},
@@ -79,7 +79,7 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
         "colors": ("00A6D6", "002B49", "007396"), "bg": "F8FAFC", "sans": True,
         "default_columns": 2,
         "papers": None, "default_paper": "60x90",
-        "logos": {"header": MAX_LOGOS_HEADER, "footer": 0},
+        "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },
 }
 

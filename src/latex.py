@@ -625,6 +625,12 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             parts.append(f"\\block{{{_inline(s['title'])}}}{{\n{body}\n}}")
         col_tex.append("\n".join(parts))
 
+    footer_imgs = [images[p] for p in poster.get("logos_footer", []) if p in images]
+    footer_tex = ""
+    if footer_imgs:
+        cells = " \\hspace{3cm} ".join(f"\\includegraphics[height=4.5cm,keepaspectratio]{{{f}}}" for f in footer_imgs)
+        footer_tex = f"\n\\node[above=15mm of bottomright, anchor=south east, xshift=-15mm] {{\\begin{{minipage}}{{\\linewidth}}\\centering {cells}\\end{{minipage}}}};\n"
+
     logos = "".join(
         f"\\includegraphics[height=6cm]{{{images[p]}}}\\hspace{{2cm}}" for p in poster["logos_header"] if p in images
     )
@@ -681,7 +687,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\begin{{columns}}
 {chr(10).join(col_tex)}
 \\end{{columns}}
-\\end{{document}}
+{footer_tex}\\end{{document}}
 """
 
 

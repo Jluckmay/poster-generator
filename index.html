@@ -948,16 +948,33 @@ button.sm {
 }
 .draft-logos-row {
   display: flex;
-  justify-content: center;
+  justify-content: space-between;
   align-items: center;
   gap: 16px;
+  width: 100%;
   margin-bottom: 8px;
-  flex-wrap: wrap;
+  box-sizing: border-box;
+}
+.draft-logos-row:empty {
+  display: none;
 }
 .draft-logo-img {
-  max-height: 38px;
-  max-width: 120px;
+  max-height: 48px;
+  max-width: 140px;
   object-fit: contain;
+  filter: drop-shadow(0 1px 2px rgba(0,0,0,0.08));
+}
+.draft-footer {
+  margin-top: auto;
+  padding-top: 12px;
+  border-top: 1.5px solid rgba(0, 0, 0, 0.12);
+  width: 100%;
+  box-sizing: border-box;
+}
+.draft-footer .draft-logos-row {
+  margin-bottom: 0;
+  justify-content: space-around;
+  padding: 4px 12px;
 }
 .draft-title {
   font-size: 15px;
@@ -3520,22 +3537,42 @@ $("#quickSampleBtn").onclick = () => {
   }
 
   const sampleTexts = isEn ? {
-    introduction: "Electromagnetic spectrum modulation is critical for photosynthetic efficiency and physiological regulation [1].\n- **Blue spectrum:** enhances chlorophyll synthesis and stomatal conductance\n- **Red spectrum:** maximizes photon absorption and biomass accumulation [2]",
-    methods: "Factorial trial with 80 seedlings distributed across 4 climate chambers automated via IoT sensors.\n\n\\begin{tikzpicture}\n\\node[draw, rounded corners, fill=blue!10] (A) {Seedling Selection (80)};\n\\node[draw, rounded corners, fill=green!10, right=of A] (B) {IoT Climate Chambers};\n\\node[draw, rounded corners, fill=red!10, right=of B] (C) {Biomass & Growth Analysis};\n\\draw[->, thick] (A) -- (B);\n\\draw[->, thick] (B) -- (C);\n\\end{tikzpicture}\n- Environmental parameters logged at 1 Hz\n- Spectral irradiance calibrated with spectroradiometer [1]",
-    results: "Comparative dry biomass accumulation and growth cycle acceleration:\n\n| Spectrum Wavelength | Dry Biomass (g) | Cycle Reduction | Photon Efficiency |\n| :--- | :---: | :---: | :---: |\n| White Control | 4.2 ± 0.3 | Baseline (0d) | 1.0x |\n| Blue (450nm) | 5.1 ± 0.4 | -4 days | 1.2x |\n| Red (660nm) | 5.8 ± 0.5 | -7 days | 1.4x |\n| Combined (Blue + Red) | **7.3 ± 0.4** | **-12 days** | **1.8x** |\n\n- Biomass increased by 34% under combined spectrum with 12-day cycle reduction [2].",
-    conclusions: "- **Precision lighting** demonstrates superior technical and energy efficiency for sustainable indoor vertical farming.\n- Dual-band illumination optimizes commercial yield while significantly lowering HVAC operational costs.",
-    references: "[1] Smith, J. et al. (2024). Photobiology & Plant Physiology. Nature Plants, 10:142–155.\n[2] Doe, J. & Turing, A. (2023). Precision Agricultural Systems. IEEE Transactions on AgriTech, 18:204–215."
+    introduction: "Electromagnetic spectrum modulation is critical for photosynthetic efficiency and physiological regulation in controlled environments [1].\n- **Blue spectrum (450nm):** stimulates chlorophyll-a/b synthesis and stomatal conductance\n- **Red spectrum (660nm):** maximizes quantum yield of photosystem II and CO2 assimilation [2]\n- **Far-red synergy:** Emerson enhancement effect boosts net carbon assimilation rate by 18%\n- **Target metric:** optimize dry biomass accumulation per kWh while compressing crop growth cycles.",
+    methods: "Factorial trial with 80 seedlings evaluated across 4 automated microclimate chambers:\n\n[Seleção de 80 Mudas] -> [Câmaras Climatizadas IoT] -> [Fotoperíodo 16h/8h] -> [Análise de Biomassa & Taxa CO2]\n\n- **Microclimate sensing:** temperature, relative humidity, and VPD logged at 1 Hz via calibrated sensors\n- **Spectral irradiance:** continuously calibrated with high-resolution spectroradiometer [1]\n- **Nutrient delivery:** closed-loop recirculating hydroponic fertigation with automated EC/pH control.",
+    results: "Comparative dry biomass accumulation and growth cycle acceleration:\n\n| Spectrum Wavelength | Dry Biomass (g) | Cycle Reduction | Photon Efficiency |\n| :--- | :---: | :---: | :---: |\n| White Control | 4.2 ± 0.3 | Baseline (0d) | 1.0x |\n| Blue (450nm) | 5.1 ± 0.4 | -4 days | 1.2x |\n| Red (660nm) | 5.8 ± 0.5 | -7 days | 1.4x |\n| Combined (Blue + Red) | **7.3 ± 0.4** | **-12 days** | **1.8x** |\n\n- Biomass increased by 73.8% under combined spectrum with 12-day harvest cycle compression [2].\n- Stomatal conductance was 28% higher under dynamic blue-to-red ratios.\n- Specific energy consumption decreased from 14.2 kWh/kg to 8.9 kWh/kg dry matter.",
+    conclusions: "- **Precision lighting** demonstrates superior physiological and energetic efficiency for sustainable vertical farming.\n- Dual-band dynamic spectrum accelerates vegetative cycles while dramatically lowering HVAC and lighting operational expenditures.\n- IoT-driven real-time spectral adaptation provides reproducible agronomic quality across multi-tiered cultivation systems [1, 2].",
+    references: "[1] Smith, J., Watson, H. et al. (2024). Photobiology & Plant Physiology. Nature Plants, 10:142–155.\n[2] Doe, J. & Turing, A. (2023). Precision Agricultural Systems. IEEE Transactions on AgriTech, 18:204–215."
   } : {
-    introduction: "A modulação do espectro eletromagnético é determinante para a eficiência fotossintética e regulação fisiológica [1].\n- **Espectro azul:** estimula síntese de clorofila e abertura estomática\n- **Espectro vermelho:** maximiza absorção e taxa de fixação de carbono [2]",
-    methods: "Ensaio fatorial com 80 mudas divididas em 4 câmaras climatizadas automatizadas via sensores IoT.\n\n\\begin{tikzpicture}\n\\node[draw, rounded corners, fill=blue!10] (A) {Seleção 80 Mudas};\n\\node[draw, rounded corners, fill=green!10, right=of A] (B) {Câmaras Climatizadas IoT};\n\\node[draw, rounded corners, fill=red!10, right=of B] (C) {Análise de Biomassa};\n\\draw[->, thick] (A) -- (B);\n\\draw[->, thick] (B) -- (C);\n\\end{tikzpicture}\n- Parâmetros ambientais monitorados a 1 Hz\n- Irradiância espectral calibrada por espectrorradiômetro [1]",
-    results: "Comparativo de acúmulo de biomassa seca e aceleração do ciclo produtivo:\n\n| Comprimento de Onda | Biomassa Seca (g) | Redução de Ciclo | Eficiência Fotônica |\n| :--- | :---: | :---: | :---: |\n| Controle Branco | 4.2 ± 0.3 | Baseline (0d) | 1.0x |\n| Azul (450nm) | 5.1 ± 0.4 | -4 dias | 1.2x |\n| Vermelho (660nm) | 5.8 ± 0.5 | -7 dias | 1.4x |\n| Combinado (Azul + Vermelho) | **7.3 ± 0.4** | **-12 dias** | **1.8x** |\n\n- A biomassa aumentou em 34% sob espectro combinado com redução do ciclo em 12 dias [2].",
-    conclusions: "- **Iluminação de precisão** demonstra viabilidade técnica e energética superior para cultivo protegido vertical.\n- Espectro duplo otimiza rendimento comercial com expressiva economia nos custos operacionais.",
-    references: "[1] Silva, M. et al. (2024). Fotobiologia Vegetal Aplicada. Journal of Plant Science, 12:88–99.\n[2] Santos, C. & Rostova, E. (2023). Sistemas Agrícolas de Precisão. Revista Brasileira de Agrocomputação, 15:45–58."
+    introduction: "A modulação do espectro eletromagnético é determinante para a eficiência fotossintética e regulação fisiológica vegetal em ambientes protegidos [1].\n- **Espectro azul (450nm):** estimula síntese de clorofilas a/b e abertura estomática\n- **Espectro vermelho (660nm):** maximiza rendimento quântico do fotossistema II e fixação de CO2 [2]\n- **Sinergia do vermelho-distante:** efeito Emerson acelera taxa de assimilação líquida em 18%\n- **Objetivo:** maximizar acúmulo de biomassa seca por kWh reduzindo o tempo de bancada.",
+    methods: "Ensaio fatorial com 80 mudas avaliadas em 4 câmaras climatizadas automatizadas via sensores IoT:\n\n[Seleção de 80 Mudas] -> [Câmaras Climatizadas IoT] -> [Fotoperíodo 16h/8h] -> [Análise de Biomassa & Taxa CO2]\n\n- **Sensoriamento ambiental:** monitoramento contínuo a 1 Hz de temperatura, umidade relativa e VPD\n- **Irradiância espectral:** calibrada com espectrorradiômetro de bancada de alta resolução [1]\n- **Nutrição:** fertirrigação hidropônica recirculante com controle automatizado de condutividade elétrica e pH.",
+    results: "Comparativo de acúmulo de biomassa seca e aceleração do ciclo produtivo:\n\n| Comprimento de Onda | Biomassa Seca (g) | Redução de Ciclo | Eficiência Fotônica |\n| :--- | :---: | :---: | :---: |\n| Controle Branco | 4.2 ± 0.3 | Baseline (0d) | 1.0x |\n| Azul (450nm) | 5.1 ± 0.4 | -4 dias | 1.2x |\n| Vermelho (660nm) | 5.8 ± 0.5 | -7 dias | 1.4x |\n| Combinado (Azul + Vermelho) | **7.3 ± 0.4** | **-12 dias** | **1.8x** |\n\n- A biomassa aumentou em 73.8% sob espectro combinado com antecipação da colheita em 12 dias [2].\n- Condutância estomática foi 28% superior sob regimes de transição dinâmica azul-vermelho.\n- Consumo energético específico reduziu de 14.2 kWh/kg para 8.9 kWh/kg de matéria seca.",
+    conclusions: "- **Iluminação de precisão** demonstra viabilidade agronômica e energética superior para agricultura vertical sustentável.\n- Espectro dinâmico duplo acelera ciclos fenológicos com expressiva economia nos custos operacionais com climatização e energia.\n- A integração com IoT permite calibração espectral em tempo real garantindo qualidade reprodutível na produção [1, 2].",
+    references: "[1] Silva, M., Pereira, R. et al. (2024). Fotobiologia Vegetal Aplicada. Journal of Plant Science, 12:88–99.\n[2] Santos, C. & Rostova, E. (2023). Sistemas Agrícolas de Precisão. Revista Brasileira de Agrocomputação, 15:45–58."
   };
 
   sections.forEach(s => {
     if (sampleTexts[s.id]) s.content = sampleTexts[s.id];
   });
+
+  // Insere logotipos SVG demonstrativos no cabeçalho e rodapé
+  function makeDemoLogo(label, bg, fg) {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="220" height="70" viewBox="0 0 220 70"><rect width="220" height="70" rx="8" fill="${bg}"/><text x="50%" y="54%" dominant-baseline="middle" text-anchor="middle" fill="${fg}" font-family="sans-serif" font-weight="700" font-size="19">${label}</text></svg>`;
+    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const field = "f" + (++uid);
+    files.set(field, new File([blob], `${label.toLowerCase().replace(/\s+/g, "_")}.svg`, { type: "image/svg+xml" }));
+    return { field, caption: "", url };
+  }
+
+  logosH.length = 0;
+  logosF.length = 0;
+  logosH.push(makeDemoLogo("INSTITUTO DE BOTÂNICA", "#1F3A5F", "#FFFFFF"));
+  logosH.push(makeDemoLogo("UNIVERSIDADE FEDERAL", "#0F766E", "#FFFFFF"));
+  logosF.push(makeDemoLogo("LAB-IoT AGRO", "#1E293B", "#FFFFFF"));
+  logosF.push(makeDemoLogo("CNPq / CAPES", "#7C2D12", "#FFFFFF"));
+  logosF.push(makeDemoLogo("FAPEMIG", "#064E3B", "#FFFFFF"));
+
+  renderLogos();
   renderSections();
   updateDraftPreview();
   generate("pdf");
