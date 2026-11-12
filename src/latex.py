@@ -181,7 +181,7 @@ def _arrow_pipeline_to_latex(text: str) -> str:
         tikz_nodes = []
         for i, st in enumerate(nodes):
             tikz_nodes.append(
-                f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+                f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
                 f"        text width=0.82\\linewidth, align=center, inner sep=10pt,\n"
                 f"        font=\\Large\\bfseries] (n{i}) {{{_inline(st)}}};"
             )
@@ -189,7 +189,7 @@ def _arrow_pipeline_to_latex(text: str) -> str:
         pos_lines = [tikz_nodes[0]]
         for i in range(1, len(nodes)):
             pos_lines.append(
-                f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+                f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
                 f"        text width=0.82\\linewidth, align=center, inner sep=10pt,\n"
                 f"        font=\\Large\\bfseries, below=18pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
             )
@@ -211,13 +211,13 @@ def _arrow_pipeline_to_latex(text: str) -> str:
         # Layout horizontal com setas para a direita
         tikz_nodes = []
         tikz_nodes.append(
-            f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+            f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
             f"        align=center, inner sep=10pt,\n"
             f"        font=\\Large\\bfseries] (n0) {{{_inline(nodes[0])}}};"
         )
         for i in range(1, len(nodes)):
             tikz_nodes.append(
-                f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+                f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
                 f"        align=center, inner sep=10pt,\n"
                 f"        font=\\Large\\bfseries, right=18pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
             )
@@ -637,11 +637,12 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     footer_imgs = [images[p] for p in poster.get("logos_footer", []) if p in images]
     footer_tex = ""
     if footer_imgs:
-        cells = " \\hspace{3cm} ".join(f"\\includegraphics[height=4.5cm,keepaspectratio]{{{f}}}" for f in footer_imgs)
-        footer_tex = f"\n\\node[above=15mm of bottomright, anchor=south east, xshift=-15mm] {{\\begin{{minipage}}{{\\linewidth}}\\centering {cells}\\end{{minipage}}}};\n"
+        cells = "\\hfill ".join(f"\\includegraphics[height=4.5cm,width=0.16\\linewidth,keepaspectratio]{{{f}}}" for f in footer_imgs)
+        footer_tex = f"\n\\node[above=15mm of bottomright, anchor=south east, xshift=-15mm] {{\\begin{{minipage}}{{\\linewidth}} {cells}\\end{{minipage}}}};\n"
 
-    logos = "".join(
-        f"\\includegraphics[height=6cm]{{{images[p]}}}\\hspace{{2cm}}" for p in poster["logos_header"] if p in images
+    header_imgs = [images[p] for p in poster["logos_header"] if p in images]
+    logos = "\\hfill ".join(
+        f"\\includegraphics[height=6cm,width=0.18\\linewidth,keepaspectratio]{{{path}}}" for path in header_imgs
     )
     title = _inline(poster["title"]) or "~"
     authors = escape_latex(poster["authors"]).replace("\n", ", ")
