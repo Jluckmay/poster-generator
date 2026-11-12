@@ -162,6 +162,7 @@ def api_config() -> Response:
             "sections": DEFAULT_SECTION_IDS,
             "labels": {lang: {k: v for k, v in d.items() if k != "babel"} for lang, d in LABELS.items()},
             "doc_extensions": list(ALLOWED_DOC_EXT),
+            "pdflatex_available": bool(shutil.which("pdflatex")),
         }
     )
 

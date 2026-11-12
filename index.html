@@ -2786,6 +2786,7 @@ let CFG = DEFAULT_CFG, uiLang = "pt-BR", posterLang = "pt-BR", sections = [], lo
 let customTexFileObj = null;
 const files = new Map(); // field id -> File
 let backendAvailable = false;
+let serverHasPdflatex = null;
 const state = {
   template: "classic",
   pdfDoc: null,
@@ -3062,6 +3063,9 @@ async function _tryBackend(baseUrl, maxAttempts) {
         try {
           const data = await res.json();
           CFG = data;
+          if (typeof data.pdflatex_available === "boolean") {
+            serverHasPdflatex = data.pdflatex_available;
+          }
           populateProviders();
         } catch (_) {}
 
@@ -4704,7 +4708,7 @@ async function generate(fmt) {
 
   const form = buildForm();
   try {
-    if (!backendAvailable) throw new Error("Backend unavailable; using local compiler.");
+    if (!backendAvailable || serverHasPdflatex === false) throw new Error("Backend unavailable; using local compiler.");
     const r = await robustFetch(getApiBase() + "/api/generate?format=" + fmt, { method: "POST", body: form }, {
       onStatusUpdate: (stMsg) => {
         $("#loadingText").textContent = stMsg;
