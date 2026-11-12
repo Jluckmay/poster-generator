@@ -58,6 +58,9 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         c1 = poster["colors"]["accent"]
     elif poster.get("accent"):
         c1 = poster["accent"]
+    has_custom_bg = bool(poster.get("colors") and poster["colors"].get("bg"))
+    bg_color = poster["colors"]["bg"] if has_custom_bg else "FFFFFF"
+    page_bg_tex = f"\n{_hex_to_latex('posterbg', bg_color)}\n\\pagecolor{{posterbg}}" if has_custom_bg else ""
     width, height = article_dims(poster)
     fit = float(poster.get("_fit") or 1.0)
     s = (min(width, height) / 60.0) * fit  # escala relativa ao modelo 60x90 cm
@@ -119,7 +122,7 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage{{qrcode}}
 \\usepackage{{booktabs,array,tikz}}
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
-\\pagestyle{{empty}}
+\\pagestyle{{empty}}{page_bg_tex}
 {_hex_to_latex('accent', c1)}
 {_hex_to_latex('darkgray', c2)}
 {_hex_to_latex('barblack', c3)}

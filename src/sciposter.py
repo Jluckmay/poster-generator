@@ -38,6 +38,8 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     elif poster.get("accent"):
         c1 = c2 = poster["accent"]
 
+    has_custom_bg = bool(poster.get("colors") and poster["colors"].get("bg"))
+    page_bg_tex = "\n\\pagecolor{bgCol}" if has_custom_bg else ""
     paper_key = poster.get("paper", "a0")
     orient = poster.get("orientation", "portrait")
     cols = max(1, poster.get("columns", 2))
@@ -71,6 +73,7 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
 
     authors = escape_latex(poster.get("authors", "")).replace("\n", ", ")
+    email = escape_latex(poster.get("email", ""))
     affil_bits = [escape_latex(ln.strip()) for ln in poster.get("affiliations", "").split("\n") if ln.strip()]
     if poster.get("email"):
         affil_bits.insert(0, escape_latex(poster["email"]))
@@ -100,7 +103,7 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
 {_hex_to_latex('mainCol', c1)}
 {_hex_to_latex('titleCol', c2)}
-{_hex_to_latex('bgCol', bg_color)}
+{_hex_to_latex('bgCol', bg_color)}{page_bg_tex}
 
 \\definecolor{{BoxCol}}{{HTML}}{{{c1}}}
 \\definecolor{{SectionCol}}{{HTML}}{{{c1}}}

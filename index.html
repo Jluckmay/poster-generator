@@ -1041,7 +1041,7 @@ button.sm {
   flex-grow: 1;
 }
 .draft-block {
-  background: #ffffff;
+  background: var(--tpl-block-bg, #ffffff);
   border-radius: 4px;
   padding: 14px 16px;
   box-shadow: 0 1px 4px rgba(0,0,0,0.06);
@@ -1190,10 +1190,10 @@ button.sm {
   border: 1.5px solid var(--tpl-accent, #1F3A5F);
   border-radius: 6px;
   box-shadow: 0 3px 8px rgba(31,58,95,0.06);
-  background: #ffffff;
+  background: var(--tpl-block-bg, #ffffff);
 }
 .draft-poster.tpl-classic .draft-block-title {
-  background: rgba(31,58,95,0.06);
+  background: var(--tpl-block-title-bg, rgba(31,58,95,0.06));
   padding: 6px 10px;
   margin: -10px -12px 6px -12px;
   border-bottom: 2px solid var(--tpl-accent, #1F3A5F);
@@ -1205,7 +1205,7 @@ button.sm {
 /* 2. Moderno (Gradiente & Tech) */
 .draft-poster.tpl-modern {
   font-family: 'Inter', -apple-system, sans-serif;
-  background: linear-gradient(180deg, #F0FDFA 0%, #FFFFFF 100%);
+  background: var(--tpl-poster-bg-gradient, linear-gradient(180deg, #F0FDFA 0%, #FFFFFF 100%));
 }
 .draft-poster.tpl-modern .draft-header {
   background: linear-gradient(135deg, var(--tpl-accent, #0F766E) 0%, var(--tpl-color2, #14B8A6) 100%) !important;
@@ -1215,9 +1215,9 @@ button.sm {
 }
 .draft-poster.tpl-modern .draft-block {
   border-radius: 12px;
-  border: 1px solid rgba(20,184,166,0.3);
+  border: 1px solid var(--tpl-accent, rgba(20,184,166,0.3));
   box-shadow: 0 4px 16px rgba(15,118,110,0.06);
-  background: #ffffff;
+  background: var(--tpl-block-bg, #ffffff);
   padding: 12px 14px;
 }
 .draft-poster.tpl-modern .draft-block-title {
@@ -1232,7 +1232,7 @@ button.sm {
 /* 3. Minimalista (Editorial) */
 .draft-poster.tpl-minimal {
   font-family: 'Georgia', 'Garamond', serif;
-  background: #FAFAFA;
+  background: var(--tpl-bg, #FAFAFA);
 }
 .draft-poster.tpl-minimal .draft-header {
   background: transparent !important;
@@ -1242,16 +1242,16 @@ button.sm {
   padding: 10px 0 16px 0;
 }
 .draft-poster.tpl-minimal .draft-block {
-  background: transparent;
+  background: var(--tpl-block-bg, transparent);
   border: none;
-  border-top: 1.5px solid #334155;
+  border-top: 1.5px solid var(--tpl-accent, #334155);
   border-radius: 0;
   box-shadow: none;
   padding: 10px 2px;
 }
 .draft-poster.tpl-minimal .draft-block-title {
   border: none;
-  color: #1E293B;
+  color: var(--tpl-accent, #1E293B);
   font-size: 10.5px;
   font-weight: 700;
   letter-spacing: 0.14em;
@@ -1262,7 +1262,7 @@ button.sm {
 /* 4. Ousado (Envelope) */
 .draft-poster.tpl-bold {
   font-family: 'Montserrat', 'Trebuchet MS', sans-serif;
-  background: #FFF7ED;
+  background: var(--tpl-bg, #FFF7ED);
 }
 .draft-poster.tpl-bold .draft-header {
   background: var(--tpl-accent, #7C2D12) !important;
@@ -1289,7 +1289,7 @@ button.sm {
   padding: 0;
   overflow: hidden;
   box-shadow: 0 6px 18px rgba(124,45,18,0.1);
-  background: #ffffff;
+  background: var(--tpl-block-bg, #ffffff);
 }
 .draft-poster.tpl-bold .draft-block-title {
   background: var(--tpl-accent, #7C2D12);
@@ -1308,7 +1308,7 @@ button.sm {
 /* 5. Ondas Esmeralda (Corner Orgânico) */
 .draft-poster.tpl-corner {
   font-family: 'Segoe UI', 'Nunito', sans-serif;
-  background: radial-gradient(ellipse at top left, #F0FDF4 0%, #FFFFFF 80%);
+  background: var(--tpl-poster-bg-gradient, radial-gradient(ellipse at top left, #F0FDF4 0%, #FFFFFF 80%));
 }
 .draft-poster.tpl-corner .draft-header {
   border-radius: 20px 4px 28px 4px;
@@ -1320,7 +1320,7 @@ button.sm {
   border: 1.5px solid var(--tpl-color3, #A7F3D0);
   border-radius: 18px 4px 18px 4px;
   box-shadow: 0 4px 14px rgba(6,78,59,0.06);
-  background: #ffffff;
+  background: var(--tpl-block-bg, #ffffff);
   padding: 12px 14px;
 }
 .draft-poster.tpl-corner .draft-block-title {
@@ -1334,7 +1334,7 @@ button.sm {
 /* 6. Academic Red (Artigo / Duas Colunas - Estilo LaTeX Article / DCC UFMG) */
 .draft-poster.tpl-dcc {
   font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  background: #ffffff !important;
+  background: var(--tpl-bg, #ffffff);
 }
 .draft-poster.tpl-dcc .draft-header {
   background: transparent !important;
@@ -1388,7 +1388,7 @@ button.sm {
   border-top: 3.5px solid var(--tpl-accent, #CC0000);
   border-radius: 0;
   box-shadow: none;
-  background: transparent;
+  background: var(--tpl-block-bg, transparent);
   padding: 8px 0 14px 0;
   margin-bottom: 4px;
 }
@@ -1420,15 +1420,15 @@ button.sm {
   padding: 14px 16px;
 }
 .draft-poster.tpl-mostra_ic .draft-block {
-  border: 1.5px solid #CBD5E1;
+  border: 1.5px solid var(--tpl-accent, #CBD5E1);
   border-radius: 3px;
   box-shadow: 0 2px 6px rgba(10,59,117,0.05);
   padding: 0;
   overflow: hidden;
-  background: #ffffff;
+  background: var(--tpl-block-bg, #ffffff);
 }
 .draft-poster.tpl-mostra_ic .draft-block-title {
-  background: #0A3B75;
+  background: var(--tpl-accent, #0A3B75);
   color: #ffffff !important;
   padding: 6px 12px;
   margin: 0;
@@ -1480,9 +1480,9 @@ button.sm {
   margin-top: 2px;
 }
 .draft-poster.tpl-uzh .draft-block {
-  background: #F8FAFC;
+  background: var(--tpl-block-bg, #F8FAFC);
   border: none;
-  border-left: 3.5px solid #0028A5;
+  border-left: 3.5px solid var(--tpl-accent, #0028A5);
   border-radius: 0;
   box-shadow: none;
   padding: 10px 12px;
@@ -1500,7 +1500,7 @@ button.sm {
 /* 9. TU Delft (Beamer Holandês) */
 .draft-poster.tpl-tudelft {
   font-family: 'Segoe UI', 'Inter', sans-serif;
-  background: #F8FAFC;
+  background: var(--tpl-bg, #F8FAFC);
 }
 .draft-poster.tpl-tudelft .draft-header {
   background: linear-gradient(90deg, #002B49 0%, #007396 55%, #00A6D6 100%) !important;
@@ -1513,18 +1513,18 @@ button.sm {
   border: none !important;
 }
 .draft-poster.tpl-tudelft .draft-block {
-  background: #ffffff;
-  border: 1px solid #E2E8F0;
-  border-top: 4px solid #00A6D6;
+  background: var(--tpl-block-bg, #ffffff);
+  border: 1px solid var(--tpl-color3, #E2E8F0);
+  border-top: 4px solid var(--tpl-accent, #00A6D6);
   border-radius: 4px;
   box-shadow: 0 3px 8px rgba(0,43,73,0.06);
   padding: 10px 12px;
 }
 .draft-poster.tpl-tudelft .draft-block-title {
-  color: #002B49;
+  color: var(--tpl-accent, #002B49);
   font-weight: 800;
   font-size: 11px;
-  border-bottom: 1.5px solid #E2E8F0;
+  border-bottom: 1.5px solid var(--tpl-color3, #E2E8F0);
   padding-bottom: 4px;
 }
 
@@ -3753,6 +3753,17 @@ function updateDraftPreview() {
   poster.style.setProperty("--tpl-body", bodyColor);
   poster.style.setProperty("--tpl-bg", bgColor);
   poster.style.backgroundColor = bgColor;
+
+  // Quando paleta personalizada está ativa, o fundo dos blocos deve seguir a cor de fundo escolhida
+  if (useColors) {
+    poster.style.setProperty("--tpl-block-bg", bgColor);
+    poster.style.setProperty("--tpl-poster-bg-gradient", bgColor);
+    poster.style.setProperty("--tpl-block-title-bg", "rgba(0,0,0,0.04)");
+  } else {
+    poster.style.removeProperty("--tpl-block-bg");
+    poster.style.removeProperty("--tpl-poster-bg-gradient");
+    poster.style.removeProperty("--tpl-block-title-bg");
+  }
 
   // Header & Barra de Destaque
   const topBar = $("#draftTopBar");

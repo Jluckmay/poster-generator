@@ -595,6 +595,8 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         pw, ph = ph, pw
     c1, c2, c3 = tpl["colors"]
     bg_color = tpl["bg"]
+    has_custom_bg = False
+    body_color = None
     if poster.get("colors"):
         colors = poster["colors"]
         if colors.get("accent"):
@@ -603,11 +605,18 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             c2 = colors["subtitle"]
         if colors.get("title"):
             c3 = colors["title"]
+        if colors.get("body"):
+            body_color = colors["body"]
         if colors.get("bg"):
             bg_color = colors["bg"]
+            has_custom_bg = True
     elif poster.get("accent"):
         c1 = c2 = poster["accent"]
     font = "\\renewcommand{\\familydefault}{\\sfdefault}\n" if tpl["sans"] else ""
+
+    body_fg_def = f"\n  {_hex_to_latex('colorBody', body_color)}" if body_color else ""
+    body_fg_let = "colorBody" if body_color else "black"
+    block_body_bg = "posterbg" if has_custom_bg else "white"
 
     sections = []
     for s in poster["sections"]:
@@ -655,7 +664,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 {font}\\definecolorstyle{{PosterColors}}{{
   {_hex_to_latex('colorOne', c1)}
   {_hex_to_latex('colorTwo', c2)}
-  {_hex_to_latex('colorThree', c3)}
+  {_hex_to_latex('colorThree', c3)}{body_fg_def}
 }}{{
   {_hex_to_latex('posterbg', bg_color)}
   \\colorlet{{backgroundcolor}}{{posterbg}}
@@ -664,12 +673,12 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
   \\colorlet{{titlebgcolor}}{{colorOne}}
   \\colorlet{{blocktitlebgcolor}}{{colorTwo}}
   \\colorlet{{blocktitlefgcolor}}{{white}}
-  \\colorlet{{blockbodybgcolor}}{{white}}
-  \\colorlet{{blockbodyfgcolor}}{{black}}
+  \\colorlet{{blockbodybgcolor}}{{{block_body_bg}}}
+  \\colorlet{{blockbodyfgcolor}}{{{body_fg_let}}}
   \\colorlet{{innerblocktitlebgcolor}}{{colorThree}}
   \\colorlet{{innerblocktitlefgcolor}}{{black}}
-  \\colorlet{{innerblockbodybgcolor}}{{white}}
-  \\colorlet{{innerblockbodyfgcolor}}{{black}}
+  \\colorlet{{innerblockbodybgcolor}}{{{block_body_bg}}}
+  \\colorlet{{innerblockbodyfgcolor}}{{{body_fg_let}}}
   \\colorlet{{notefgcolor}}{{black}}
   \\colorlet{{notebgcolor}}{{colorThree}}
   \\colorlet{{noteframecolor}}{{colorOne}}

@@ -34,6 +34,9 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     elif poster.get("accent"):
         c1 = c2 = poster["accent"]
 
+    has_custom_bg = bool(poster.get("colors") and poster["colors"].get("bg"))
+    block_body_bg = "tudBg" if has_custom_bg else "white"
+
     paper_key = poster.get("paper", "a0")
     orient = poster.get("orientation", "portrait")
     cols_count = max(1, poster.get("columns", 2))
@@ -113,10 +116,12 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usetheme{{Madrid}}
 {_hex_to_latex('tudBlue', c1)}
 {_hex_to_latex('tudDark', c2)}
+{_hex_to_latex('tudBg', bg_color)}
 
 \\setbeamercolor{{structure}}{{fg=tudBlue}}
+\\setbeamercolor{{background canvas}}{{bg=tudBg}}
 \\setbeamercolor{{block title}}{{bg=tudBlue,fg=white}}
-\\setbeamercolor{{block body}}{{bg=white,fg=black}}
+\\setbeamercolor{{block body}}{{bg={block_body_bg},fg=black}}
 
 \\title{{{_inline(poster.get('title', '')) or '~'}}}
 \\author{{{authors}}}

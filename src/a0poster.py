@@ -38,6 +38,9 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     elif poster.get("accent"):
         c1 = c2 = poster["accent"]
 
+    has_custom_bg = bool(poster.get("colors") and poster["colors"].get("bg"))
+    page_bg_tex = f"\n{_hex_to_latex('uzhBg', bg_color)}\n\\pagecolor{{uzhBg}}" if has_custom_bg else ""
+
     paper_key = poster.get("paper", "a0")
     orient = poster.get("orientation", "portrait")
     cols = max(1, poster.get("columns", 2))
@@ -101,7 +104,7 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
 
 {_hex_to_latex('uzhAccent', c1)}
-{_hex_to_latex('uzhDark', c2)}
+{_hex_to_latex('uzhDark', c2)}{page_bg_tex}
 
 \\titleformat{{\\section}}
   {{\\huge\\bfseries\\color{{uzhAccent}}}}
