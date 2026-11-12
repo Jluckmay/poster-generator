@@ -574,7 +574,9 @@ button.sm {
 /* Grade de Templates */
 .tpls {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-auto-flow: row;
+  align-items: stretch;
   gap: 10px;
   margin-bottom: 12px;
 }
@@ -3344,7 +3346,10 @@ function fillFromExtract(p) {
 
 function renderTemplates() {
   if (!CFG || !CFG.templates) return;
-  $("#tpls").innerHTML = Object.entries(CFG.templates).map(([id, tp]) => `
+  const fixedTemplateOrder = ["classic", "modern", "minimal", "bold", "corner", "dcc", "mostra_ic", "uzh", "tudelft"];
+  const knownEntries = fixedTemplateOrder.filter(id => CFG.templates[id]).map(id => [id, CFG.templates[id]]);
+  const extraEntries = Object.entries(CFG.templates).filter(([id]) => !fixedTemplateOrder.includes(id));
+  $("#tpls").innerHTML = [...knownEntries, ...extraEntries].map(([id, tp]) => `
     <div class="tpl ${state.template === id ? "sel" : ""}" data-id="${id}" tabindex="0" role="button">
       <div class="sw" style="background:#${tp.bg}">${tp.colors.map(c => `<i style="background:#${c}"></i>`).join("")}</div>
       <div class="tpl-name">${(tp.name && tp.name[uiLang]) || id}</div>
