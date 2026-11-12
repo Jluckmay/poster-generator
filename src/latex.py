@@ -384,6 +384,29 @@ def _preprocess_structured_blocks(text: str) -> str:
     return "\n".join(out)
 
 
+def _parse_multiline_pipeline(lines: List[str]) -> List[str] | None:
+    """Detecta sequência de blocos com setas verticais intercaladas (↓, ->, etc.)."""
+    if len(lines) < 3:
+        return None
+    arrow_syms = {"↓", "->", "→", "=>", "|", "v", "V"}
+    nodes = []
+    is_pipeline = True
+    for i, ln in enumerate(lines):
+        s = ln.strip()
+        if i % 2 == 1:
+            if s not in arrow_syms:
+                is_pipeline = False
+                break
+        else:
+            if s in arrow_syms or not s:
+                is_pipeline = False
+                break
+            nodes.append(s)
+    if is_pipeline and len(nodes) >= 2:
+        return nodes
+    return None
+
+
 def text_to_latex(text: str) -> str:
     """Converte texto simples, listas, tabelas e diagramas em LaTeX."""
     normalized = _preprocess_structured_blocks(explode_inline_tables(text.strip()))
@@ -399,6 +422,12 @@ def text_to_latex(text: str) -> str:
         lines = [ln for ln in block.split("\n") if ln.strip()]
         if _is_markdown_table(lines):
             out.append(_markdown_table_to_latex(lines) + "\n")
+            continue
+        # Verifica se o bloco inteiro é um pipeline multilinhas (ex: linhas intercaladas com ↓)
+        multi_nodes = _parse_multiline_pipeline(lines)
+        if multi_nodes:
+            synthetic_arrow = " -> ".join(f"[{n}]" for n in multi_nodes)
+            out.append(_arrow_pipeline_to_latex(synthetic_arrow) + "\n")
             continue
         if len(lines) == 1 and _is_arrow_pipeline(lines[0]):
             out.append(_arrow_pipeline_to_latex(lines[0]) + "\n")

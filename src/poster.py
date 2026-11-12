@@ -5,6 +5,90 @@ from __future__ import annotations
 import re
 from typing import Any, Dict, List
 
+
+def renumber_citations(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    """
+    Remaps citation numbers in all section texts so they match the references list.
+    Supports bracketed numbers [9], dot numbers 9., or plain numbers at line starts (9 Author...).
+    """
+    # Find references section
+    ref_sec = None
+    for sec in sections:
+        if sec.get("id") == "references" or re.search(r"refer[eê]nc", sec.get("title", ""), re.IGNORECASE):
+            ref_sec = sec
+            break
+
+    if not ref_sec or not ref_sec.get("content"):
+        return sections
+
+    ref_text = ref_sec["content"].replace("\r\n", "\n").replace("\r", "\n")
+    # Break into items if separated on single lines or spaces before numbers
+    ref_text = re.sub(r"(?:^|\s+)(?:\[\d{1,3}\]|\d{1,2}[.)]?)\s+(?=[A-ZÀ-ÿ])", r"\n\g<0>", ref_text)
+    lines = [ln.strip() for ln in ref_text.split("\n") if ln.strip()]
+
+    old_to_new: Dict[int, int] = {}
+    new_refs: List[str] = []
+    new_idx = 1
+    for ln in lines:
+        # Match '[1] ...', '1. ...', '1) ...', or '1 Author ...'
+        m = re.match(r"^(?:\[(\d+)\]|(\d+)[.)]?)\s+(.+)", ln)
+        if m:
+            old_num = int(m.group(1) or m.group(2))
+            body = m.group(3).strip()
+            if old_num not in old_to_new:
+                old_to_new[old_num] = new_idx
+                new_refs.append(f"[{new_idx}] {body}")
+                new_idx += 1
+        else:
+            new_refs.append(f"[{new_idx}] {ln}")
+            new_idx += 1
+
+    if not old_to_new:
+        return sections
+
+    valid_keys = set(old_to_new.keys())
+
+    def remap_text(text: str) -> str:
+        """Replace citation numbers in text according to old_to_new mapping."""
+        def replace_bracket(m: re.Match) -> str:
+            inner = m.group(1)
+            parts = re.split(r"[,;]\s*", inner)
+            new_parts = []
+            for p in parts:
+                p = p.strip()
+                rng = re.match(r"^(\d+)\s*[-\u2013]\s*(\d+)$", p)
+                if rng:
+                    start, end = int(rng.group(1)), int(rng.group(2))
+                    mapped = [str(old_to_new[n]) for n in range(start, end + 1) if n in old_to_new]
+                    new_parts.extend(mapped)
+                else:
+                    if p.isdigit():
+                        n = int(p)
+                        if n in old_to_new:
+                            new_parts.append(str(old_to_new[n]))
+                    else:
+                        new_parts.append(p)
+            seen = set()
+            dedup = []
+            for np in new_parts:
+                if np not in seen:
+                    seen.add(np)
+                    dedup.append(np)
+            return "[" + ", ".join(dedup) + "]" if dedup else ""
+
+        res = re.sub(r"\[(\d+(?:[,;\s\u2013-]+\d+)*)\]", replace_bracket, text)
+        return re.sub(r"\s{2,}", " ", res).replace(" .", ".").replace(" ,", ",")
+
+    # Apply remapping to all sections
+    result = []
+    for sec in sections:
+        if sec is ref_sec:
+            result.append({**sec, "content": "\n".join(new_refs)})
+        else:
+            result.append({**sec, "content": remap_text(sec.get("content", ""))})
+
+    return result
+
 from .config import LANGUAGES
 from .i18n import labels_for
 from .templates import DEFAULT_TEMPLATE, TEMPLATES, default_paper_for, papers_for
@@ -68,6 +152,8 @@ def normalize_poster(data: Dict[str, Any]) -> Dict[str, Any]:
         if not title:
             title = sid.capitalize()
         sections.append({"id": sid, "title": title, "content": content, "images": images})
+
+    sections = renumber_citations(sections)
 
     colors: Dict[str, str] = {}
     if isinstance(data.get("colors"), dict):

@@ -997,6 +997,7 @@ button.sm {
   width: 100%;
   align-items: stretch;
   flex: 1;
+  min-height: 0;
 }
 .draft-col {
   flex: 1;
@@ -1005,6 +1006,9 @@ button.sm {
   gap: 12px;
   min-width: 0;
   align-self: stretch;
+}
+.draft-col > .draft-block:last-child {
+  flex-grow: 1;
 }
 .draft-block {
   background: #ffffff;
@@ -1019,6 +1023,9 @@ button.sm {
   line-height: 1.45;
   box-sizing: border-box;
   width: 100%;
+}
+.draft-col > .draft-block:last-child {
+  flex-grow: 1;
 }
 .draft-block-title {
   font-size: 10.5px;
@@ -3744,7 +3751,8 @@ function updateDraftPreview() {
   const grid = $("#draftGrid");
   if (grid) {
     const renderedSections = sections.filter(s => s && ((s.title && s.title.trim()) || (s.content && s.content.trim()) || s.images.length > 0));
-    const activeSections = renderedSections.length > 0 ? renderedSections : sections;
+    const rawActive = renderedSections.length > 0 ? renderedSections : sections;
+    const activeSections = getRenumberedDraftSections(rawActive);
 
     const numCols = Math.max(1, Math.min(5, cols));
     const colBuckets = Array.from({ length: numCols }, () => []);
@@ -3808,6 +3816,71 @@ function formatInlineText(str) {
   // Citações estilo autor-ano [Truong and Koyejo 2026] como expoente
   esc = esc.replace(/\[([A-ZÀ-ÿ][^\[\]\n]*?\b(?:19|20)\d{2}[a-z]?[^\[\]\n]*?)\]/g, '<sup class="draft-cite">[$1]</sup>');
   return esc;
+}
+
+function getRenumberedDraftSections(activeSections) {
+  const refSec = activeSections.find(s => s && (s.id === "references" || /refer[eê]nc/i.test(s.title || "")));
+  if (!refSec || !refSec.content) return activeSections;
+
+  let clean = refSec.content.trim();
+  clean = clean.replace(/(?:^|\s+)(?:\[\d{1,3}\]|\d{1,2}[.)]?)\s+(?=[A-ZÀ-ÿ])/g, "\n$1 ");
+  clean = clean.replace(/(?:^|\s+)(\d{1,2}\.\s*(?:\[\d{1,3}\]\s*)+)/g, "\n$1 ");
+  clean = clean.replace(/(?:^|\s+)((?:\[\d{1,3}\]\s*)+)/g, "\n$1 ");
+
+  const lines = clean.split("\n").map(l => l.trim()).filter(Boolean);
+  const oldToNew = {};
+  const newRefs = [];
+  let newIdx = 1;
+  lines.forEach(ln => {
+    const m = ln.match(/^(?:\[(\d+)\]|(\d+)[.)]?)\s+(.+)/);
+    if (m) {
+      const oldNum = parseInt(m[1] || m[2], 10);
+      const body = m[3].trim();
+      if (!oldToNew[oldNum]) {
+        oldToNew[oldNum] = newIdx;
+        newRefs.push(`[${newIdx}] ${body}`);
+        newIdx++;
+      }
+    } else {
+      newRefs.push(`[${newIdx}] ${ln}`);
+      newIdx++;
+    }
+  });
+
+  if (Object.keys(oldToNew).length === 0) return activeSections;
+
+  function remap(str) {
+    if (!str) return str;
+    return str.replace(/\[(\d+(?:[,;\s–-]+\d+)*)\]/g, (match, inner) => {
+      const parts = inner.split(/[,;]\s*/);
+      const newParts = [];
+      parts.forEach(p => {
+        p = p.trim();
+        const rng = p.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+        if (rng) {
+          const start = parseInt(rng[1], 10);
+          const end = parseInt(rng[2], 10);
+          for (let n = start; n <= end; n++) {
+            if (oldToNew[n]) newParts.push(String(oldToNew[n]));
+          }
+        } else if (/^\d+$/.test(p)) {
+          const n = parseInt(p, 10);
+          if (oldToNew[n]) newParts.push(String(oldToNew[n]));
+        } else {
+          newParts.push(p);
+        }
+      });
+      const dedup = [...new Set(newParts)];
+      return dedup.length ? `[${dedup.join(", ")}]` : "";
+    }).replace(/\s{2,}/g, " ").replace(" .", ".").replace(" ,", ",");
+  }
+
+  return activeSections.map(s => {
+    if (s === refSec) {
+      return { ...s, content: newRefs.join("\n") };
+    }
+    return { ...s, content: remap(s.content) };
+  });
 }
 
 function renderDraftReferences(text) {
@@ -3993,6 +4066,25 @@ function renderDraftBody(text) {
     const strippedArrow = trimmed.replace(/^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?/, "").trim();
     if (/(?:->|→|=>)/.test(strippedArrow) && strippedArrow.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2) {
       return renderArrowPipelineToHtml(strippedArrow);
+    }
+    // 3.1. Diagrama multilinhas com setas verticais intercaladas (↓, ->, etc.)
+    const blockLines = trimmed.split("\n").map(l => l.trim()).filter(Boolean);
+    if (blockLines.length >= 3) {
+      const arrowSyms = new Set(["↓", "->", "→", "=>", "|", "v", "V"]);
+      const multiNodes = [];
+      let isMultiPipeline = true;
+      for (let i = 0; i < blockLines.length; i++) {
+        const ln = blockLines[i];
+        if (i % 2 === 1) {
+          if (!arrowSyms.has(ln)) { isMultiPipeline = false; break; }
+        } else {
+          if (arrowSyms.has(ln) || !ln) { isMultiPipeline = false; break; }
+          multiNodes.push(ln);
+        }
+      }
+      if (isMultiPipeline && multiNodes.length >= 2) {
+        return renderArrowPipelineToHtml(multiNodes.map(n => `[${n}]`).join(" -> "));
+      }
     }
     // 4. Tabela Markdown (suporta traços comuns e unicode - — –)
     const lines = trimmed.split("\n").map(l => l.trim()).filter(Boolean);
