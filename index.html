@@ -1034,7 +1034,7 @@ button.sm {
   flex: 1 1 0;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: 12px;
   min-width: 0;
   align-self: stretch;
@@ -3863,6 +3863,25 @@ function updateDraftPreview() {
     footerLogosEl.innerHTML = "";
   }
 
+  const headerLogoAlignment = {
+    classic: "space-between", modern: "space-between", minimal: "flex-start", bold: "space-between",
+    corner: "space-between", dcc: "center", mostra_ic: "space-between", uzh: "flex-start", tudelft: "space-between"
+  }[tplId] || "space-between";
+  const fitLogoRow = (row, alignment, maxHeightRatio) => {
+    if (!row) return;
+    const images = Array.from(row.querySelectorAll(".draft-logo-img"));
+    const count = images.length;
+    row.style.justifyContent = count === 1 && alignment === "space-between" ? "center" : alignment;
+    row.style.gap = `${Math.max(8, poster.clientWidth * 0.012)}px`;
+    const widthPercent = count ? Math.max(20, (100 - (count - 1) * 5) / count) : 100;
+    images.forEach(img => {
+      img.style.maxWidth = `${widthPercent}%`;
+      img.style.maxHeight = `${Math.max(18, poster.clientHeight * maxHeightRatio)}px`;
+    });
+  };
+  fitLogoRow(headerLogosEl, headerLogoAlignment, 0.06);
+  fitLogoRow(footerLogosEl, "space-around", 0.05);
+
   // Seções e Grade de Colunas (Fluxo em Colunas Acadêmicas)
   const grid = $("#draftGrid");
   if (grid) {
@@ -3924,12 +3943,26 @@ function updateDraftPreview() {
   // Converte a fonte física do documento para a largura exibida no preview.
   const paperFontPt = { a0: 25, "90x120": 25, "60x90": 20, a1: 20, a2: 17 }[paper] || 25;
   const widthCm = isLandscape ? (sizes[1] || 118.9) : (sizes[0] || 84.1);
-  const fontScale = Math.max(0.5, Math.min(2, paperFontPt * 2.54 * poster.clientWidth / (72 * widthCm * 10)));
-  poster.querySelectorAll("*").forEach(el => {
-    el.style.removeProperty("font-size");
-    const baseFontPx = parseFloat(getComputedStyle(el).fontSize) || 10;
-    el.style.fontSize = `calc(${baseFontPx}px * ${fontScale})`;
+  let fontScale = Math.max(0.5, Math.min(2, paperFontPt * 2.54 * poster.clientWidth / (72 * widthCm * 10)));
+  const fontElements = Array.from(poster.querySelectorAll("*"));
+  fontElements.forEach(el => el.style.removeProperty("font-size"));
+  const baseFontSizes = fontElements.map(el => parseFloat(getComputedStyle(el).fontSize) || 10);
+  const applyDraftFontScale = () => fontElements.forEach((el, index) => {
+    el.style.fontSize = `calc(${baseFontSizes[index]}px * ${fontScale})`;
   });
+  applyDraftFontScale();
+
+  // Shrink only when a column would otherwise cover the footer or exceed the page.
+  const availableHeight = grid ? grid.clientHeight : 0;
+  if (availableHeight > 0 && grid.children.length) {
+    for (let attempt = 0; attempt < 8; attempt++) {
+      const contentHeight = Math.max(...Array.from(grid.children, col => col.scrollHeight));
+      const fitRatio = availableHeight / Math.max(1, contentHeight);
+      if (fitRatio >= 0.995 || fontScale <= 0.42) break;
+      fontScale = Math.max(0.42, fontScale * Math.max(0.65, Math.min(0.94, fitRatio * 0.96)));
+      applyDraftFontScale();
+    }
+  }
 }
 
 
@@ -4928,6 +4961,7 @@ window.addEventListener("resize", () => {
   if (state.pdfDoc && (state.fitMode === "width" || state.fitMode === "page")) {
     renderPosterPages();
   }
+  if (currentViewMode === "draft") updateDraftPreview();
 });
 
 /* ---------- Downloads ---------- */
