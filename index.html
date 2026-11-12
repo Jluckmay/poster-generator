@@ -260,8 +260,8 @@ header {
   box-shadow: 0 0 8px #ef4444;
 }
 
-/* Banner de bloqueio AdBlock */
-.blocked-banner {
+/* Painel de alerta de conexão / status */
+.conn-alert-panel {
   background: rgba(239, 68, 68, 0.15);
   border: 1px solid var(--red);
   border-left: 4px solid var(--red);
@@ -275,39 +275,39 @@ header {
   font-size: 12px;
   line-height: 1.5;
 }
-.blocked-banner.hidden {
+.conn-alert-panel.hidden {
   display: none !important;
 }
-.blocked-banner-content {
+.conn-alert-content {
   display: flex;
   align-items: flex-start;
   gap: 12px;
 }
-.blocked-banner-icon {
+.conn-alert-icon {
   font-size: 20px;
   flex-shrink: 0;
   margin-top: 2px;
 }
-.blocked-banner-text {
+.conn-alert-text {
   flex: 1;
 }
-.blocked-banner-text strong {
+.conn-alert-text strong {
   display: block;
   font-size: 13px;
   margin-bottom: 4px;
   color: var(--red);
 }
-.blocked-banner-text p {
+.conn-alert-text p {
   margin: 0 0 8px 0;
   font-size: 12px;
   color: var(--fg);
 }
-.blocked-banner-actions {
+.conn-alert-actions {
   display: flex;
   gap: 8px;
   flex-shrink: 0;
 }
-.blocked-banner-actions button {
+.conn-alert-actions button {
   font-size: 11px;
   padding: 6px 12px;
   min-height: 32px;
@@ -2036,15 +2036,15 @@ button.sm {
   <button class="pri" id="genBtn" data-i18n="generate">⚡ Gerar / Atualizar Pôster</button>
 </div>
 
-<!-- Banner de bloqueio AdBlock -->
-<div id="blockedBanner" class="blocked-banner hidden" role="alert">
-  <div class="blocked-banner-content">
-    <span class="blocked-banner-icon">⚠️</span>
-    <div class="blocked-banner-text">
-      <strong id="blockedBannerTitle" data-i18n="blocked_title">Backend bloqueado por AdBlock</strong>
-      <p id="blockedBannerMsg" data-i18n="blocked_msg"></p>
+<!-- Alerta de bloqueio de conexão -->
+<div id="blockedAlertPanel" class="conn-alert-panel hidden" role="alert">
+  <div class="conn-alert-content">
+    <span class="conn-alert-icon">⚠️</span>
+    <div class="conn-alert-text">
+      <strong id="connAlertTitle" data-i18n="blocked_title">Backend bloqueado por AdBlock</strong>
+      <p id="connAlertMsg" data-i18n="blocked_msg"></p>
     </div>
-    <div class="blocked-banner-actions">
+    <div class="conn-alert-actions">
       <button id="btnUseLocal" class="btn-toggle sm" data-i18n="blocked_local">Usar Servidor Local</button>
       <button id="btnOpenBackend" class="pri sm" data-i18n="blocked_custom">Configurar URL</button>
     </div>
@@ -2917,18 +2917,18 @@ function updateServerBadge(status, label) {
       ? `Backend: ${serverName} was blocked by your browser (AdBlock / Brave Shields). Disable blocking for this site or use local backend.`
       : `Backend: ${serverName} foi bloqueado pelo navegador (AdBlock / Brave Shields / Extensão). Desative o bloqueador nesta página para conectar ao Render.`;
     backendAvailable = false;
-    showBlockedBanner();
+    showConnAlert();
     showOfflineIndicator();
   } else if (status === "online") {
     backendAvailable = true;
-    hideBlockedBanner();
+    hideConnAlert();
     hideOfflineIndicator();
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} (${status}). Interface is fully functional while connection is established.`
       : `Backend: ${serverName} (${status}). A interface está totalmente liberada para edição enquanto a conexão é estabelecida.`;
   } else {
     backendAvailable = false;
-    hideBlockedBanner();
+    hideConnAlert();
     showOfflineIndicator();
     badge.title = (uiLang === "en-US")
       ? `Backend: ${serverName} (${status}). Interface is fully functional while connection is established.`
@@ -2946,16 +2946,16 @@ function hideOfflineIndicator() {
   if (indicator) indicator.classList.remove("visible");
 }
 
-function showBlockedBanner() {
-  const banner = $("#blockedBanner");
-  if (banner) banner.classList.remove("hidden");
+function showConnAlert() {
+  const panel = $("#blockedAlertPanel");
+  if (panel) panel.classList.remove("hidden");
   const details = $("#backendSettingsDetails");
   if (details) details.open = true;
 }
 
-function hideBlockedBanner() {
-  const banner = $("#blockedBanner");
-  if (banner) banner.classList.add("hidden");
+function hideConnAlert() {
+  const panel = $("#blockedAlertPanel");
+  if (panel) panel.classList.add("hidden");
 }
 
 async function robustFetch(url, options = {}, { maxRetries = 6, retryDelay = 4000, onStatusUpdate = null, timeout = 120000 } = {}) {
@@ -3043,13 +3043,7 @@ async function _tryBackend(baseUrl, maxAttempts) {
         return true;
       }
     } catch (err) {
-      const elapsed = Date.now() - t0;
-      // Quando bloqueado por extensão (ex: AdBlock, uBlock, Brave Shields bloqueando .onrender.com),
-      // a requisição é rejeitada pelo navegador quase instantaneamente (<80ms) com ERR_BLOCKED_BY_CLIENT.
-      if (elapsed < 80) {
-        console.warn(`[PosterGenerator] Backend bloqueado pelo navegador (ERR_BLOCKED_BY_CLIENT): ${baseUrl}`);
-        return false;
-      }
+      // Ignora erros transitórios durante a tentativa de conexão (spin-up do Render leva de 30 a 50s)
     }
 
     updateServerBadge("connecting", (uiLang === "en-US") ? `${serverName}: Waking up (${attempt}/${maxAttempts})...` : `${serverName}: Conectando (${attempt}/${maxAttempts})...`);
