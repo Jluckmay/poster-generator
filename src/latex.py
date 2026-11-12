@@ -172,33 +172,67 @@ def _arrow_pipeline_to_latex(text: str) -> str:
     if len(bracket_nodes) < 2:
         return _inline(text)
 
-    boxes: List[str] = []
-    # If 4 or more nodes, stacked presentation ensures excellent readability in column
-    if len(bracket_nodes) >= 4:
-        for st in bracket_nodes[:6]:
-            boxes.append(
-                f"\\fbox{{\\parbox{{0.92\\linewidth}}{{\\centering\\large\\textbf{{{_inline(st)}}}}}}}"
+    nodes = bracket_nodes[:6]
+    stacked = len(nodes) >= 4
+
+    # TikZ colorido: usa colorOne (accent do poster) para bordas e fundo do header
+    if stacked:
+        # Layout vertical com setas para baixo
+        tikz_nodes = []
+        for i, st in enumerate(nodes):
+            tikz_nodes.append(
+                f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+                f"        text width=0.82\\linewidth, align=center, inner sep=10pt,\n"
+                f"        font=\\Large\\bfseries] (n{i}) {{{_inline(st)}}};"
             )
-        joined = "\n  \\par\\vspace{6pt}$\\boldsymbol{\\downarrow}$\\par\\vspace{6pt}\n  ".join(boxes)
+        # posicionamento: cada nó abaixo do anterior com espaço para seta
+        pos_lines = [tikz_nodes[0]]
+        for i in range(1, len(nodes)):
+            pos_lines.append(
+                f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+                f"        text width=0.82\\linewidth, align=center, inner sep=10pt,\n"
+                f"        font=\\Large\\bfseries, below=18pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
+            )
+        arrow_lines = [
+            f"  \\draw[-{{Stealth[scale=1.4]}}, line width=2pt, color=colorOne] (n{i}.south) -- (n{i+1}.north);"
+            for i in range(len(nodes) - 1)
+        ]
+        body = "\n".join(pos_lines + arrow_lines)
         return (
             "\\begin{center}\n"
-            "{\\setlength{\\fboxsep}{9pt}\\setlength{\\fboxrule}{1.6pt}\n"
-            f"  {joined}%\n"
+            "\\resizebox{0.95\\linewidth}{!}{%\n"
+            "\\begin{tikzpicture}\n"
+            f"{body}\n"
+            "\\end{tikzpicture}%\n"
             "}\n"
             "\\end{center}"
         )
     else:
-        for st in bracket_nodes:
-            boxes.append(
-                f"\\fbox{{\\begin{{tabular}}{{@{{}}c@{{}}}}\\large\\textbf{{{_inline(st)}}}\\end{{tabular}}}}"
+        # Layout horizontal com setas para a direita
+        tikz_nodes = []
+        tikz_nodes.append(
+            f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+            f"        align=center, inner sep=10pt,\n"
+            f"        font=\\Large\\bfseries] (n0) {{{_inline(nodes[0])}}};"
+        )
+        for i in range(1, len(nodes)):
+            tikz_nodes.append(
+                f"  \\node[draw=colorOne, line width=1.6pt, fill=white, rounded corners=4pt,\n"
+                f"        align=center, inner sep=10pt,\n"
+                f"        font=\\Large\\bfseries, right=18pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
             )
-        joined = "\n  $\\boldsymbol{\\rightarrow}$\n  ".join(boxes)
+        arrow_lines = [
+            f"  \\draw[-{{Stealth[scale=1.4]}}, line width=2pt, color=colorOne] (n{i}.east) -- (n{i+1}.west);"
+            for i in range(len(nodes) - 1)
+        ]
+        body = "\n".join(tikz_nodes + arrow_lines)
         return (
             "\\begin{center}\n"
-            "{\\setlength{\\fboxsep}{9pt}\\setlength{\\fboxrule}{1.6pt}\n"
             "\\resizebox{0.98\\linewidth}{!}{%\n"
-            f"  {joined}%\n"
-            "}}\n"
+            "\\begin{tikzpicture}\n"
+            f"{body}\n"
+            "\\end{tikzpicture}%\n"
+            "}\n"
             "\\end{center}"
         )
 
