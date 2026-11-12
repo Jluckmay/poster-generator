@@ -152,13 +152,36 @@
   }
 
   async function rasterize(file) {
-    if (!file || !file.type.startsWith("image/")) throw new Error(`Arquivo de imagem inválido: ${file && file.name}`);
-    const bitmap = await createImageBitmap(file);
+    if (!file) throw new Error("Arquivo de imagem inválido.");
+    const extension = String(file.name || "").split(".").pop().toLowerCase();
+    const accepted = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]);
+    if (!(file.type && file.type.startsWith("image/")) && !accepted.has(extension)) {
+      throw new Error(`Arquivo de imagem inválido: ${file.name}`);
+    }
+    const source = file.type && file.type.startsWith("image/") ? file : new Blob([file], { type: extension === "svg" ? "image/svg+xml" : "application/octet-stream" });
     const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, bitmap.width);
-    canvas.height = Math.max(1, bitmap.height);
-    canvas.getContext("2d", { alpha: true }).drawImage(bitmap, 0, 0);
-    bitmap.close();
+    try {
+      const bitmap = await createImageBitmap(source);
+      canvas.width = Math.max(1, bitmap.width);
+      canvas.height = Math.max(1, bitmap.height);
+      canvas.getContext("2d", { alpha: true }).drawImage(bitmap, 0, 0);
+      bitmap.close();
+    } catch (_) {
+      const url = URL.createObjectURL(source);
+      try {
+        const image = new Image();
+        await new Promise((resolve, reject) => {
+          image.onload = resolve;
+          image.onerror = () => reject(new Error(`Não foi possível abrir a imagem ${file.name}.`));
+          image.src = url;
+        });
+        canvas.width = Math.max(1, image.naturalWidth);
+        canvas.height = Math.max(1, image.naturalHeight);
+        canvas.getContext("2d", { alpha: true }).drawImage(image, 0, 0);
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
     const blob = await new Promise(resolve => canvas.toBlob(resolve, "image/png"));
     if (!blob) throw new Error(`Não foi possível converter ${file.name} para PNG.`);
     return new Uint8Array(await blob.arrayBuffer());

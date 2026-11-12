@@ -121,7 +121,7 @@ def _headers(resp: Response) -> Response:
     resp.headers["Permissions-Policy"] = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()"
     resp.headers["Content-Security-Policy"] = (
         "default-src 'self' data: blob:; "
-        "script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; "
+        "script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com; "
         "worker-src 'self' blob: data: https://cdnjs.cloudflare.com; "
         "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; "
         "font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; "

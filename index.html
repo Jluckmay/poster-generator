@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' * http://127.0.0.1:5000 http://localhost:5000 https://academic-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' * http://127.0.0.1:5000 http://localhost:5000 https://academic-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>poster-generator | Gerador de Pôsteres Acadêmicos</title>
@@ -1040,6 +1040,7 @@ button.sm {
   align-self: stretch;
 }
 .draft-block {
+  flex: 1 0 auto;
   background: var(--tpl-block-bg, #ffffff);
   border-radius: 4px;
   padding: 14px 16px;
@@ -1931,6 +1932,13 @@ button.sm {
   #form > section:nth-of-type(4) { order: 5; }
   #form > section:nth-of-type(5) { order: 6; }
   #form > section:nth-of-type(6) { order: 7; }
+  #genBtnFixed {
+    position: static;
+    transform: none;
+    width: fit-content;
+    margin: 8px auto;
+    pointer-events: auto;
+  }
 }
 
 @media (max-width: 768px) {
@@ -1964,7 +1972,9 @@ button.sm {
     box-sizing: border-box;
   }
   #pdf-viewport-container { padding: 10px; }
-  .draft-poster { padding: 14px 10px; }
+  .draft-container { align-items: flex-start; overflow-x: auto; padding-bottom: 8px; }
+  .draft-container > div:first-child { min-width: 720px; }
+  .draft-poster { width: 720px; min-width: 720px; max-width: none; padding: 14px 10px; }
   .draft-grid { gap: 8px; }
   .draft-block { padding: 8px 10px; font-size: 9px; }
   .draft-block-title { font-size: 9.5px; }
@@ -3952,10 +3962,13 @@ function updateDraftPreview() {
   });
   applyDraftFontScale();
 
-  // Shrink only when a column would otherwise cover the footer or exceed the page.
-  const availableHeight = grid ? grid.clientHeight : 0;
-  if (availableHeight > 0 && grid.children.length) {
-    for (let attempt = 0; attempt < 8; attempt++) {
+  // Compare natural column content with the space left between the header and footer.
+  if (grid && grid.children.length) {
+    const posterStyle = getComputedStyle(poster);
+    const verticalPadding = parseFloat(posterStyle.paddingTop) + parseFloat(posterStyle.paddingBottom);
+    const fixedHeight = header.offsetHeight + (divider.classList.contains("hidden") ? 0 : divider.offsetHeight) + (footerEl.classList.contains("hidden") ? 0 : footerEl.offsetHeight);
+    const availableHeight = Math.max(1, poster.clientHeight - verticalPadding - fixedHeight - 24);
+    for (let attempt = 0; attempt < 12; attempt++) {
       const contentHeight = Math.max(...Array.from(grid.children, col => col.scrollHeight));
       const fitRatio = availableHeight / Math.max(1, contentHeight);
       if (fitRatio >= 0.995 || fontScale <= 0.42) break;
@@ -3964,7 +3977,6 @@ function updateDraftPreview() {
     }
   }
 }
-
 
 function formatInlineText(str) {
   let esc = escapeHtml(str);
