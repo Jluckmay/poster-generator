@@ -3024,22 +3024,19 @@ async function _tryBackend(baseUrl, maxAttempts) {
   for (let attempt = 1; attempt <= maxAttempts; attempt++) {
     const t0 = Date.now();
     try {
-      const res = await _fetchWithClientHeader((baseUrl || "") + "/healthz", { signal: timeoutSignal(6000) });
+      const res = await _fetchWithClientHeader((baseUrl || "") + "/api/config", { signal: timeoutSignal(6000) });
       if (res.ok) {
         try {
-          const cfgRes = await _fetchWithClientHeader((baseUrl || "") + "/api/config", { signal: timeoutSignal(5000) });
-          if (cfgRes.ok) {
-            const data = await cfgRes.json();
-            CFG = data;
-            populateProviders();
-          }
+          const data = await res.json();
+          CFG = data;
+          populateProviders();
         } catch (_) {}
 
         updateServerBadge("online");
 
         if (keepAliveTimer) clearInterval(keepAliveTimer);
         keepAliveTimer = setInterval(() => {
-          _fetchWithClientHeader((baseUrl || "") + "/healthz", { signal: timeoutSignal(5000) }).catch(() => {});
+          _fetchWithClientHeader((baseUrl || "") + "/api/config", { signal: timeoutSignal(5000) }).catch(() => {});
         }, 8 * 60 * 1000);
         return true;
       }
