@@ -3688,7 +3688,7 @@ $("#quickSampleBtn").onclick = () => {
 
 /* ---------- Alternância de Visualização (Rascunho vs PDF) ---------- */
 let currentViewMode = "draft";
-let draftScale = 1.5;
+let draftScale = 1.0;
 
 function setDraftZoom(newScale) {
   draftScale = Math.max(0.35, Math.min(2.5, newScale));
@@ -3912,7 +3912,7 @@ function updateDraftPreview() {
     row.style.gap = `${Math.max(8, poster.clientWidth * 0.012)}px`;
     if (isHeader) {
       row.style.position = "absolute";
-      row.style.top = "0";
+      row.style.top = tplId === "dcc" ? "58%" : "0";
       row.style.bottom = "0";
       row.style.left = rightDock ? "60%" : "0";
       row.style.right = "0";
@@ -4004,17 +4004,13 @@ function updateDraftPreview() {
   });
   applyDraftFontScale();
 
-  // Compare natural column content with the space left between the header and footer.
+  // Shrink text only when content actually overflows a column.
   if (grid && grid.children.length) {
-    const posterStyle = getComputedStyle(poster);
-    const verticalPadding = parseFloat(posterStyle.paddingTop) + parseFloat(posterStyle.paddingBottom);
-    const fixedHeight = header.offsetHeight + (divider.classList.contains("hidden") ? 0 : divider.offsetHeight) + (footerEl.classList.contains("hidden") ? 0 : footerEl.offsetHeight);
-    const availableHeight = Math.max(1, poster.clientHeight - verticalPadding - fixedHeight - 24);
+    const minimumFontScale = Math.max(0.42, fontScale * 0.85);
     for (let attempt = 0; attempt < 12; attempt++) {
-      const contentHeight = Math.max(...Array.from(grid.children, col => col.scrollHeight));
-      const fitRatio = availableHeight / Math.max(1, contentHeight);
-      if (fitRatio >= 0.995 || fontScale <= 0.42) break;
-      fontScale = Math.max(0.42, fontScale * Math.max(0.65, Math.min(0.94, fitRatio * 0.96)));
+      const fitRatio = Math.min(...Array.from(grid.children, col => col.clientHeight / Math.max(1, col.scrollHeight)));
+      if (fitRatio >= 0.995 || fontScale <= minimumFontScale) break;
+      fontScale = Math.max(minimumFontScale, fontScale * Math.max(0.65, Math.min(0.94, fitRatio * 0.96)));
       applyDraftFontScale();
     }
   }
