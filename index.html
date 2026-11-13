@@ -913,9 +913,9 @@ button.sm {
 .draft-poster {
   width: 100%;
   max-width: 960px;
-  background: #ffffff;
+  background: transparent;
   color: #1a1a1a;
-  box-shadow: 0 16px 48px rgba(0,0,0,0.7), 0 0 0 1px rgba(255,255,255,0.06);
+  box-shadow: none;
   border-radius: 4px;
   position: relative;
   overflow: visible;
@@ -926,6 +926,7 @@ button.sm {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   padding: 22px;
   box-sizing: border-box;
+  min-height: 100vh;
 }
 .draft-poster.portrait {
   min-height: auto;
@@ -975,15 +976,15 @@ button.sm {
 .draft-header .draft-logos-row {
   position: absolute;
   z-index: 2;
-  top: 0;
-  bottom: 0;
+  top: 8px;
   left: 0;
   right: 0;
   width: 100%;
-  height: 100%;
+  height: auto;
   margin: 0;
   padding: 0 1%;
   pointer-events: none;
+  justify-content: space-between;
 }
 .draft-logo-img {
   max-height: 48px;
@@ -1014,7 +1015,7 @@ button.sm {
   box-shadow: none;
 }
 .draft-title {
-  font-size: 15px;
+  font-size: 24px;
   font-weight: 800;
   line-height: 1.25;
   margin: 0;
@@ -1022,13 +1023,13 @@ button.sm {
   word-break: break-word;
 }
 .draft-authors {
-  font-size: 10.5px;
+  font-size: 14px;
   font-weight: 600;
   margin-top: 4px;
   line-height: 1.3;
 }
 .draft-affil {
-  font-size: 9px;
+  font-size: 12px;
   opacity: 0.8;
   line-height: 1.3;
   margin-top: 2px;
@@ -1072,13 +1073,13 @@ button.sm {
   display: flex;
   flex-direction: column;
   gap: 8px;
-  font-size: 10px;
+  font-size: 11px;
   line-height: 1.5;
   box-sizing: border-box;
   width: 100%;
 }
 .draft-block-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.04em;
@@ -1097,7 +1098,7 @@ button.sm {
   width: 100%;
   border-collapse: collapse;
   margin: 10px 0;
-  font-size: 9.5px;
+  font-size: 11px;
   line-height: 1.4;
   background: transparent;
   border: 1.5px solid #1e293b;
@@ -1110,7 +1111,7 @@ button.sm {
   padding: 6px 8px;
   border: 1px solid #334155;
   text-align: center;
-  font-size: 10px;
+  font-size: 11px;
   letter-spacing: -0.01em;
 }
 .draft-block-body table.draft-table th:first-child {
@@ -1132,12 +1133,12 @@ button.sm {
   align-items: center;
   justify-content: center;
   gap: 8px;
-  padding: 10px 8px;
-  margin: 10px 0;
+  padding: 8px 6px;
+  margin: 8px 0;
   background: transparent;
   border: 1.5px solid #cbd5e1;
   border-radius: 4px;
-  font-size: 9.5px;
+  font-size: 11px;
 }
 .draft-block-body .draft-diag-node {
   padding: 6px 10px;
@@ -1147,7 +1148,7 @@ button.sm {
   font-weight: 700;
   color: #0f172a;
   box-shadow: 0 1px 3px rgba(0,0,0,0.06);
-  font-size: 9.5px;
+  font-size: 11px;
   line-height: 1.3;
 }
 .draft-block-body .draft-diag-arrow {
@@ -1363,8 +1364,15 @@ button.sm {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 8px 16px 12px 16px;
+  padding: 12px 16px 12px 16px;
   text-align: center;
+  position: relative;
+}
+.draft-poster.tpl-dcc .draft-header .draft-logos-row {
+  position: static !important;
+  margin-bottom: 8px;
+  justify-content: center;
+  gap: 20px;
 }
 .draft-poster.tpl-dcc .draft-title {
   color: #000000 !important;
@@ -1386,13 +1394,13 @@ button.sm {
 .draft-poster.tpl-dcc .draft-authors {
   color: #000000 !important;
   font-weight: 800;
-  font-size: 12.5px;
+  font-size: 14px;
   margin-top: 6px;
 }
 .draft-poster.tpl-dcc .draft-affil {
   color: #444444 !important;
   font-weight: 500;
-  font-size: 10.5px;
+  font-size: 12px;
   margin-top: 4px;
   line-height: 1.4;
 }
