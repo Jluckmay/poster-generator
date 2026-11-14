@@ -486,6 +486,12 @@ button.pri:hover:not(:disabled) {
   display: flex;
   justify-content: center;
   pointer-events: none;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+}
+.gen-btn-fixed.hidden {
+  transform: translateX(-50%) translateY(-120%);
+  opacity: 0;
+  pointer-events: none;
 }
 .gen-btn-fixed .pri {
   pointer-events: auto;
@@ -3615,14 +3621,14 @@ $("#quickSampleBtn").onclick = () => {
   }
 
   const sampleTexts = isEn ? {
-    introduction: "Electromagnetic spectrum modulation in controlled agriculture is critical for optimizing photosynthetic yield, energy efficiency, and secondary metabolite biosynthesis [1]. Precise control of wavelength, intensity, and photoperiod allows directing plant development toward specific productive goals, whether maximizing biomass, accelerating the phenological cycle, or inducing high-value secondary compounds.\n\n- **Blue spectrum (450nm):** activates cryptochromes and phototropins, promoting stomatal opening, controlled hypocotyl elongation, and chlorophyll-a accumulation, essential for efficient photosynthesis.\n- **Red spectrum (660nm):** targets peak absorption of phytochrome Pr, maximizing PSII quantum yield and CO2 assimilation, driving vegetative growth [2].\n- **Far-red synergy (730nm):** triggers the Emerson enhancement effect, boosting net carbon assimilation rate by up to 18.4% when combined with red light, exceeding the sum of individual effects.\n- **Energy challenge:** conventional lighting systems dissipate excessive thermal energy without proportional conversion to photosynthetically active radiation (PAR), resulting in low energy-use efficiency.\n- **Objective:** investigate optimal multi-channel spectral combinations to minimize electrical power per gram of harvested biomass, reducing operational costs and carbon footprint of controlled-environment production.",
-    methods: "Factorial trial evaluated with 80 uniform seedlings across 4 automated microclimate chambers, under rigorous environmental variable control.\n\n[80 Uniform Seedlings] → [IoT Climate Chambers] → [Spectral Modulation] → [Biomass & Gas Exchange]\n\n- **Microclimate sensing:** temperature, relative humidity, and vapor pressure deficit (VPD) monitored continuously at 1 Hz via calibrated sensors, logged to cloud for real-time analysis.\n- **Spectral irradiance:** monitored and calibrated with high-resolution laboratory spectroradiometers (380–780nm) [1], ensuring uniform photon distribution across all chambers.\n- **Closed-loop fertigation:** recirculating hydroponic solution with autonomous electrical conductivity (EC 1.8 mS/cm) and pH (5.8 ± 0.2) control, with automatic nutrient replenishment based on plant uptake.\n- **Gas exchange assays:** portable infrared gas analyzers (IRGA) measuring net photosynthesis (A) and stomatal conductance (gs) during 16h photoperiods, with weekly measurements to track development.\n- **Biomass analysis:** dry weight determination after oven-drying at 65°C for 72h, with leaf area index and root-to-shoot ratio determination.",
+    introduction: "Electromagnetic spectrum modulation in controlled agriculture is critical for optimizing photosynthetic yield, energy efficiency, and secondary metabolite biosynthesis [1]. Precise control of wavelength, intensity, and photoperiod directs plant development toward specific goals: maximizing biomass, accelerating the phenological cycle, or inducing high-value secondary compounds.\n\n- **Blue spectrum (450nm):** activates cryptochromes and phototropins, promoting stomatal opening and chlorophyll-a accumulation.\n- **Red spectrum (660nm):** targets peak absorption of phytochrome Pr, maximizing PSII quantum yield and CO2 assimilation [2].\n- **Far-red synergy (730nm):** triggers the Emerson enhancement effect, boosting net carbon assimilation by up to 18.4% when combined with red light.\n- **Energy challenge:** conventional lighting dissipates excessive heat without proportional PAR conversion, resulting in low energy-use efficiency.\n- **Objective:** investigate optimal multi-channel spectral combinations to minimize electrical power per gram of harvested biomass.",
+    methods: "Factorial trial with 80 uniform seedlings across 4 automated microclimate chambers under rigorous environmental control.\n\n[80 Uniform Seedlings] → [IoT Climate Chambers] → [Spectral Modulation] → [Biomass & Gas Exchange]\n\n- **Microclimate sensing:** temperature, relative humidity, and VPD monitored continuously at 1 Hz via calibrated sensors.\n- **Spectral irradiance:** monitored with high-resolution spectroradiometers (380–780nm) [1], ensuring uniform photon distribution.\n- **Closed-loop fertigation:** recirculating hydroponic solution with autonomous EC (1.8 mS/cm) and pH (5.8 ± 0.2) control.\n- **Gas exchange assays:** IRGA measuring net photosynthesis (A) and stomatal conductance (gs) during 16h photoperiods.",
     results: "Comparative dry biomass accumulation, harvest cycle reduction, and photosynthetic photon efficiency:\n\n| Light Treatment | Dry Biomass (g) | Cycle Reduction | Photon Efficiency (g/mol) |\n| :--- | :---: | :---: | :---: |\n| White Control (Fluorescent) | 4.2 ± 0.3 | Baseline (0 days) | 1.05 |\n| Monochromatic Blue (450nm) | 5.1 ± 0.4 | -4 days | 1.28 |\n| Monochromatic Red (660nm) | 5.8 ± 0.5 | -7 days | 1.45 |\n| Dynamic Combined (B+R+FR) | **7.4 ± 0.3** | **-12 days** | **1.86** |\n\n- The dynamic combined spectrum produced a **76.2% increase** in dry biomass compared to white light control [2].\n- Crop development cycles were shortened by 12 days, increasing annual production turnarounds by 28%.\n- Net CO2 assimilation increased from 11.2 to 19.6 umol/m2s under modulated far-red supplementation.\n- Specific electrical energy expenditure decreased from 14.2 kWh/kg to 8.7 kWh/kg dry matter, representing a 38.7% energy saving.",
     conclusions: "- **Precision lighting** demonstrates outstanding biological and energetic feasibility for industrial vertical farming systems.\n- Dual-band dynamic spectrum combined with far-red boosts vegetative development while significantly cutting operational expenditure in climate control and lighting.\n- Closed-loop IoT sensor networks enable real-time autonomous spectral adaptation, ensuring reproducible quality across multi-tier vertical farming facilities [1, 2].\n- Future studies will assess secondary metabolite concentration and antioxidant accumulation under pulsed photoperiod regimes.",
     references: "[1] Smith, J., Watson, H. et al. (2024). Photobiology & Plant Physiology. Nature Plants, 10:142–155.\n[2] Doe, J. & Turing, A. (2023). Precision Agricultural Systems. IEEE Transactions on AgriTech, 18:204–215."
   } : {
-    introduction: "A modulação do espectro eletromagnético na agricultura em ambiente protegido é decisiva para a otimização da taxa fotossintética, eficiência de uso de energia e síntese de metabólitos vegetais [1]. O controle preciso do comprimento de onda, intensidade e fotoperíodo permite direcionar o desenvolvimento vegetal para objetivos produtivos específicos, seja maximização de biomassa, aceleração do ciclo fenológico ou indução de compostos secundários de valor agregado.\n\n- **Espectro azul (450nm):** estimula criptocromos e fototropinas, favorecendo condutância estomática, alongamento controlado do hipocótilo e acúmulo de clorofila-a, essencial para fotossíntese eficiente.\n- **Espectro vermelho (660nm):** atinge o pico de absorção dos fitocromos Pr, maximizando o rendimento quântico do fotossistema II e a fixação de CO2, impulsionando o crescimento vegetativo [2].\n- **Sinergia do vermelho-distante (730nm):** desencadeia o efeito Emerson, elevando a taxa de assimilação líquida em até 18.4% quando combinado com luz vermelha, superando a soma das partes.\n- **Gargalo produtivo:** sistemas convencionais de iluminação dissipam energia térmica excessiva sem conversão proporcional em radiação fotossinteticamente ativa (PAR), resultando em baixo aproveitamento energético.\n- **Objetivo:** investigar a proporção espectral ideal multicanal visando máxima biomassa seca por kWh consumido, reduzindo custos operacionais e pegada de carbono da produção em ambiente controlado.",
-    methods: "Ensaio fatorial avaliado com 80 mudas padronizadas em 4 câmaras climatizadas automatizadas via sensores IoT, sob controle rigoroso de variáveis ambientais.\n\n[80 Mudas Padronizadas] → [Câmaras Climatizadas IoT] → [Modulação Espectral] → [Biomassa & Trocas Gasosas]\n\n- **Sensoriamento microclimático:** temperatura, umidade relativa e déficit de pressão de vapor (VPD) monitorados continuamente a 1 Hz com sensores calibrados, registrados em nuvem para análise em tempo real.\n- **Irradiância espectral:** acompanhada e calibrada com espectrorradiômetro laboratorial de alta precisão (380–780nm) [1], garantindo uniformidade de distribuição de fotons em todas as câmaras.\n- **Fertirrigação em circuito fechado:** recirculação hidropônica com controle autônomo de condutividade elétrica (EC 1.8 mS/cm) e pH (5.8 ± 0.2), com reposição automática de nutrientes conforme consumo das plantas.\n- **Avaliação fisiológica:** analisador de trocas gasosas por infravermelho (IRGA) medindo fotossíntese líquida (A) e condutância estomática (gs) durante fotoperíodo de 16h, com medições semanais para acompanhamento do desenvolvimento.\n- **Análise de biomassa:** pesagem de massa seca após secagem em estufa a 65°C por 72h, com determinação de índice de área foliar e razão raiz-parte aérea.",
+    introduction: "A modulação do espectro eletromagnético na agricultura em ambiente protegido é decisiva para a otimização da taxa fotossintética, eficiência de uso de energia e síntese de metabólitos vegetais [1]. O controle preciso do comprimento de onda, intensidade e fotoperíodo direciona o desenvolvimento vegetal para objetivos específicos: maximização de biomassa, aceleração do ciclo fenológico ou indução de compostos secundários de valor agregado.\n\n- **Espectro azul (450nm):** estimula criptocromos e fototropinas, favorecendo condutância estomática e acúmulo de clorofila-a.\n- **Espectro vermelho (660nm):** atinge o pico de absorção dos fitocromos Pr, maximizando o rendimento quântico do fotossistema II e a fixação de CO2 [2].\n- **Sinergia do vermelho-distante (730nm):** desencadeia o efeito Emerson, elevando a taxa de assimilação líquida em até 18.4% quando combinado com luz vermelha.\n- **Gargalo produtivo:** sistemas convencionais dissipam energia térmica excessiva sem conversão proporcional em PAR, resultando em baixo aproveitamento energético.\n- **Objetivo:** investigar a proporção espectral ideal multicanal visando máxima biomassa seca por kWh consumido.",
+    methods: "Ensaio fatorial com 80 mudas padronizadas em 4 câmaras climatizadas automatizadas via sensores IoT, sob controle rigoroso de variáveis ambientais.\n\n[80 Mudas Padronizadas] → [Câmaras Climatizadas IoT] → [Modulação Espectral] → [Biomassa & Trocas Gasosas]\n\n- **Sensoriamento microclimático:** temperatura, umidade relativa e VPD monitorados continuamente a 1 Hz com sensores calibrados.\n- **Irradiância espectral:** acompanhada com espectrorradiômetro de alta precisão (380–780nm) [1], garantindo uniformidade de distribuição de fotons.\n- **Fertirrigação em circuito fechado:** recirculação hidropônica com controle autônomo de EC (1.8 mS/cm) e pH (5.8 ± 0.2).\n- **Avaliação fisiológica:** IRGA medindo fotossíntese líquida (A) e condutância estomática (gs) durante fotoperíodo de 16h.",
     results: "Comparativo de acúmulo de biomassa seca, redução do ciclo fenológico e eficiência de fótons fotossintéticos:\n\n| Tratamento Espectral | Biomassa Seca (g) | Redução de Ciclo | Eficiência Fotônica (g/mol) |\n| :--- | :---: | :---: | :---: |\n| Controle Branco (Fluorescente) | 4.2 ± 0.3 | Linha de Base (0d) | 1.05 |\n| Azul Monocromático (450nm) | 5.1 ± 0.4 | -4 dias | 1.28 |\n| Vermelho Monocromático (660nm) | 5.8 ± 0.5 | -7 dias | 1.45 |\n| Dinâmico Combinado (A+V+VD) | **7.4 ± 0.3** | **-12 dias** | **1.86** |\n\n- O espectro combinado dinâmico proporcionou um aumento de **76.2% na biomassa seca** em relação ao controle branco [2].\n- O ciclo até o ponto de colheita foi reduzido em 12 dias, viabilizando 28% mais rotações produtivas anuais.\n- A assimilação líquida de CO2 elevou-se de 11.2 para 19.6 umol/m2s sob suplementação calibrada de vermelho-distante.\n- O consumo específico de energia elétrica caiu de 14.2 kWh/kg para 8.7 kWh/kg de matéria seca colhida, uma redução de 38.7% no custo de produção.",
     conclusions: "- **Iluminação de precisão** comprova viabilidade agronômica, fisiológica e energética destacada para fazendas verticais urbanas sustentáveis.\n- O espectro dinâmico multicanal acelera o desenvolvimento vegetativo com expressiva redução de despesas operacionais em climatização e energia.\n- A integração com sensores IoT possibilita calibração espectral autônoma em tempo real, garantindo reprodutibilidade qualitativa no cultivo vertical [1, 2].\n- Trabalhos futuros investigarão a concentração de compostos antioxidantes e compostos bioativos sob regimes pulsados de fotoperíodo.",
     references: "[1] Silva, M., Pereira, R. et al. (2024). Fotobiologia Vegetal Aplicada. Journal of Plant Science, 12:88–99.\n[2] Santos, C. & Rostova, E. (2023). Sistemas Agrícolas de Precisão. Revista Brasileira de Agrocomputação, 15:45–58."
@@ -3940,10 +3946,10 @@ function updateDraftPreview() {
       row.style.bottom = tplId === "dcc" ? "auto" : "0";
       row.style.left = rightDock ? "60%" : "0";
       row.style.right = "0";
-      row.style.width = "auto";
+      row.style.width = tplId === "dcc" ? "100%" : "auto";
       row.style.height = tplId === "dcc" ? "auto" : "100%";
       row.style.margin = "0";
-      row.style.padding = "0 1%";
+      row.style.padding = tplId === "dcc" ? "0" : "0 1%";
       row.style.alignItems = "center";
       row.style.zIndex = "2";
     }
@@ -5038,6 +5044,35 @@ window.addEventListener("resize", () => {
   }
   if (currentViewMode === "draft") updateDraftPreview();
 });
+
+/* ---------- Generate button hide/show on scroll ---------- */
+let lastScrollY = window.scrollY;
+let scrollTimer = null;
+const genBtnFixed = $("#genBtnFixed");
+function handleGenBtnScroll() {
+  if (!genBtnFixed) return;
+  const currentScrollY = window.scrollY;
+  const scrollingDown = currentScrollY > lastScrollY;
+  if (scrollingDown && currentScrollY > 80) {
+    genBtnFixed.classList.add("hidden");
+  } else {
+    genBtnFixed.classList.remove("hidden");
+  }
+  lastScrollY = currentScrollY;
+  if (scrollTimer) clearTimeout(scrollTimer);
+  scrollTimer = setTimeout(() => {
+    lastScrollY = window.scrollY;
+  }, 150);
+}
+window.addEventListener("scroll", handleGenBtnScroll, { passive: true });
+
+// Show button when mouse is near the top edge of the page
+window.addEventListener("mousemove", (e) => {
+  if (!genBtnFixed) return;
+  if (e.clientY < 120) {
+    genBtnFixed.classList.remove("hidden");
+  }
+}, { passive: true });
 
 /* ---------- Downloads ---------- */
 function saveBlob(blob, name) {
