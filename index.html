@@ -476,14 +476,14 @@ button.pri:hover:not(:disabled) {
   box-shadow: 0 4px 20px rgba(255, 42, 64, 0.55);
 }
 
-/* Botão "Gerar Pôster" fixado no centro do topo da página */
+/* Botão "Gerar Pôster" fixado acima da seção de preview */
 .gen-btn-fixed {
   position: fixed;
-  top: 72px;
+  top: 68px;
   left: 50%;
   transform: translateX(-50%) translateY(0);
   opacity: 1;
-  z-index: 60;
+  z-index: 95;
   display: flex;
   justify-content: center;
   pointer-events: none;
@@ -505,6 +505,7 @@ button.pri:hover:not(:disabled) {
   padding: 10px 26px;
   min-height: 42px;
   font-size: 13px;
+  font-weight: 700;
   border-radius: 9999px;
   box-shadow: 0 4px 18px rgba(255, 42, 64, 0.45);
 }
@@ -734,7 +735,7 @@ button.sm {
 /* Visualizador de Pôster */
 #preview {
   position: sticky;
-  top: 22px;
+  top: 70px;
   height: auto;
   min-height: 600px;
   background: var(--bg-card);
@@ -2033,11 +2034,7 @@ button.sm {
   #form > section:nth-of-type(5) { order: 6; }
   #form > section:nth-of-type(6) { order: 7; }
   #genBtnFixed {
-    position: static;
-    transform: none;
-    width: fit-content;
-    margin: 8px auto;
-    pointer-events: auto;
+    top: 58px;
   }
 }
 
@@ -3867,6 +3864,9 @@ function setViewMode(mode) {
       if (iframe) iframe.style.display = "block";
     }
   }
+  if (typeof alignGenBtnWithPreview === "function") {
+    alignGenBtnWithPreview();
+  }
 }
 
 if ($("#btnViewDraft")) $("#btnViewDraft").onclick = () => setViewMode("draft");
@@ -5228,35 +5228,6 @@ window.addEventListener("resize", () => {
   if (currentViewMode === "draft") updateDraftPreview();
 });
 
-/* ---------- Generate button hide/show on scroll ---------- */
-let lastScrollY = window.scrollY;
-let scrollTimer = null;
-const genBtnFixed = $("#genBtnFixed");
-function handleGenBtnScroll() {
-  if (!genBtnFixed) return;
-  const currentScrollY = window.scrollY;
-  const scrollingDown = currentScrollY > lastScrollY;
-  if (scrollingDown && currentScrollY > 80) {
-    genBtnFixed.classList.add("hidden");
-  } else {
-    genBtnFixed.classList.remove("hidden");
-  }
-  lastScrollY = currentScrollY;
-  if (scrollTimer) clearTimeout(scrollTimer);
-  scrollTimer = setTimeout(() => {
-    lastScrollY = window.scrollY;
-  }, 150);
-}
-window.addEventListener("scroll", handleGenBtnScroll, { passive: true });
-
-// Show button when mouse is near the top edge of the page
-window.addEventListener("mousemove", (e) => {
-  if (!genBtnFixed) return;
-  if (e.clientY < 120) {
-    genBtnFixed.classList.remove("hidden");
-  }
-}, { passive: true });
-
 /* ---------- Downloads ---------- */
 function saveBlob(blob, name) {
   const a = document.createElement("a");
@@ -5331,24 +5302,66 @@ function init() {
   setupFloatingGenButton();
 }
 
-/* ---------- Controle Dinâmico de Exibição do Botão Gerar Pôster ---------- */
+/* ---------- Controle Dinâmico de Posicionamento e Exibição do Botão Gerar Pôster ---------- */
 function setupFloatingGenButton() {
   const btnFixed = $("#genBtnFixed");
   if (!btnFixed) return;
 
   let lastScrollY = window.scrollY || document.documentElement.scrollTop || 0;
-  const threshold = 8;
-  let isMouseNearTop = false;
+  let scrollInactivityTimer = null;
+  let mouseHideTimeout = null;
+  let isMouseNearTopCenter = false;
+  let isHoveringGenBtn = false;
+
+  function alignGenBtnWithPreview() {
+    const preview = $("#preview");
+    if (!preview) return;
+    const rect = preview.getBoundingClientRect();
+    if (rect.width > 0) {
+      const centerX = Math.round(rect.left + (rect.width / 2));
+      btnFixed.style.left = `${centerX}px`;
+    } else {
+      btnFixed.style.left = "50%";
+    }
+  }
+  window.alignGenBtnWithPreview = alignGenBtnWithPreview;
+
+  function showButton() {
+    if (mouseHideTimeout) clearTimeout(mouseHideTimeout);
+    btnFixed.classList.remove("hidden");
+    alignGenBtnWithPreview();
+  }
+
+  function hideButton() {
+    if (isHoveringGenBtn || isMouseNearTopCenter) return;
+    const curScroll = window.scrollY || document.documentElement.scrollTop || 0;
+    if (curScroll <= 40) return;
+    btnFixed.classList.add("hidden");
+  }
 
   function updateVisibility(scrollY) {
-    if (isMouseNearTop || scrollY <= 45) {
-      btnFixed.classList.remove("hidden");
-    } else if (scrollY > lastScrollY + threshold) {
-      // Descendo a página -> oculta o botão
-      btnFixed.classList.add("hidden");
-    } else if (scrollY < lastScrollY - threshold) {
+    alignGenBtnWithPreview();
+    const scrollDiff = scrollY - lastScrollY;
+
+    if (scrollY <= 40) {
+      // Topo da página: sempre visível acima da coluna de preview
+      if (mouseHideTimeout) clearTimeout(mouseHideTimeout);
+      if (scrollInactivityTimer) clearTimeout(scrollInactivityTimer);
+      showButton();
+    } else if (scrollDiff < -4) {
       // Subindo a página -> exibe o botão
-      btnFixed.classList.remove("hidden");
+      showButton();
+      if (scrollInactivityTimer) clearTimeout(scrollInactivityTimer);
+      scrollInactivityTimer = setTimeout(() => {
+        const curScroll = window.scrollY || document.documentElement.scrollTop || 0;
+        if (!isMouseNearTopCenter && !isHoveringGenBtn && curScroll > 40) {
+          hideButton();
+        }
+      }, 2500);
+    } else if (scrollDiff > 4 && !isMouseNearTopCenter && !isHoveringGenBtn) {
+      // Descendo a página -> oculta o botão
+      if (scrollInactivityTimer) clearTimeout(scrollInactivityTimer);
+      hideButton();
     }
     lastScrollY = Math.max(0, scrollY);
   }
@@ -5359,15 +5372,71 @@ function setupFloatingGenButton() {
     updateVisibility(scrollY);
   }, { passive: true, capture: true });
 
-  // Exibe o botão ao aproximar o cursor do topo da tela (área superior <= 95px)
+  window.addEventListener("resize", alignGenBtnWithPreview, { passive: true });
+
+  btnFixed.addEventListener("mouseenter", () => {
+    isHoveringGenBtn = true;
+    if (mouseHideTimeout) clearTimeout(mouseHideTimeout);
+    if (scrollInactivityTimer) clearTimeout(scrollInactivityTimer);
+    btnFixed.classList.remove("hidden");
+  });
+
+  btnFixed.addEventListener("mouseleave", () => {
+    isHoveringGenBtn = false;
+    const curScroll = window.scrollY || document.documentElement.scrollTop || 0;
+    if (curScroll > 40 && !isMouseNearTopCenter) {
+      if (mouseHideTimeout) clearTimeout(mouseHideTimeout);
+      mouseHideTimeout = setTimeout(() => {
+        const checkScroll = window.scrollY || document.documentElement.scrollTop || 0;
+        if (!isHoveringGenBtn && !isMouseNearTopCenter && checkScroll > 40) {
+          hideButton();
+        }
+      }, 350);
+    }
+  });
+
+  // Exibe o botão ao aproximar o cursor do centro do topo da tela ou do preview
   window.addEventListener("mousemove", (e) => {
-    if (e.clientY <= 95) {
-      isMouseNearTop = true;
-      btnFixed.classList.remove("hidden");
-    } else {
-      isMouseNearTop = false;
+    const isNearTop = e.clientY <= 95;
+    let isNearCenter = false;
+
+    if (isNearTop) {
+      const screenCenterX = window.innerWidth / 2;
+      const nearScreenCenter = Math.abs(e.clientX - screenCenterX) <= (window.innerWidth * 0.28);
+      let nearPreviewCenter = false;
+      const preview = $("#preview");
+      if (preview) {
+        const rect = preview.getBoundingClientRect();
+        const previewCenterX = rect.left + (rect.width / 2);
+        nearPreviewCenter = Math.abs(e.clientX - previewCenterX) <= Math.max(180, rect.width * 0.42);
+      }
+      isNearCenter = nearScreenCenter || nearPreviewCenter;
+    }
+
+    if (isNearTop && isNearCenter) {
+      isMouseNearTopCenter = true;
+      if (mouseHideTimeout) clearTimeout(mouseHideTimeout);
+      if (scrollInactivityTimer) clearTimeout(scrollInactivityTimer);
+      showButton();
+    } else if (isMouseNearTopCenter) {
+      isMouseNearTopCenter = false;
+      const curScroll = window.scrollY || document.documentElement.scrollTop || 0;
+      if (curScroll > 40 && !isHoveringGenBtn) {
+        if (mouseHideTimeout) clearTimeout(mouseHideTimeout);
+        mouseHideTimeout = setTimeout(() => {
+          const checkScroll = window.scrollY || document.documentElement.scrollTop || 0;
+          if (!isMouseNearTopCenter && !isHoveringGenBtn && checkScroll > 40) {
+            hideButton();
+          }
+        }, 350);
+      }
     }
   }, { passive: true });
+
+  // Posicionamento inicial
+  alignGenBtnWithPreview();
+  setTimeout(alignGenBtnWithPreview, 60);
+  setTimeout(alignGenBtnWithPreview, 300);
 }
 
 init();
