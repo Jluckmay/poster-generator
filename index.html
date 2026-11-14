@@ -2968,8 +2968,14 @@ function isLocalEnvironment() {
   return host === "localhost" || host === "127.0.0.1" || window.location.protocol === "file:";
 }
 
+let _activeApiBase = null;
+
 function getServerDisplayName() {
-  return isLocalEnvironment() ? (uiLang === "en-US" ? "Local Server" : "Servidor Local") : "Render";
+  const base = getApiBase();
+  if (base && (base.includes("127.0.0.1") || base.includes("localhost"))) {
+    return (uiLang === "en-US" ? "Local Server" : "Servidor Local");
+  }
+  return "Render";
 }
 
 // BackendEnclave: URL do backend ofuscada com rotação polinomial + salt + XOR,
@@ -3010,6 +3016,7 @@ function _clientHeaders() {
 }
 
 function getApiBase() {
+  if (_activeApiBase) return _activeApiBase;
   const custom = localStorage.getItem("poster_api_base");
   if (custom !== null && custom.trim() !== "") return custom.trim().replace(/\/+$/, "");
 
@@ -3204,13 +3211,29 @@ async function _tryBackend(baseUrl, maxAttempts) {
 async function wakeUpServer() {
   updateServerBadge("connecting");
 
-  const apiBase = getApiBase();
-  const ok = await _tryBackend(apiBase, isLocalEnvironment() ? 4 : 2);
-  if (!ok) {
-    const serverName = getServerDisplayName();
-    updateServerBadge("offline");
-    console.warn(`[PosterGenerator] Backend indisponível: ${apiBase || "(vazio)"}`);
+  const preferredBase = getApiBase();
+  // Se for ambiente local (Live Preview), tenta o local primeiro (1 tentativa rápida)
+  let ok = await _tryBackend(preferredBase, isLocalEnvironment() ? 1 : 2);
+  if (ok) {
+    _activeApiBase = preferredBase;
+    return;
   }
+
+  // Se o servidor local estiver offline e o usuário não definiu URL manual, tenta o Render
+  if (isLocalEnvironment() && !localStorage.getItem("poster_api_base")) {
+    const cloudBase = _resolveBackend();
+    if (cloudBase && cloudBase !== preferredBase) {
+      console.log("[PosterGenerator] Servidor local offline, alternando para backend em nuvem (Render)...");
+      ok = await _tryBackend(cloudBase, 2);
+      if (ok) {
+        _activeApiBase = cloudBase;
+        return;
+      }
+    }
+  }
+
+  updateServerBadge("offline", uiLang === "en-US" ? "Offline (WASM Fallback)" : "Offline (Compilador WASM)");
+  console.warn(`[PosterGenerator] Backends offline. Modo fallback Tectonic WASM ativo.`);
 }
 
 function populateProviders() {
@@ -3733,9 +3756,29 @@ $("#quickSampleBtn").onclick = () => {
 
   function makeDemoLogo(brand, sub, mainCol, accCol, icon) {
     const svg = createFictionalLogoSvg(brand, sub, mainCol, accCol, icon);
-    const blob = new Blob([svg], { type: "image/svg+xml" });
+    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(blob);
     const field = "f" + (++uid);
+
+    // Rasterização imediata para PNG nativo (compatível com Pillow / XeTeX / Tectonic)
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        canvas.width = 440;
+        canvas.height = 136;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, 440, 136);
+        canvas.toBlob(pngBlob => {
+          if (pngBlob) {
+            const pngFile = new File([pngBlob], `${brand.toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`, { type: "image/png" });
+            files.set(field, pngFile);
+          }
+        }, "image/png");
+      } catch (_) {}
+    };
+    img.src = url;
+
     files.set(field, new File([blob], `${brand.toLowerCase().replace(/[^a-z0-9]/g, "_")}.svg`, { type: "image/svg+xml" }));
     return { field, caption: "", url };
   }
@@ -4837,8 +4880,48 @@ if (customTexFileEl) {
   };
 }
 
+/* Converte SVG para PNG de alta fidelidade antes do envio (garante compatibilidade com Pillow no backend e XeTeX) */
+async function svgFileToPng(file) {
+  if (!file) return file;
+  const isSvg = (file.type && file.type.includes("svg")) || (file.name && file.name.toLowerCase().endsWith(".svg"));
+  if (!isSvg) return file;
+
+  return new Promise(resolve => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement("canvas");
+        const w = Math.max(1, (img.naturalWidth || 440) * 2);
+        const h = Math.max(1, (img.naturalHeight || 136) * 2);
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        canvas.toBlob(blob => {
+          URL.revokeObjectURL(url);
+          if (blob) {
+            const pngName = (file.name || "logo").replace(/\.svg$/i, "") + ".png";
+            resolve(new File([blob], pngName, { type: "image/png" }));
+          } else {
+            resolve(file);
+          }
+        }, "image/png");
+      } catch (_) {
+        URL.revokeObjectURL(url);
+        resolve(file);
+      }
+    };
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      resolve(file);
+    };
+    img.src = url;
+  });
+}
+
 /* ---------- Geração e Pré-visualização do Pôster ---------- */
-function buildForm() {
+async function buildForm() {
   const fd = new FormData();
   const useColors = $("#useColors") && $("#useColors").checked;
   const accentVal = useColors ? $("#accent").value : "";
@@ -4882,9 +4965,16 @@ function buildForm() {
     ...data.logos_footer,
     ...data.sections.flatMap(s => s.images.map(i => i.path))
   ]);
-  used.forEach(f => {
-    if (files.has(f)) fd.append(f, files.get(f));
-  });
+  for (const f of used) {
+    if (files.has(f)) {
+      let file = files.get(f);
+      if (file && ((file.type && file.type.includes("svg")) || (file.name && file.name.toLowerCase().endsWith(".svg")))) {
+        file = await svgFileToPng(file);
+        files.set(f, file);
+      }
+      fd.append(f, file);
+    }
+  }
   return fd;
 }
 
@@ -4910,7 +5000,7 @@ async function generate(fmt) {
     if (p) p.scrollIntoView({ behavior: "smooth", block: "start" });
   }
 
-  const form = buildForm();
+  const form = await buildForm();
   try {
     if (!backendAvailable || serverHasPdflatex === false) throw new Error("Backend unavailable; using local compiler.");
     const r = await robustFetch(getApiBase() + "/api/generate?format=" + fmt, { method: "POST", body: form }, {
@@ -4953,6 +5043,9 @@ async function generate(fmt) {
       const imageFiles = new Map();
       for (const [key, value] of form.entries()) {
         if (key !== "data" && key !== "custom_tex" && value instanceof File) imageFiles.set(key, value);
+      }
+      if (typeof window.compilePosterTectonicWasm !== "function") {
+        throw new Error("Compilador local Tectonic WASM não foi carregado.");
       }
       const blob = await window.compilePosterTectonicWasm({
         data,

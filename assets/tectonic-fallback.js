@@ -2,7 +2,22 @@
 (function () {
   "use strict";
 
-  const BASE = new URL("tectonic/", document.currentScript.src);
+  function resolveTectonicBase() {
+    try {
+      if (document.currentScript && document.currentScript.src) {
+        return new URL("tectonic/", document.currentScript.src);
+      }
+    } catch (_) {}
+    try {
+      const el = document.querySelector('script[src*="tectonic-fallback"]');
+      if (el && el.src) {
+        return new URL("tectonic/", el.src);
+      }
+    } catch (_) {}
+    return new URL("assets/tectonic/", window.location.href);
+  }
+
+  const BASE = resolveTectonicBase();
   const decoder = new TextDecoder();
   const encoder = new TextEncoder();
   let compilerPromise;
@@ -13,34 +28,34 @@
     return decoder.decode(bytes.subarray(start, stop));
   }
 
-  function parseTarGzip(gzipBytes) {
+  async function parseTarGzip(gzipBytes) {
     if (typeof DecompressionStream !== "function") {
       throw new Error("Este navegador não oferece descompressão gzip necessária ao compilador local.");
     }
-    return new Response(new Blob([gzipBytes]).stream().pipeThrough(new DecompressionStream("gzip")))
-      .arrayBuffer().then(buffer => {
-        const tar = new Uint8Array(buffer);
-        const files = [];
-        for (let offset = 0; offset + 512 <= tar.length;) {
-          const header = tar.subarray(offset, offset + 512);
-          if (header.every(byte => byte === 0)) break;
-          const name = readCString(header, 0, 100);
-          const prefix = readCString(header, 345, 500);
-          const path = (prefix ? `${prefix}/${name}` : name).replace(/^\.\//, "");
-          const sizeText = readCString(header, 124, 136).trim();
-          const size = parseInt(sizeText || "0", 8) || 0;
-          const type = String.fromCharCode(header[156] || 48);
-          const dataStart = offset + 512;
-          if (path && (type === "0" || type === "7")) {
-            files.push([path, tar.slice(dataStart, dataStart + size)]);
-          }
-          offset = dataStart + Math.ceil(size / 512) * 512;
-        }
-        if (!files.some(([name]) => name === "latex.fmt")) {
-          throw new Error("O bundle Tectonic local não contém latex.fmt.");
-        }
-        return files;
-      });
+    const stream = new Blob([gzipBytes]).stream().pipeThrough(new DecompressionStream("gzip"));
+    const buffer = await new Response(stream).arrayBuffer();
+    const tar = new Uint8Array(buffer);
+    const files = [];
+    for (let offset = 0; offset + 512 <= tar.length;) {
+      const header = tar.subarray(offset, offset + 512);
+      if (header.every(byte => byte === 0)) break;
+      const name = readCString(header, 0, 100);
+      const prefix = readCString(header, 345, 500);
+      const rawPath = prefix ? `${prefix}/${name}` : name;
+      const path = rawPath.replace(/^\.\//, "");
+      const sizeText = readCString(header, 124, 136).trim();
+      const size = parseInt(sizeText || "0", 8) || 0;
+      const type = String.fromCharCode(header[156] || 48);
+      const dataStart = offset + 512;
+      if (path && (type === "0" || type === "7")) {
+        files.push([path, tar.slice(dataStart, dataStart + size)]);
+      }
+      offset = dataStart + Math.ceil(size / 512) * 512;
+    }
+    if (!files.some(([name]) => name === "latex.fmt")) {
+      throw new Error("O bundle Tectonic local não contém latex.fmt.");
+    }
+    return files;
   }
 
   function makeImports(module) {
@@ -73,7 +88,7 @@
           const len = view.getUint32(iov + i * 8 + 4, true);
           const value = decoder.decode(new Uint8Array(instance.exports.memory.buffer, ptr, len));
           total += len;
-          if (fd === 2) stdout += value;
+          if (fd === 1 || fd === 2) stdout += value;
         }
         writeU32(writtenPtr, total);
         return 0;
@@ -117,11 +132,18 @@
     if (!compilerPromise) {
       compilerPromise = (async () => {
         onStatus("Carregando o compilador Tectonic WASM...");
+        const wasmUrl = new URL("tectonic_wasm.wasm", BASE);
+        const bundleUrl = new URL("tectonic-bundle.tar.gz", BASE);
         const [wasmResponse, bundleResponse] = await Promise.all([
-          fetch(new URL("tectonic_wasm.wasm", BASE)),
-          fetch(new URL("tectonic-bundle.tar.gz", BASE))
+          fetch(wasmUrl),
+          fetch(bundleUrl)
         ]);
-        if (!wasmResponse.ok || !bundleResponse.ok) throw new Error("Não foi possível carregar os arquivos locais do Tectonic.");
+        if (!wasmResponse.ok) {
+          throw new Error(`Falha ao buscar ${wasmUrl.href} (HTTP ${wasmResponse.status})`);
+        }
+        if (!bundleResponse.ok) {
+          throw new Error(`Falha ao buscar ${bundleUrl.href} (HTTP ${bundleResponse.status})`);
+        }
         const [wasmBytes, bundleBytes] = await Promise.all([wasmResponse.arrayBuffer(), bundleResponse.arrayBuffer()]);
         onStatus("Preparando os pacotes LaTeX locais (primeira compilação)...");
         const packageFiles = await parseTarGzip(bundleBytes);
@@ -333,7 +355,11 @@ ${bucket.map((section, sectionIndex) => {
     try {
       wasm.tectonic_set_input(texPtr, texBytes.length);
       const code = wasm.tectonic_compile();
-      if (code !== 0) throw new Error(`Tectonic não conseguiu compilar o documento (código ${code}).`);
+      if (code !== 0) {
+        const log = host.getLog();
+        const snippet = log ? log.slice(-350) : "sem logs";
+        throw new Error(`Tectonic falhou na compilação (código ${code}): ${snippet}`);
+      }
     } finally {
       wasm.free(texPtr);
     }
