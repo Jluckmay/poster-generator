@@ -107,6 +107,37 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             + _logo_row(footer_logos, 6 * s, False)
         )
 
+    left_logo_tex = ""
+    right_logo_tex = ""
+    center_w = "1.0"
+    if len(header_logos) >= 2:
+        left_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\raggedright\\includegraphics[width=\\linewidth,height={_pt(5.5 * s)}cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\raggedleft\\includegraphics[width=\\linewidth,height={_pt(5.5 * s)}cm,keepaspectratio]{{{header_logos[1]}}}\\end{{minipage}}"
+        center_w = "0.56"
+    elif len(header_logos) == 1:
+        left_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\raggedright\\includegraphics[width=\\linewidth,height={_pt(5.5 * s)}cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\null\\end{{minipage}}"
+        center_w = "0.56"
+
+    if left_logo_tex:
+        meta_block = (
+            f"\\noindent{left_logo_tex}\\hfill\n"
+            f"\\begin{{minipage}}[c]{{{center_w}\\textwidth}}\\centering\n"
+            f"  {{{_fs(34, s, 1.2)}\\textbf{{{authors}}}}}\\par\n"
+            f"  \\vspace{{{cm(0.4)}}}\n"
+            f"  {{{_fs(26, s, 1.2)}\\textcolor{{darkgray}}{{{affil}}}}}\\par\n"
+            f"\\end{{minipage}}\\hfill\n"
+            f"{right_logo_tex}\\par"
+        )
+    else:
+        meta_block = (
+            f"\\begin{{center}}\n"
+            f"  {{{_fs(34, s, 1.2)}\\textbf{{{authors}}}}}\\par\n"
+            f"  \\vspace{{{cm(0.4)}}}\n"
+            f"  {{{_fs(26, s, 1.2)}\\textcolor{{darkgray}}{{{affil}}}}}\\par\n"
+            f"\\end{{center}}"
+        )
+
     return f"""\\documentclass[11pt]{{article}}
 \\usepackage[paperwidth={_pt(width)}cm,paperheight={_pt(height)}cm,margin={cm(4)}]{{geometry}}
 \\usepackage[T1]{{fontenc}}
@@ -134,17 +165,14 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\begin{{document}}
 \\raggedright
 {_fs(28, s)}
-{_logo_row(header_logos, 6 * s, True)}\\vspace{{{cm(1)}}}
 \\begin{{center}}
-  {{{_fs(54, s, 1.2)}\\textbf{{\\MakeUppercase{{{_inline(poster['title']) or '~'}}}}}}}\\par
-  \\vspace{{{cm(1.2)}}}
-  \\noindent\\textcolor{{accent}}{{\\rule{{\\textwidth}}{{{_pt(8 * s)}pt}}}}\\par
-  \\vspace{{{cm(0.6)}}}
-  {{{_fs(36, s, 1.2)}\\textbf{{{authors}}}}}\\par
-  \\vspace{{{cm(0.6)}}}
-  {{{_fs(30, s, 1.2)}\\textcolor{{darkgray}}{{{affil}}}}}\\par
+  {{{_fs(48, s, 1.2)}\\textbf{{\\MakeUppercase{{{_inline(poster['title']) or '~'}}}}}}}\\par
 \\end{{center}}
-\\vspace{{{cm(0.4)}}}
+\\vspace{{{cm(0.6)}}}
+\\noindent\\textcolor{{accent}}{{\\rule{{\\textwidth}}{{{_pt(8 * s)}pt}}}}\\par
+\\vspace{{{cm(0.5)}}}
+{meta_block}
+\\vspace{{{cm(0.3)}}}
 \\noindent\\textcolor{{accent}}{{\\rule{{\\textwidth}}{{{_pt(8 * s)}pt}}}}\\par
 \\vspace{{{cm(0.8)}}}
 {open_cols}

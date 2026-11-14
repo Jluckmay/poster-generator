@@ -481,17 +481,24 @@ button.pri:hover:not(:disabled) {
   position: fixed;
   top: 72px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) translateY(0);
+  opacity: 1;
   z-index: 60;
   display: flex;
   justify-content: center;
   pointer-events: none;
-  transition: transform 0.3s ease, opacity 0.3s ease;
+  transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.25s ease;
 }
 .gen-btn-fixed.hidden {
-  transform: translateX(-50%) translateY(-120%);
+  transform: translateX(-50%) translateY(-160%);
   opacity: 0;
   pointer-events: none;
+}
+.gen-btn-fixed:hover,
+.gen-btn-fixed.visible {
+  transform: translateX(-50%) translateY(0) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 .gen-btn-fixed .pri {
   pointer-events: auto;
@@ -1366,65 +1373,47 @@ button.sm {
 .draft-poster.tpl-dcc {
   font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
   background: var(--tpl-bg, #ffffff);
-  padding-bottom: 70px;
+  padding: 16px 20px 24px 20px;
 }
 .draft-poster.tpl-dcc .draft-header {
   background: transparent !important;
   border: none !important;
   box-shadow: none !important;
-  padding: 20px 16px 16px 16px;
+  padding: 12px 14px 4px 14px;
   text-align: center;
   position: relative;
-}
-.draft-poster.tpl-dcc .draft-header .draft-logos-row {
-  position: absolute !important;
-  top: 8px;
-  left: 0;
-  right: 0;
-  width: 100%;
-  height: auto;
-  margin: 0;
-  padding: 0 2%;
-  pointer-events: none;
-  justify-content: space-between;
-  align-items: center;
-}
-.draft-poster.tpl-dcc .draft-header .draft-logo-img {
-  position: relative;
-  z-index: 2;
-  max-height: 52px;
-  max-width: 160px;
-  pointer-events: auto;
 }
 .draft-poster.tpl-dcc .draft-title {
   color: #000000 !important;
   font-weight: 900;
-  font-size: 28px;
+  font-size: 21px;
   text-transform: uppercase;
   border-bottom: none !important;
   letter-spacing: -0.01em;
-  margin-bottom: 6px;
+  margin-bottom: 8px;
+  line-height: 1.25;
 }
 .draft-poster.tpl-dcc .draft-title-divider {
   display: block !important;
   width: 100%;
   height: 3.5px;
   background: var(--tpl-accent, #CC0000) !important;
-  margin: 6px auto;
+  margin: 6px auto 8px auto;
   border-radius: 0;
 }
 .draft-poster.tpl-dcc .draft-authors {
   color: #000000 !important;
   font-weight: 800;
-  font-size: 18px;
-  margin-top: 8px;
+  font-size: 14px;
+  margin-top: 0;
+  line-height: 1.3;
 }
 .draft-poster.tpl-dcc .draft-affil {
   color: #444444 !important;
   font-weight: 500;
-  font-size: 15px;
-  margin-top: 6px;
-  line-height: 1.4;
+  font-size: 11.5px;
+  margin-top: 4px;
+  line-height: 1.35;
 }
 .draft-poster.tpl-dcc .draft-top-bar {
   display: none !important;
@@ -1433,7 +1422,7 @@ button.sm {
   display: block !important;
   background: var(--tpl-accent, #CC0000) !important;
   height: 3.5px;
-  margin: 4px 0 16px 0;
+  margin: 8px 0 14px 0;
   width: 100%;
 }
 .draft-poster.tpl-dcc .draft-block {
@@ -1442,13 +1431,13 @@ button.sm {
   border-radius: 0;
   box-shadow: none;
   background: var(--tpl-block-bg, transparent);
-  padding: 8px 0 14px 0;
+  padding: 8px 0 12px 0;
   margin-bottom: 4px;
 }
 .draft-poster.tpl-dcc .draft-block-title {
   color: var(--tpl-accent, #CC0000);
   font-family: 'Roboto', 'Helvetica Neue', Arial, sans-serif;
-  font-size: 16px;
+  font-size: 13.5px;
   font-weight: 900;
   text-transform: uppercase;
   border-bottom: none;
@@ -1456,9 +1445,41 @@ button.sm {
   letter-spacing: 0.02em;
 }
 .draft-poster.tpl-dcc .draft-block-body {
-  font-size: 15px;
+  font-size: 11.5px;
   color: #111827;
-  line-height: 1.5;
+  line-height: 1.45;
+}
+
+/* Linha de Autores com Logos Laterais (DCC / Academic Red) */
+.draft-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  position: relative;
+  gap: 12px;
+}
+.draft-meta-center {
+  flex: 1 1 auto;
+  text-align: center;
+  min-width: 0;
+}
+.draft-dcc-logo {
+  flex: 0 0 20%;
+  display: flex;
+  align-items: center;
+  max-width: 20%;
+}
+.draft-dcc-logo.left {
+  justify-content: flex-start;
+}
+.draft-dcc-logo.right {
+  justify-content: flex-end;
+}
+.draft-dcc-logo .draft-logo-img {
+  max-height: 52px;
+  max-width: 135px;
+  object-fit: contain;
 }
 
 /* 7. Mostra IC (UFOP Simpósio) */
@@ -2485,8 +2506,14 @@ button.sm {
           <div id="draftHeaderLogos" class="draft-logos-row hidden"></div>
           <h1 id="draftTitle" class="draft-title">Título do Trabalho</h1>
           <div id="draftTitleDivider" class="draft-title-divider"></div>
-          <div id="draftAuthors" class="draft-authors">Autores do Trabalho</div>
-          <div id="draftAffil" class="draft-affil">Afiliação Institucional</div>
+          <div id="draftMetaRow" class="draft-meta-row">
+            <div id="draftDccLogoLeft" class="draft-dcc-logo left hidden"></div>
+            <div class="draft-meta-center">
+              <div id="draftAuthors" class="draft-authors">Autores do Trabalho</div>
+              <div id="draftAffil" class="draft-affil">Afiliação Institucional</div>
+            </div>
+            <div id="draftDccLogoRight" class="draft-dcc-logo right hidden"></div>
+          </div>
         </header>
         <div id="draftDivider" class="draft-divider hidden"></div>
         <div id="draftGrid" class="draft-grid"></div>
@@ -3621,16 +3648,18 @@ $("#quickSampleBtn").onclick = () => {
   }
 
   const sampleTexts = isEn ? {
-    introduction: "Electromagnetic spectrum modulation in controlled agriculture is critical for optimizing photosynthetic yield, energy efficiency, and secondary metabolite biosynthesis [1]. Precise control of wavelength, intensity, and photoperiod directs plant development toward specific goals: maximizing biomass, accelerating the phenological cycle, or inducing high-value secondary compounds.\n\n- **Blue spectrum (450nm):** activates cryptochromes and phototropins, promoting stomatal opening and chlorophyll-a accumulation.\n- **Red spectrum (660nm):** targets peak absorption of phytochrome Pr, maximizing PSII quantum yield and CO2 assimilation [2].\n- **Far-red synergy (730nm):** triggers the Emerson enhancement effect, boosting net carbon assimilation by up to 18.4% when combined with red light.\n- **Energy challenge:** conventional lighting dissipates excessive heat without proportional PAR conversion, resulting in low energy-use efficiency.\n- **Objective:** investigate optimal multi-channel spectral combinations to minimize electrical power per gram of harvested biomass.",
-    methods: "Factorial trial with 80 uniform seedlings across 4 automated microclimate chambers under rigorous environmental control.\n\n[80 Uniform Seedlings] → [IoT Climate Chambers] → [Spectral Modulation] → [Biomass & Gas Exchange]\n\n- **Microclimate sensing:** temperature, relative humidity, and VPD monitored continuously at 1 Hz via calibrated sensors.\n- **Spectral irradiance:** monitored with high-resolution spectroradiometers (380–780nm) [1], ensuring uniform photon distribution.\n- **Closed-loop fertigation:** recirculating hydroponic solution with autonomous EC (1.8 mS/cm) and pH (5.8 ± 0.2) control.\n- **Gas exchange assays:** IRGA measuring net photosynthesis (A) and stomatal conductance (gs) during 16h photoperiods.",
-    results: "Comparative dry biomass accumulation, harvest cycle reduction, and photosynthetic photon efficiency:\n\n| Light Treatment | Dry Biomass (g) | Cycle Reduction | Photon Efficiency (g/mol) |\n| :--- | :---: | :---: | :---: |\n| White Control (Fluorescent) | 4.2 ± 0.3 | Baseline (0 days) | 1.05 |\n| Monochromatic Blue (450nm) | 5.1 ± 0.4 | -4 days | 1.28 |\n| Monochromatic Red (660nm) | 5.8 ± 0.5 | -7 days | 1.45 |\n| Dynamic Combined (B+R+FR) | **7.4 ± 0.3** | **-12 days** | **1.86** |\n\n- The dynamic combined spectrum produced a **76.2% increase** in dry biomass compared to white light control [2].\n- Crop development cycles were shortened by 12 days, increasing annual production turnarounds by 28%.\n- Net CO2 assimilation increased from 11.2 to 19.6 umol/m2s under modulated far-red supplementation.\n- Specific electrical energy expenditure decreased from 14.2 kWh/kg to 8.7 kWh/kg dry matter, representing a 38.7% energy saving.",
-    conclusions: "- **Precision lighting** demonstrates outstanding biological and energetic feasibility for industrial vertical farming systems.\n- Dual-band dynamic spectrum combined with far-red boosts vegetative development while significantly cutting operational expenditure in climate control and lighting.\n- Closed-loop IoT sensor networks enable real-time autonomous spectral adaptation, ensuring reproducible quality across multi-tier vertical farming facilities [1, 2].\n- Future studies will assess secondary metabolite concentration and antioxidant accumulation under pulsed photoperiod regimes.",
+    introduction: "Modulation of the electromagnetic spectrum in controlled environments optimizes photosynthesis, quantum yield, and biomass accumulation [1]. Targeted wavelengths steer photomorphogenesis:\n\n- **Blue light (450nm):** stimulates cryptochromes, enhancing stomatal opening and chlorophyll synthesis.\n- **Red light (660nm):** targets phytochrome absorption peaks, maximizing PSII quantum yield and CO2 fixation [2].\n- **Far-red (730nm):** drives the Emerson enhancement effect, increasing net carbon assimilation by 18.4%.",
+    methods: "Factorial trial with 80 seedlings across 4 automated microclimate chambers under continuous environmental control:\n\n[80 Uniform Seedlings] → [IoT Climate Chambers] → [Spectral Modulation] → [Biomass & Gas Exchange]\n\n- **IoT microclimate:** continuous 1 Hz logging of temperature, relative humidity, and VPD.\n- **Spectral irradiance:** calibrated spectroradiometer (380–780nm) [1] guaranteeing uniform photon flux density.\n- **Closed-loop fertigation:** recirculating hydroponics maintaining steady electrical conductivity and pH.",
+    results: "Comparative dry biomass accumulation, phenological cycle duration, and photosynthetic photon efficiency:\n\n| Light Treatment | Dry Biomass (g) | Cycle Reduction | Photon Efficiency (g/mol) |\n| :--- | :---: | :---: | :---: |\n| White Control (Fluorescent) | 4.2 ± 0.3 | Baseline (0d) | 1.05 |\n| Monochromatic Blue (450nm) | 5.1 ± 0.4 | -4 days | 1.28 |\n| Monochromatic Red (660nm) | 5.8 ± 0.5 | -7 days | 1.45 |\n| Dynamic Combined (B+R+FR) | **7.4 ± 0.3** | **-12 days** | **1.86** |\n\n- Dynamic combined spectrum delivered a **76.2% increase in dry biomass** over the control baseline [2].\n- Crop development cycles were shortened by 12 days, reducing specific electrical energy demand by 38.7%.",
+    conclusions: "- **Precision lighting** demonstrates high biological and energetic feasibility for vertical farming.\n- Multi-channel dynamic spectrum paired with real-time IoT sensing ensures high quality and reproducibility [1, 2].\n- Dynamic spectral protocols establish a scalable, sustainable standard for industrial vertical agriculture.",
     references: "[1] Smith, J., Watson, H. et al. (2024). Photobiology & Plant Physiology. Nature Plants, 10:142–155.\n[2] Doe, J. & Turing, A. (2023). Precision Agricultural Systems. IEEE Transactions on AgriTech, 18:204–215."
   } : {
-    introduction: "A modulação do espectro eletromagnético na agricultura em ambiente protegido é decisiva para a otimização da taxa fotossintética, eficiência de uso de energia e síntese de metabólitos vegetais [1]. O controle preciso do comprimento de onda, intensidade e fotoperíodo direciona o desenvolvimento vegetal para objetivos específicos: maximização de biomassa, aceleração do ciclo fenológico ou indução de compostos secundários de valor agregado.\n\n- **Espectro azul (450nm):** estimula criptocromos e fototropinas, favorecendo condutância estomática e acúmulo de clorofila-a.\n- **Espectro vermelho (660nm):** atinge o pico de absorção dos fitocromos Pr, maximizando o rendimento quântico do fotossistema II e a fixação de CO2 [2].\n- **Sinergia do vermelho-distante (730nm):** desencadeia o efeito Emerson, elevando a taxa de assimilação líquida em até 18.4% quando combinado com luz vermelha.\n- **Gargalo produtivo:** sistemas convencionais dissipam energia térmica excessiva sem conversão proporcional em PAR, resultando em baixo aproveitamento energético.\n- **Objetivo:** investigar a proporção espectral ideal multicanal visando máxima biomassa seca por kWh consumido.",
-    methods: "Ensaio fatorial com 80 mudas padronizadas em 4 câmaras climatizadas automatizadas via sensores IoT, sob controle rigoroso de variáveis ambientais.\n\n[80 Mudas Padronizadas] → [Câmaras Climatizadas IoT] → [Modulação Espectral] → [Biomassa & Trocas Gasosas]\n\n- **Sensoriamento microclimático:** temperatura, umidade relativa e VPD monitorados continuamente a 1 Hz com sensores calibrados.\n- **Irradiância espectral:** acompanhada com espectrorradiômetro de alta precisão (380–780nm) [1], garantindo uniformidade de distribuição de fotons.\n- **Fertirrigação em circuito fechado:** recirculação hidropônica com controle autônomo de EC (1.8 mS/cm) e pH (5.8 ± 0.2).\n- **Avaliação fisiológica:** IRGA medindo fotossíntese líquida (A) e condutância estomática (gs) durante fotoperíodo de 16h.",
-    results: "Comparativo de acúmulo de biomassa seca, redução do ciclo fenológico e eficiência de fótons fotossintéticos:\n\n| Tratamento Espectral | Biomassa Seca (g) | Redução de Ciclo | Eficiência Fotônica (g/mol) |\n| :--- | :---: | :---: | :---: |\n| Controle Branco (Fluorescente) | 4.2 ± 0.3 | Linha de Base (0d) | 1.05 |\n| Azul Monocromático (450nm) | 5.1 ± 0.4 | -4 dias | 1.28 |\n| Vermelho Monocromático (660nm) | 5.8 ± 0.5 | -7 dias | 1.45 |\n| Dinâmico Combinado (A+V+VD) | **7.4 ± 0.3** | **-12 dias** | **1.86** |\n\n- O espectro combinado dinâmico proporcionou um aumento de **76.2% na biomassa seca** em relação ao controle branco [2].\n- O ciclo até o ponto de colheita foi reduzido em 12 dias, viabilizando 28% mais rotações produtivas anuais.\n- A assimilação líquida de CO2 elevou-se de 11.2 para 19.6 umol/m2s sob suplementação calibrada de vermelho-distante.\n- O consumo específico de energia elétrica caiu de 14.2 kWh/kg para 8.7 kWh/kg de matéria seca colhida, uma redução de 38.7% no custo de produção.",
-    conclusions: "- **Iluminação de precisão** comprova viabilidade agronômica, fisiológica e energética destacada para fazendas verticais urbanas sustentáveis.\n- O espectro dinâmico multicanal acelera o desenvolvimento vegetativo com expressiva redução de despesas operacionais em climatização e energia.\n- A integração com sensores IoT possibilita calibração espectral autônoma em tempo real, garantindo reprodutibilidade qualitativa no cultivo vertical [1, 2].\n- Trabalhos futuros investigarão a concentração de compostos antioxidantes e compostos bioativos sob regimes pulsados de fotoperíodo.",
+    introduction: "A modulação do espectro eletromagnético em cultivo protegido otimiza a taxa fotossintética, o rendimento quântico e o acúmulo de biomassa vegetal [1]. O controle espectral direciona o desenvolvimento:\n\n- **Espectro azul (450nm):** estimula criptocromos, promovendo abertura estomática e síntese de clorofila.\n- **Espectro vermelho (660nm):** ativa fitocromos Pr, maximizando a fixação de CO2 e rendimento do fotossistema II [2].\n- **Vermelho-distante (730nm):** induz efeito Emerson, elevando em 18.4% a taxa de assimilação líquida.",
+    methods: "Ensaio fatorial com 80 mudas em 4 câmaras climatizadas automatizadas sob controle contínuo de variáveis ambientais:\n\n[80 Mudas Padronizadas] → [Câmaras Climatizadas IoT] → [Modulação Espectral] → [Biomassa & Trocas Gasosas]\n\n- **Microclima IoT:** monitoramento contínuo a 1 Hz de temperatura, umidade e VPD com calibração em tempo real.\n- **Irradiância espectral:** espectrorradiômetro (380–780nm) [1] assegurando densidade uniforme de fluxo de fótons.\n- **Fertirrigação autônoma:** recirculação hidropônica em malha fechada mantendo condutividade e pH estáveis.",
+    results: "Comparativo de acúmulo de biomassa seca, redução do ciclo fenológico e eficiência de fótons fotossintéticos:\n\n| Tratamento Espectral | Biomassa Seca (g) | Redução de Ciclo | Eficiência Fotônica (g/mol) |\n| :--- | :---: | :---: | :---: |\n| Controle Branco (Fluorescente) | 4.2 ± 0.3 | Linha de Base (0d) | 1.05 |\n| Azul Monocromático (450nm) | 5.1 ± 0.4 | -4 dias | 1.28 |\n| Vermelho Monocromático (660nm) | 5.8 ± 0.5 | -7 dias | 1.45 |\n| Dinâmico Combinado (A+V+VD) | **7.4 ± 0.3** | **-12 dias** | **1.86** |\n\n- O espectro combinado dinâmico proporcionou aumento de **76.2% na biomassa seca** contra o controle [2].\n- Redução de 12 dias no ciclo fenológico, viabilizando menor consumo elétrico por kg de matéria seca colhida.",
+    conclusions: "- **Iluminação de precisão** comprova viabilidade agronômica superior com expressiva economia energética.\n- O espectro dinâmico multicanal acelera o desenvolvimento vegetal sob sensoriamento IoT autônomo [1, 2].\n- Protocolos espectrais dinâmicos estabelecem novo padrão de sustentabilidade para agricultura vertical urbana.",
+    references: "[1] Silva, M., Pereira, R. et al. (2024). Fotobiologia Vegetal Aplicada. Journal of Plant Science, 12:88–99.\n[2] Santos, C. & Rostova, E. (2023). Sistemas Agrícolas de Precisão. Revista Brasileira de Agrocomputação, 15:45–58."
+  };
     references: "[1] Silva, M., Pereira, R. et al. (2024). Fotobiologia Vegetal Aplicada. Journal of Plant Science, 12:88–99.\n[2] Santos, C. & Rostova, E. (2023). Sistemas Agrícolas de Precisão. Revista Brasileira de Agrocomputação, 15:45–58."
   };
 
@@ -3914,12 +3943,48 @@ function updateDraftPreview() {
 
   // Logotipos no Header
   const headerLogosEl = $("#draftHeaderLogos");
-  if (logosH && logosH.length > 0) {
-    headerLogosEl.classList.remove("hidden");
-    headerLogosEl.innerHTML = logosH.map(l => `<img class="draft-logo-img" src="${escapeHtml(l.url || l.preview || "")}" alt="Logo">`).join("");
-  } else {
+  const dccLogoLeft = $("#draftDccLogoLeft");
+  const dccLogoRight = $("#draftDccLogoRight");
+
+  if (tplId === "dcc") {
+    // No Academic Red, as logos do cabeçalho são posicionadas nas laterais dos autores/filiações (entre as duas divisórias)
     headerLogosEl.classList.add("hidden");
     headerLogosEl.innerHTML = "";
+    if (logosH && logosH.length > 0) {
+      if (logosH[0]) {
+        dccLogoLeft.classList.remove("hidden");
+        dccLogoLeft.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[0].url || logosH[0].preview || "")}" alt="Logo Left">`;
+      } else {
+        dccLogoLeft.classList.add("hidden");
+        dccLogoLeft.innerHTML = "";
+      }
+      if (logosH[1]) {
+        dccLogoRight.classList.remove("hidden");
+        dccLogoRight.style.visibility = "visible";
+        dccLogoRight.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[1].url || logosH[1].preview || "")}" alt="Logo Right">`;
+      } else {
+        // Se houver apenas 1 logo, espelha placeholder invisível para manter os autores centralizados
+        dccLogoRight.classList.remove("hidden");
+        dccLogoRight.style.visibility = "hidden";
+        dccLogoRight.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[0].url || logosH[0].preview || "")}" alt="" style="opacity:0;">`;
+      }
+    } else {
+      dccLogoLeft.classList.add("hidden");
+      dccLogoLeft.innerHTML = "";
+      dccLogoRight.classList.add("hidden");
+      dccLogoRight.innerHTML = "";
+    }
+  } else {
+    // Para outros templates
+    if (dccLogoLeft) { dccLogoLeft.classList.add("hidden"); dccLogoLeft.innerHTML = ""; }
+    if (dccLogoRight) { dccLogoRight.classList.add("hidden"); dccLogoRight.innerHTML = ""; dccLogoRight.style.visibility = "visible"; }
+    if (logosH && logosH.length > 0) {
+      headerLogosEl.classList.remove("hidden");
+      headerLogosEl.innerHTML = logosH.map(l => `<img class="draft-logo-img" src="${escapeHtml(l.url || l.preview || "")}" alt="Logo">`).join("");
+    } else {
+      headerLogosEl.classList.add("hidden");
+      headerLogosEl.innerHTML = "";
+    }
   }
 
   // Logotipos no Footer
@@ -3942,14 +4007,14 @@ function updateDraftPreview() {
     row.style.gap = `${Math.max(8, poster.clientWidth * 0.012)}px`;
     if (isHeader) {
       row.style.position = "absolute";
-      row.style.top = tplId === "dcc" ? "8px" : "0";
-      row.style.bottom = tplId === "dcc" ? "auto" : "0";
+      row.style.top = "0";
+      row.style.bottom = "0";
       row.style.left = rightDock ? "60%" : "0";
       row.style.right = "0";
-      row.style.width = tplId === "dcc" ? "100%" : "auto";
-      row.style.height = tplId === "dcc" ? "auto" : "100%";
+      row.style.width = "auto";
+      row.style.height = "100%";
       row.style.margin = "0";
-      row.style.padding = tplId === "dcc" ? "0" : "0 1%";
+      row.style.padding = "0 1%";
       row.style.alignItems = "center";
       row.style.zIndex = "2";
     }
@@ -3961,7 +4026,9 @@ function updateDraftPreview() {
       img.style.maxHeight = `${Math.max(18, poster.clientHeight * maxHeightRatio)}px`;
     });
   };
-  fitLogoRow(headerLogosEl, "space-between", 0.1, true);
+  if (tplId !== "dcc") {
+    fitLogoRow(headerLogosEl, "space-between", 0.1, true);
+  }
   fitLogoRow(footerLogosEl, "space-around", 0.05);
 
   // Seções e Grade de Colunas (Fluxo em Colunas Acadêmicas)
@@ -4036,11 +4103,11 @@ function updateDraftPreview() {
 
   // Shrink text only when content actually overflows a column.
   if (grid && grid.children.length) {
-    const minimumFontScale = Math.max(0.42, fontScale * 0.85);
-    for (let attempt = 0; attempt < 12; attempt++) {
+    const minimumFontScale = Math.max(0.35, fontScale * 0.60);
+    for (let attempt = 0; attempt < 20; attempt++) {
       const fitRatio = Math.min(...Array.from(grid.children, col => col.clientHeight / Math.max(1, col.scrollHeight)));
-      if (fitRatio >= 0.995 || fontScale <= minimumFontScale) break;
-      fontScale = Math.max(minimumFontScale, fontScale * Math.max(0.65, Math.min(0.94, fitRatio * 0.96)));
+      if (fitRatio >= 0.99 || fontScale <= minimumFontScale) break;
+      fontScale = Math.max(minimumFontScale, fontScale * Math.max(0.60, Math.min(0.95, fitRatio * 0.96)));
       applyDraftFontScale();
     }
   }
@@ -5144,7 +5211,49 @@ function init() {
       $("#backendUrlInput").focus();
     };
   }
+
+  setupFloatingGenButton();
 }
+
+/* ---------- Controle Dinâmico de Exibição do Botão Gerar Pôster ---------- */
+function setupFloatingGenButton() {
+  const btnFixed = $("#genBtnFixed");
+  if (!btnFixed) return;
+
+  let lastScrollY = window.scrollY || document.documentElement.scrollTop || 0;
+  const threshold = 8;
+  let isMouseNearTop = false;
+
+  function updateVisibility(scrollY) {
+    if (isMouseNearTop || scrollY <= 45) {
+      btnFixed.classList.remove("hidden");
+    } else if (scrollY > lastScrollY + threshold) {
+      // Descendo a página -> oculta o botão
+      btnFixed.classList.add("hidden");
+    } else if (scrollY < lastScrollY - threshold) {
+      // Subindo a página -> exibe o botão
+      btnFixed.classList.remove("hidden");
+    }
+    lastScrollY = Math.max(0, scrollY);
+  }
+
+  // Monitora scroll em qualquer contêiner da página
+  window.addEventListener("scroll", (e) => {
+    const scrollY = window.scrollY || document.documentElement.scrollTop || (e.target && e.target.scrollTop) || 0;
+    updateVisibility(scrollY);
+  }, { passive: true, capture: true });
+
+  // Exibe o botão ao aproximar o cursor do topo da tela (área superior <= 95px)
+  window.addEventListener("mousemove", (e) => {
+    if (e.clientY <= 95) {
+      isMouseNearTop = true;
+      btnFixed.classList.remove("hidden");
+    } else {
+      isMouseNearTop = false;
+    }
+  }, { passive: true });
+}
+
 init();
 </script>
 </body>
