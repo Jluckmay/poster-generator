@@ -641,15 +641,28 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         footer_tex = f"\n\\node[above=15mm of bottomright, anchor=south east, xshift=-15mm] {{\\begin{{minipage}}{{\\linewidth}} {cells}\\end{{minipage}}}};\n"
 
     header_imgs = [images[p] for p in poster["logos_header"] if p in images]
-    logos = "\\hfill ".join(
-        f"\\includegraphics[height=6cm,width=0.18\\linewidth,keepaspectratio]{{{path}}}" for path in header_imgs
-    )
     title = _inline(poster["title"]) or "~"
     authors = escape_latex(poster["authors"]).replace("\n", ", ")
     institute_bits = [escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip()]
     if poster["email"]:
         institute_bits.insert(0, _inline(poster["email"]))
     institute = "\\\\".join(institute_bits)
+
+    if len(header_imgs) >= 2:
+        left_logo = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedright\\includegraphics[height=5cm,width=\\linewidth,keepaspectratio]{{{header_imgs[0]}}}\\end{{minipage}}"
+        right_logo = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedleft\\includegraphics[height=5cm,width=\\linewidth,keepaspectratio]{{{header_imgs[1]}}}\\end{{minipage}}"
+        center_inst = f"\\begin{{minipage}}[c]{{0.60\\linewidth}}\\centering {institute}\\end{{minipage}}"
+        institute_tex = f"{left_logo}\\hfill {center_inst}\\hfill {right_logo}"
+        logos = ""
+    elif len(header_imgs) == 1:
+        left_logo = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedright\\includegraphics[height=5cm,width=\\linewidth,keepaspectratio]{{{header_imgs[0]}}}\\end{{minipage}}"
+        right_spacer = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\null\\end{{minipage}}"
+        center_inst = f"\\begin{{minipage}}[c]{{0.60\\linewidth}}\\centering {institute}\\end{{minipage}}"
+        institute_tex = f"{left_logo}\\hfill {center_inst}\\hfill {right_spacer}"
+        logos = ""
+    else:
+        institute_tex = institute
+        logos = ""
 
     return f"""\\documentclass[{poster.get('_font') or paper['font']},a0paper,margin=20mm,innermargin=12mm,blockverticalspace=12mm,colspace=12mm,subcolspace=8mm]{{tikzposter}}
 \\geometry{{paperwidth={pw * 10:.0f}mm,paperheight={ph * 10:.0f}mm,margin=20mm}}
@@ -690,7 +703,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usebackgroundstyle{{{tpl['background']}}}
 \\title{{{title}}}
 \\author{{{authors}}}
-\\institute{{{institute}}}
+\\institute{{{institute_tex}}}
 \\titlegraphic{{{logos}}}
 \\begin{{document}}
 \\maketitle

@@ -121,13 +121,15 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
     if left_logo_tex:
         meta_block = (
-            f"\\noindent{left_logo_tex}\\hfill\n"
-            f"\\begin{{minipage}}[c]{{{center_w}\\textwidth}}\\centering\n"
+            f"\\begin{{center}}\n"
             f"  {{{_fs(34, s, 1.2)}\\textbf{{{authors}}}}}\\par\n"
-            f"  \\vspace{{{cm(0.4)}}}\n"
-            f"  {{{_fs(26, s, 1.2)}\\textcolor{{darkgray}}{{{affil}}}}}\\par\n"
-            f"\\end{{minipage}}\\hfill\n"
-            f"{right_logo_tex}\\par"
+            f"  \\vspace{{{cm(0.3)}}}\n"
+            f"  \\noindent{left_logo_tex}\\hfill\n"
+            f"  \\begin{{minipage}}[c]{{{center_w}\\textwidth}}\\centering\n"
+            f"    {{{_fs(26, s, 1.2)}\\textcolor{{darkgray}}{{{affil}}}}}\\par\n"
+            f"  \\end{{minipage}}\\hfill\n"
+            f"  {right_logo_tex}\\par\n"
+            f"\\end{{center}}"
         )
     else:
         meta_block = (

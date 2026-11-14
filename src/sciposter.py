@@ -80,8 +80,20 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     affil = "\\\\".join(affil_bits)
 
     header_logos = [images[p] for p in poster.get("logos_header", []) if p in images]
-    left_logo = f"\\leftlogo[1.2]{{{header_logos[0]}}}" if len(header_logos) >= 1 else ""
-    right_logo = f"\\rightlogo[1.2]{{{header_logos[1]}}}" if len(header_logos) >= 2 else ""
+    if len(header_logos) >= 2:
+        left_box = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedright\\includegraphics[height=3.5cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_box = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedleft\\includegraphics[height=3.5cm,keepaspectratio]{{{header_logos[1]}}}\\end{{minipage}}"
+        center_affil = f"\\begin{{minipage}}[c]{{0.60\\linewidth}}\\centering {affil}\\end{{minipage}}"
+        inst_tex = f"{left_box}\\hfill {center_affil}\\hfill {right_box}"
+    elif len(header_logos) == 1:
+        left_box = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedright\\includegraphics[height=3.5cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_spacer = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\null\\end{{minipage}}"
+        center_affil = f"\\begin{{minipage}}[c]{{0.60\\linewidth}}\\centering {affil}\\end{{minipage}}"
+        inst_tex = f"{left_box}\\hfill {center_affil}\\hfill {right_spacer}"
+    else:
+        inst_tex = affil
+    left_logo = ""
+    right_logo = ""
 
     sciposter_size = paper_key if paper_key in ("a0", "a1", "a2") else "a0"
     col_str = "2" if cols == 2 else str(cols)
@@ -110,7 +122,7 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
 \\title{{{_inline(poster.get('title', '')) or '~'}}}
 \\author{{{authors}}}
-\\institute{{{affil}}}
+\\institute{{{inst_tex}}}
 \\email{{{email}}}
 
 {left_logo}

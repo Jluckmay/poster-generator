@@ -969,7 +969,7 @@ button.sm {
 .draft-header > :not(.draft-logos-row) {
   position: relative;
   z-index: 1;
-  max-width: 70%;
+  max-width: 95%;
   margin-left: auto;
   margin-right: auto;
 }
@@ -1450,36 +1450,39 @@ button.sm {
   line-height: 1.45;
 }
 
-/* Linha de Autores com Logos Laterais (DCC / Academic Red) */
+/* Linha de Meta (Emails / Afiliações) com Logos Laterais */
 .draft-meta-row {
   display: flex;
   align-items: center;
   justify-content: center;
   width: 100%;
+  max-width: 100% !important;
   position: relative;
-  gap: 12px;
+  gap: 14px;
+  margin-top: 3px;
 }
-.draft-meta-center {
-  flex: 1 1 auto;
-  text-align: center;
-  min-width: 0;
-}
-.draft-dcc-logo {
-  flex: 0 0 20%;
+.draft-header-logo-slot {
+  flex: 0 0 18%;
+  max-width: 20%;
   display: flex;
   align-items: center;
-  max-width: 20%;
 }
-.draft-dcc-logo.left {
+.draft-header-logo-slot.left {
   justify-content: flex-start;
 }
-.draft-dcc-logo.right {
+.draft-header-logo-slot.right {
   justify-content: flex-end;
 }
-.draft-dcc-logo .draft-logo-img {
+.draft-header-logo-slot .draft-logo-img {
   max-height: 52px;
   max-width: 135px;
   object-fit: contain;
+}
+.draft-meta-row .draft-affil {
+  flex: 1 1 auto;
+  text-align: center;
+  min-width: 0;
+  margin-top: 0;
 }
 
 /* 7. Mostra IC (UFOP Simpósio) */
@@ -1535,6 +1538,24 @@ button.sm {
   max-width: 58%;
   margin-left: 0;
   margin-right: auto;
+}
+.draft-poster.tpl-uzh .draft-header .draft-logos-row {
+  position: absolute;
+  top: 10px;
+  right: 0;
+  left: auto;
+  width: 38%;
+  justify-content: flex-end;
+  gap: 12px;
+}
+.draft-poster.tpl-uzh .draft-meta-row {
+  max-width: 58% !important;
+  margin-left: 0;
+  margin-right: auto;
+  justify-content: flex-start;
+}
+.draft-poster.tpl-uzh .draft-meta-row .draft-affil {
+  text-align: left;
 }
 .draft-poster.tpl-uzh .draft-title {
   text-align: left;
@@ -2506,13 +2527,11 @@ button.sm {
           <div id="draftHeaderLogos" class="draft-logos-row hidden"></div>
           <h1 id="draftTitle" class="draft-title">Título do Trabalho</h1>
           <div id="draftTitleDivider" class="draft-title-divider"></div>
+          <div id="draftAuthors" class="draft-authors">Autores do Trabalho</div>
           <div id="draftMetaRow" class="draft-meta-row">
-            <div id="draftDccLogoLeft" class="draft-dcc-logo left hidden"></div>
-            <div class="draft-meta-center">
-              <div id="draftAuthors" class="draft-authors">Autores do Trabalho</div>
-              <div id="draftAffil" class="draft-affil">Afiliação Institucional</div>
-            </div>
-            <div id="draftDccLogoRight" class="draft-dcc-logo right hidden"></div>
+            <div id="draftHeaderLogoLeft" class="draft-header-logo-slot left hidden"></div>
+            <div id="draftAffil" class="draft-affil">Afiliação Institucional</div>
+            <div id="draftHeaderLogoRight" class="draft-header-logo-slot right hidden"></div>
           </div>
         </header>
         <div id="draftDivider" class="draft-divider hidden"></div>
@@ -3943,47 +3962,53 @@ function updateDraftPreview() {
 
   // Logotipos no Header
   const headerLogosEl = $("#draftHeaderLogos");
-  const dccLogoLeft = $("#draftDccLogoLeft");
-  const dccLogoRight = $("#draftDccLogoRight");
+  const logoSlotLeft = $("#draftHeaderLogoLeft");
+  const logoSlotRight = $("#draftHeaderLogoRight");
 
-  if (tplId === "dcc") {
-    // No Academic Red, as logos do cabeçalho são posicionadas nas laterais dos autores/filiações (entre as duas divisórias)
-    headerLogosEl.classList.add("hidden");
-    headerLogosEl.innerHTML = "";
-    if (logosH && logosH.length > 0) {
-      if (logosH[0]) {
-        dccLogoLeft.classList.remove("hidden");
-        dccLogoLeft.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[0].url || logosH[0].preview || "")}" alt="Logo Left">`;
-      } else {
-        dccLogoLeft.classList.add("hidden");
-        dccLogoLeft.innerHTML = "";
-      }
-      if (logosH[1]) {
-        dccLogoRight.classList.remove("hidden");
-        dccLogoRight.style.visibility = "visible";
-        dccLogoRight.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[1].url || logosH[1].preview || "")}" alt="Logo Right">`;
-      } else {
-        // Se houver apenas 1 logo, espelha placeholder invisível para manter os autores centralizados
-        dccLogoRight.classList.remove("hidden");
-        dccLogoRight.style.visibility = "hidden";
-        dccLogoRight.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[0].url || logosH[0].preview || "")}" alt="" style="opacity:0;">`;
-      }
-    } else {
-      dccLogoLeft.classList.add("hidden");
-      dccLogoLeft.innerHTML = "";
-      dccLogoRight.classList.add("hidden");
-      dccLogoRight.innerHTML = "";
-    }
-  } else {
-    // Para outros templates
-    if (dccLogoLeft) { dccLogoLeft.classList.add("hidden"); dccLogoLeft.innerHTML = ""; }
-    if (dccLogoRight) { dccLogoRight.classList.add("hidden"); dccLogoRight.innerHTML = ""; dccLogoRight.style.visibility = "visible"; }
+  if (tplId === "uzh") {
+    // Template Suíço (UZH): logos posicionadas no topo direito
+    if (logoSlotLeft) { logoSlotLeft.classList.add("hidden"); logoSlotLeft.innerHTML = ""; }
+    if (logoSlotRight) { logoSlotRight.classList.add("hidden"); logoSlotRight.innerHTML = ""; logoSlotRight.style.visibility = "visible"; }
     if (logosH && logosH.length > 0) {
       headerLogosEl.classList.remove("hidden");
       headerLogosEl.innerHTML = logosH.map(l => `<img class="draft-logo-img" src="${escapeHtml(l.url || l.preview || "")}" alt="Logo">`).join("");
     } else {
       headerLogosEl.classList.add("hidden");
       headerLogosEl.innerHTML = "";
+    }
+  } else {
+    // Todos os outros templates: logos alinhadas aos emails institucionais/afiliações
+    headerLogosEl.classList.add("hidden");
+    headerLogosEl.innerHTML = "";
+    if (logosH && logosH.length > 0) {
+      if (logosH[0]) {
+        logoSlotLeft.classList.remove("hidden");
+        logoSlotLeft.style.visibility = "visible";
+        logoSlotLeft.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[0].url || logosH[0].preview || "")}" alt="Logo Left">`;
+      } else {
+        logoSlotLeft.classList.add("hidden");
+        logoSlotLeft.innerHTML = "";
+      }
+      if (logosH.length > 2) {
+        logoSlotRight.classList.remove("hidden");
+        logoSlotRight.style.visibility = "visible";
+        logoSlotRight.innerHTML = logosH.slice(1).map(l => `<img class="draft-logo-img" src="${escapeHtml(l.url || l.preview || "")}" alt="Logo Right">`).join("");
+      } else if (logosH[1]) {
+        logoSlotRight.classList.remove("hidden");
+        logoSlotRight.style.visibility = "visible";
+        logoSlotRight.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[1].url || logosH[1].preview || "")}" alt="Logo Right">`;
+      } else {
+        // Se houver apenas 1 logo, espelha placeholder invisível para manter os emails perfeitamente centralizados
+        logoSlotRight.classList.remove("hidden");
+        logoSlotRight.style.visibility = "hidden";
+        logoSlotRight.innerHTML = `<img class="draft-logo-img" src="${escapeHtml(logosH[0].url || logosH[0].preview || "")}" alt="" style="opacity:0;">`;
+      }
+    } else {
+      logoSlotLeft.classList.add("hidden");
+      logoSlotLeft.innerHTML = "";
+      logoSlotRight.classList.add("hidden");
+      logoSlotRight.innerHTML = "";
+      logoSlotRight.style.visibility = "visible";
     }
   }
 

@@ -96,10 +96,18 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     affil = "\\\\".join(affil_bits)
 
     header_logos = [images[p] for p in poster.get("logos_header", []) if p in images]
-    logo_boxes = ""
-    if header_logos:
-        cells = [f"\\includegraphics[height=3.5cm,keepaspectratio]{{{f}}}" for f in header_logos]
-        logo_boxes = "\\\\ \\vspace{0.5cm} " + " \\qquad ".join(cells)
+    if len(header_logos) >= 2:
+        left_logo = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedright\\includegraphics[height=3.5cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_logo = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedleft\\includegraphics[height=3.5cm,keepaspectratio]{{{header_logos[1]}}}\\end{{minipage}}"
+        center_affil = f"\\begin{{minipage}}[c]{{0.60\\linewidth}}\\centering {affil}\\end{{minipage}}"
+        institute_content = f"{left_logo}\\hfill {center_affil}\\hfill {right_logo}"
+    elif len(header_logos) == 1:
+        left_logo = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\raggedright\\includegraphics[height=3.5cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_spacer = f"\\begin{{minipage}}[c]{{0.18\\linewidth}}\\null\\end{{minipage}}"
+        center_affil = f"\\begin{{minipage}}[c]{{0.60\\linewidth}}\\centering {affil}\\end{{minipage}}"
+        institute_content = f"{left_logo}\\hfill {center_affil}\\hfill {right_spacer}"
+    else:
+        institute_content = affil
 
     return f"""\\documentclass{{beamer}}
 \\usepackage[{beamer_opts}]{{beamerposter}}
@@ -125,7 +133,7 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
 \\title{{{_inline(poster.get('title', '')) or '~'}}}
 \\author{{{authors}}}
-\\institute{{{affil}{logo_boxes}}}
+\\institute{{{institute_content}}}
 
 \\begin{{document}}
 \\begin{{frame}}[t]
