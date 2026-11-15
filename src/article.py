@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 
 from .config import POSTER_SIZES
@@ -77,10 +78,14 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     for idx, sec in enumerate(sections):
         if idx:
             body.append(f"\\noindent\\textcolor{{accent}}{{\\rule{{\\linewidth}}{{{_pt(5 * s)}pt}}}}\\par\\vspace{{{cm(0.5)}}}")
-        title = _inline(sec["title"])
-        if sec["id"] not in _UNNUMBERED:
+        raw_title = sec.get("title") or sec.get("id") or "Section"
+        clean_title = re.sub(r"^\s*\d+[\.\-\)]\s*", "", str(raw_title)).strip()
+        is_ref = sec["id"] in _UNNUMBERED or bool(re.search(r"refer[eê]nc", raw_title, re.IGNORECASE))
+        if not is_ref:
             counter += 1
-            title = f"{counter}. {title}"
+            title = f"{counter}. {clean_title}"
+        else:
+            title = clean_title
         text = references_to_latex(sec["content"], small=False) if sec["id"] == "references" else text_to_latex(sec["content"])
         if sec["id"] == "references":
             text = f"{{{_fs(24, s)}{text}}}"

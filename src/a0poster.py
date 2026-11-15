@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 
 from .config import POSTER_SIZES
@@ -15,10 +16,14 @@ def _pt(v: float) -> str:
     return f"{v:.2f}"
 
 
+def _clean_title(t: str) -> str:
+    return re.sub(r"^\s*\d+[\.\-\)]\s*", "", str(t or "")).strip()
+
+
 def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     from .latex import (
         _QR_OK, _hex_to_latex, _images_to_latex, _inline, escape_latex,
-        references_to_latex, text_to_latex,
+        references_to_latex, split_columns, text_to_latex,
     )
 
     labels = labels_for(poster["language"])
@@ -43,36 +48,69 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
     paper_key = poster.get("paper", "a0")
     orient = poster.get("orientation", "portrait")
-    cols = max(1, poster.get("columns", 2))
+    cols = max(1, min(4, poster.get("columns", 2)))
     w, h = POSTER_SIZES.get(paper_key, POSTER_SIZES["a0"])["cm"]
     if orient == "landscape":
         w, h = h, w
     a0_paper_opt = paper_key if paper_key in ("a0", "a1", "a2") else "a0"
+
+    # Escala proporcional de fontes de acordo com as dimensões do papel
+    scale = (min(w, h) / 84.1)
+    title_fs = max(38, int(52 * scale))
+    author_fs = max(20, int(26 * scale))
+    meta_fs = max(15, int(19 * scale))
+    sec_title_fs = max(22, int(28 * scale))
+    body_fs = max(16, int(20 * scale))
+    body_lh = int(body_fs * 1.35)
 
     sections = [
         {**sec, "images": [{"file": images[i["path"]], "caption": i["caption"]} for i in sec["images"] if i["path"] in images]}
         for sec in poster["sections"]
     ]
 
-    body: List[str] = []
+    body_cards: List[str] = []
     counter, fig = 0, [0]
     for idx, sec in enumerate(sections):
-        title = _inline(sec["title"])
-        if sec["id"] not in _UNNUMBERED:
+        raw_title = sec.get("title") or sec.get("id") or "Section"
+        clean_title = _clean_title(raw_title)
+        is_ref = sec["id"] in _UNNUMBERED or bool(re.search(r"refer[eê]nc", raw_title, re.IGNORECASE))
+        if not is_ref:
             counter += 1
-            title = f"{counter}. {title}"
-        text = references_to_latex(sec["content"], small=True) if sec["id"] == "references" else text_to_latex(sec["content"])
+            display_title = f"{counter}. {clean_title}"
+        else:
+            display_title = clean_title
+
+        text = references_to_latex(sec["content"], small=False) if is_ref else text_to_latex(sec["content"])
         img_tex = _images_to_latex(sec["images"], labels["figure"], fig, r"\large")
-        body.append(
-            f"\\section{{{title}}}\n"
-            f"{text}\n"
-            f"{img_tex}\n"
+
+        # Cartão fechado com borda e espaçamento idêntico ao preview (.draft-block)
+        body_cards.append(
+            f"\\noindent\\begin{{minipage}}{{\\linewidth}}\n"
+            f"\\vspace{{0.4cm}}\n"
+            f"\\fcolorbox{{uzhAccent}}{{white}}{{\\parbox{{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}}{{\n"
+            f"  \\vspace{{0.35cm}}\n"
+            f"  {{\\color{{uzhAccent}}\\bfseries\\fontsize{{{sec_title_fs}pt}}{{{int(sec_title_fs * 1.25)}pt}}\\selectfont \\MakeUppercase{{{escape_latex(display_title)}}}}}\\par\\vspace{{0.25cm}}\n"
+            f"  {{\\color{{uzhAccent}}\\rule{{\\linewidth}}{{2pt}}}}\\par\\vspace{{0.4cm}}\n"
+            f"  {{\\color{{uzhDark}}\\fontsize{{{body_fs}pt}}{{{body_lh}pt}}\\selectfont\n"
+            f"    {text}\n"
+            f"    {img_tex}\n"
+            f"  }}\\par\\vspace{{0.3cm}}\n"
+            f"}}}}\n"
+            f"\\vspace{{0.4cm}}\n"
+            f"\\end{{minipage}}\n"
         )
 
-    qr = ""
-    if _QR_OK.match(poster.get("url", "")):
-        qr = f"\\begin{{center}}\\qrcode[height=3.5cm]{{{poster['url']}}}\\end{{center}}"
-
+    # Distribuição em colunas por blocos (sem quebra de seções no meio)
+    cols_split = split_columns(body_cards, cols)
+    col_width_factor = (0.98 - (cols - 1) * 0.03) / cols
+    col_tex = []
+    for c in cols_split:
+        col_tex.append(
+            f"\\begin{{minipage}}[t]{{{col_width_factor:.3f}\\linewidth}}\n"
+            + "".join(c)
+            + "\\end{minipage}"
+        )
+    columns_body = " \\hfill ".join(col_tex)
 
     authors = escape_latex(poster.get("authors", "")).replace("\n", ", ")
     affil_bits = [escape_latex(ln.strip()) for ln in poster.get("affiliations", "").split("\n") if ln.strip()]
@@ -83,8 +121,22 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     header_logos = [images[p] for p in poster.get("logos_header", []) if p in images]
     logo_boxes = ""
     if header_logos:
-        cells = [f"\\includegraphics[height=5cm,keepaspectratio]{{{f}}}" for f in header_logos]
-        logo_boxes = "\\hfill " + " \\qquad ".join(cells)
+        cells = [f"\\includegraphics[height={_pt(5 * scale)}cm,keepaspectratio]{{{f}}}" for f in header_logos]
+        logo_boxes = " \\qquad ".join(cells)
+
+    footer_logos = [images[p] for p in poster.get("logos_footer", []) if p in images]
+    footer_tex = ""
+    if footer_logos:
+        h_cm = f"{_pt(4.5 * scale)}cm"
+        if len(footer_logos) == 1:
+            f_boxes = f"\\hfill \\includegraphics[height={h_cm},keepaspectratio]{{{footer_logos[0]}}} \\hfill\\null"
+        else:
+            f_boxes = " \\hfill ".join(f"\\includegraphics[height={h_cm},keepaspectratio]{{{f}}}" for f in footer_logos)
+        footer_tex = (
+            f"\\vfill\n"
+            f"\\textcolor{{uzhAccent}}{{\\rule{{\\linewidth}}{{3pt}}}}\\par\\vspace{{0.5cm}}\n"
+            f"\\noindent {f_boxes}\n"
+        )
 
     title_text = _inline(poster.get('title', '')) or '~'
 
@@ -92,15 +144,15 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage[utf8]{{inputenc}}
 \\usepackage[T1]{{fontenc}}
 \\usepackage[{labels['babel']}]{{babel}}
+\\usepackage[scaled=0.92]{{helvet}}
+\\renewcommand{{\\familydefault}}{{\\sfdefault}}
 \\usepackage{{geometry}}
-\\geometry{{paperwidth={w:.1f}cm, paperheight={h:.1f}cm, left=4cm, top=4cm, right=4cm, bottom=4cm}}
-\\usepackage{{multicol}}
+\\geometry{{paperwidth={w:.1f}cm, paperheight={h:.1f}cm, left=3cm, top=3cm, right=3cm, bottom=3cm}}
 \\usepackage{{amsmath,amssymb}}
 \\usepackage{{graphicx}}
 \\usepackage{{qrcode}}
 \\usepackage[table]{{xcolor}}
 \\usepackage{{colortbl}}
-\\usepackage{{titlesec}}
 \\usepackage{{booktabs,array,tikz}}
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
 
@@ -114,32 +166,30 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\definecolor{{tableLine}}{{HTML}}{{334155}}
 \\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
 
-\\titleformat{{\\section}}
-  {{\\huge\\bfseries\\color{{uzhAccent}}}}
-  {{\\color{{uzhAccent}}\\thesection.}}
-  {{1em}}
-  {{\\color{{uzhAccent}}}}
-  [\\vspace{{-0.3em}}\\textcolor{{uzhAccent}}{{\\rule{{\\linewidth}}{{2pt}}}}]
+\\setlength{{\\fboxsep}}{{14pt}}
+\\setlength{{\\fboxrule}}{{1.8pt}}
 
 \\begin{{document}}
 
-\\begin{{minipage}}{{0.75\\linewidth}}
-  {{\\fontsize{{48pt}}{{56pt}}\\selectfont \\textbf{{{title_text}}}\\par\\vspace{{0.8cm}}}}
-  {{\\fontsize{{28pt}}{{34pt}}\\selectfont \\textbf{{{authors}}}}}\\par\\vspace{{0.4cm}}
-  {{\\fontsize{{22pt}}{{28pt}}\\selectfont \\textcolor{{uzhDark}}{{{affil}}}}}\\par
+\\noindent
+\\begin{{minipage}}[t]{{0.62\\linewidth}}
+  {{\\fontsize{{{title_fs}pt}}{{{int(title_fs * 1.15)}pt}}\\selectfont \\textbf{{\\color{{uzhAccent}} {title_text}}}\\par\\vspace{{0.5cm}}}}
+  {{\\fontsize{{{author_fs}pt}}{{{int(author_fs * 1.25)}pt}}\\selectfont \\textbf{{\\color{{uzhDark}} {authors}}}\\par\\vspace{{0.3cm}}}}
+  {{\\fontsize{{{meta_fs}pt}}{{{int(meta_fs * 1.3)}pt}}\\selectfont \\color{{gray!80!black}} {affil}\\par}}
 \\end{{minipage}}%
-\\begin{{minipage}}{{0.25\\linewidth}}
+\\hfill
+\\begin{{minipage}}[t]{{0.36\\linewidth}}
   \\raggedleft
   {logo_boxes}
 \\end{{minipage}}
 
-\\vspace{{1.5cm}}
-\\textcolor{{uzhAccent}}{{\\rule{{\\linewidth}}{{4pt}}}}
-\\vspace{{1cm}}
+\\vspace{{0.8cm}}
+\\textcolor{{uzhAccent}}{{\\rule{{\\linewidth}}{{4.5pt}}}}
+\\vspace{{0.8cm}}
 
-\\begin{{multicols}}{{{cols}}}
-{chr(10).join(body)}
-\\end{{multicols}}
+\\noindent
+{columns_body}
 
+{footer_tex}
 \\end{{document}}
 """

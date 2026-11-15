@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 
 from .config import POSTER_SIZES
@@ -55,10 +56,14 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     body: List[str] = []
     counter, fig = 0, [0]
     for idx, sec in enumerate(sections):
-        title = _inline(sec["title"])
-        if sec["id"] not in _UNNUMBERED:
+        raw_title = sec.get("title") or sec.get("id") or "Section"
+        clean_title = re.sub(r"^\s*\d+[\.\-\)]\s*", "", str(raw_title)).strip()
+        is_ref = sec["id"] in _UNNUMBERED or bool(re.search(r"refer[eê]nc", raw_title, re.IGNORECASE))
+        if not is_ref:
             counter += 1
-            title = f"{counter}. {title}"
+            title = f"{counter}. {clean_title}"
+        else:
+            title = clean_title
         text = references_to_latex(sec["content"], small=True) if sec["id"] == "references" else text_to_latex(sec["content"])
         img_tex = _images_to_latex(sec["images"], labels["figure"], fig, r"\small")
         body.append(
@@ -94,6 +99,19 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         inst_tex = affil
     left_logo = ""
     right_logo = ""
+
+    footer_logos = [images[p] for p in poster.get("logos_footer", []) if p in images]
+    footer_tex = ""
+    if footer_logos:
+        if len(footer_logos) == 1:
+            f_boxes = f"\\hfill \\includegraphics[height=4cm,keepaspectratio]{{{footer_logos[0]}}} \\hfill\\null"
+        else:
+            f_boxes = " \\hfill ".join(f"\\includegraphics[height=4cm,keepaspectratio]{{{f}}}" for f in footer_logos)
+        footer_tex = (
+            f"\\vfill\n"
+            f"\\textcolor{{mainCol}}{{\\rule{{\\linewidth}}{{3pt}}}}\\par\\vspace{{0.5cm}}\n"
+            f"\\noindent {f_boxes}\n"
+        )
 
     sciposter_size = paper_key if paper_key in ("a0", "a1", "a2") else "a0"
     col_str = "2" if cols == 2 else str(cols)
@@ -142,5 +160,6 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 {chr(10).join(body)}
 \\end{{multicols}}
 
+{footer_tex}
 \\end{{document}}
 """

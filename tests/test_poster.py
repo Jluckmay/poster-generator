@@ -204,6 +204,37 @@ def test_build_tex_has_babel_and_columns():
     assert "[english]{babel}" in tex and tex.count("\\column{") == 2
 
 
+def test_uzh_template_rendering_and_clean_titles():
+    from src.a0poster import build_a0poster_tex
+    data = {
+        "title": "Modulação do Espectro",
+        "authors": "Maria Silva",
+        "affiliations": "Instituto",
+        "email": "m@i.edu",
+        "template": "uzh",
+        "paper": "a0",
+        "columns": 2,
+        "logos_header": ["h1"],
+        "logos_footer": ["f1", "f2"],
+        "sections": [
+            {"id": "introduction", "title": "1. Introdução", "content": "Texto intro"},
+            {"id": "methods", "title": "Metodologia", "content": "[A] -> [B] -> [C] -> [D]"},
+            {"id": "results", "title": "3. Resultados", "content": "| A | B |\n|---|---|\n| 1 | 2 |"},
+            {"id": "references", "title": "Referências", "content": "[1] Ref 1"},
+        ]
+    }
+    images = {"h1": "h1.png", "f1": "f1.png", "f2": "f2.png"}
+    tex = build_a0poster_tex(normalize_poster(data), images)
+    assert "helvet" in tex
+    assert "1. 1." not in tex
+    assert "3. 3." not in tex
+    assert "1. Introdu" in tex
+    assert "4. Refer" not in tex
+    assert "Refer" in tex
+    assert "fcolorbox" in tex
+    assert "f1.png" in tex and "f2.png" in tex
+
+
 @pytest.mark.skipif(not shutil.which("pdflatex"), reason="pdflatex ausente")
 def test_fit_reduces_font_and_flags_overflow(client):
     big = {"title": "T", "paper": "a2", "columns": 1, "sections": [{"id": f"c{i}", "title": "S", "content": "palavra " * 2500} for i in range(18)]}

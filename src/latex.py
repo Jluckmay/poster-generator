@@ -173,10 +173,37 @@ def _arrow_pipeline_to_latex(text: str) -> str:
         return _inline(text)
 
     nodes = bracket_nodes[:6]
-    stacked = len(nodes) >= 4
 
     # TikZ colorido: usa colorOne (accent do poster) para bordas e setas, idêntico ao preview
-    if stacked:
+    if len(nodes) == 4:
+        # Layout 2x2 com setas e moldura externa idêntico ao preview (.draft-diagram flex-wrap)
+        pos_lines = [
+            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black] (n0) at (0, 0) {{{_inline(nodes[0])}}};",
+            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black, right=28pt of n0] (n1) {{{_inline(nodes[1])}}};",
+            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black, below=20pt of n0] (n2) {{{_inline(nodes[2])}}};",
+            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black, right=28pt of n2] (n3) {{{_inline(nodes[3])}}};",
+        ]
+        arrow_lines = [
+            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n0) -- (n1);",
+            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n1.east) -- ++(14pt,0) |- (n2.west);",
+            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n2) -- (n3);",
+        ]
+        frame_line = [r"  \node[draw=diagFrame, line width=1.5pt, rounded corners=12pt, fit=(n0) (n1) (n2) (n3), inner sep=14pt] {};"]
+        body = "\n".join(pos_lines + arrow_lines + frame_line)
+        return (
+            "\\begin{center}\n"
+            "\\resizebox{0.96\\linewidth}{!}{%\n"
+            "\\begin{tikzpicture}\n"
+            f"{body}\n"
+            "\\end{tikzpicture}%\n"
+            "}\n"
+            "\\end{center}"
+        )
+    elif len(nodes) > 4:
         # Layout vertical com setas para baixo e moldura externa
         tikz_nodes = []
         for i, st in enumerate(nodes):

@@ -232,7 +232,7 @@
     }));
     const count = rows[0].length;
     const columns = "|>{\\raggedright\\arraybackslash}X|" + "Y|".repeat(Math.max(0, count - 1));
-    return `\\begingroup\\setlength{\\tabcolsep}{10pt}\\renewcommand{\\arraystretch}{1.38}
+    return `\\begingroup\\setlength{\\tabcolsep}{12pt}\\renewcommand{\\arraystretch}{1.45}
 \\arrayrulecolor{tableLine}
 \\begin{center}\\begin{tabularx}{\\linewidth}{${columns}}\\hline
 \\rowcolor{tableHead}
@@ -244,7 +244,15 @@ ${rows.map(row => `${Array.from({ length: count }, (_, i) => row[i] || "").join(
     const nodes = [...text.matchAll(/\[([^\[\]]+)\]/g)].map(match => match[1].trim());
     const parsed = nodes.length >= 2 ? nodes : text.split(/\s*(?:->|\u2192|=>)\s*/).map(part => part.trim().replace(/^\[|\]$/g, "")).filter(Boolean);
     if (parsed.length < 2) return inlineTex(text);
-    if (parsed.length >= 4) {
+    if (parsed.length === 4) {
+      const b = node => `\\fcolorbox{posteraccent}{white}{\\parbox{0.41\\linewidth}{\\centering\\bfseries\\strut ${inlineTex(node)}}}`;
+      const arr = `\\,\\textcolor{posteraccent}{$\\rightarrow$}\\,`;
+      return `\\begingroup\\setlength{\\fboxsep}{7pt}\\setlength{\\fboxrule}{1.6pt}
+\\begin{center}\\fcolorbox{diagFrame}{white}{\\parbox{0.96\\linewidth}{\\vspace{6pt}\\centering
+${b(parsed[0])}${arr}${b(parsed[1])}\\par\\vspace{6pt}
+${b(parsed[2])}${arr}${b(parsed[3])}
+\\vspace{6pt}}}\\end{center}\\endgroup`;
+    } else if (parsed.length >= 5) {
       const items = parsed.map((node, i) => {
         const box = `\\centerline{\\fcolorbox{posteraccent}{white}{\\parbox{0.86\\linewidth}{\\centering\\bfseries\\strut ${inlineTex(node)}}}}`;
         const arrow = i < parsed.length - 1 ? `\\vspace{2pt}\\centerline{\\color{posteraccent}{\\Large $\\downarrow$}}\\vspace{2pt}` : "";
@@ -322,6 +330,7 @@ ${items}
 
   function buildTex(data, theme, imageNames) {
     const template = theme.templates && theme.templates[data.template] || {};
+    const tplId = data.template || "classic";
     const colors = data.colors || {};
     const accent = (colors.accent || data.accent || `#${(template.colors || ["1F3A5F"])[0]}`).replace(/^#/, "");
     const background = (colors.bg || template.bg || "FFFFFF").replace(/^#/, "");
@@ -329,34 +338,81 @@ ${items}
     const [width, height] = dimensions(data, theme);
     const points = ({ a0: 25, "90x120": 25, "60x90": 20, a1: 20, a2: 17 })[data.paper] || 25;
     const count = Math.max(1, Math.min(4, Number(data.columns) || 2));
-    const margin = Math.max(1.5, Math.min(2.5, width * 0.025));
+    const margin = Math.max(1.8, Math.min(3.0, width * 0.028));
     const logo = (id, maxWidth) => imageNames.get(id)
-      ? `\\includegraphics[height=0.055\\textheight,width=${maxWidth}\\linewidth,keepaspectratio]{${imageNames.get(id)}}` : "";
-    const header = (data.logos_header || []).map(id => logo(id, 0.17)).filter(Boolean).join("\\hfill ");
+      ? `\\includegraphics[height=0.065\\textheight,width=${maxWidth}\\linewidth,keepaspectratio]{${imageNames.get(id)}}` : "";
+
+    // Header layout: if uzh, left-aligned title & authors, right-docked logos
+    let headerTex = "";
+    if (tplId === "uzh") {
+      const headerLogos = (data.logos_header || []).map(id => logo(id, 0.45)).filter(Boolean).join(" \\quad ");
+      const affilText = [data.email || "", ...String(data.affiliations || "").split(/\n/).map(s => s.trim())].filter(Boolean).join(" \\\\ ");
+      headerTex = `\\noindent
+\\begin{minipage}[t]{0.62\\linewidth}
+  {\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 2.1)}pt}{${Math.round(points * 2.4)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par\\vspace{0.4em}}
+  {\\fontsize{${Math.round(points * 1.25)}pt}{${Math.round(points * 1.5)}pt}\\selectfont \\textbf{${escapeTex(data.authors || "")}}\\par\\vspace{0.3em}}
+  {\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${escapeTex(affilText)}\\par}
+\\end{minipage}%
+\\hfill
+\\begin{minipage}[t]{0.36\\linewidth}
+  \\raggedleft
+  ${headerLogos}
+\\end{minipage}
+\\vspace{0.6em}\\par
+{\\color{posteraccent}\\rule{\\linewidth}{3.5pt}}\\vspace{0.8em}`;
+    } else {
+      const header = (data.logos_header || []).map(id => logo(id, 0.17)).filter(Boolean).join("\\hfill ");
+      headerTex = `${header ? `\\noindent${header}\\par\\vspace{0.4em}` : ""}
+{\\centering{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 2.0)}pt}{${Math.round(points * 2.3)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par}
+\\vspace{0.3em}{\\fontsize{${Math.round(points * 1.2)}pt}{${Math.round(points * 1.45)}pt}\\selectfont \\textbf{${escapeTex(data.authors || "")}}\\par}
+\\vspace{0.2em}{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${escapeTex([data.affiliations || "", data.email || ""].filter(Boolean).join(" / "))}\\par}}
+\\vspace{0.8em}`;
+    }
+
     const footerLogos = (data.logos_footer || []).map(id => logo(id, 0.16)).filter(Boolean);
     let footer = "";
     if (footerLogos.length === 1) {
-      footer = `\\noindent\\hfill ${footerLogos[0]}\\hfill\\null`;
+      footer = `\\vfill\\noindent{\\color{posteraccent}\\rule{\\linewidth}{2.5pt}}\\par\\vspace{0.4em}\\noindent\\hfill ${footerLogos[0]}\\hfill\\null`;
     } else if (footerLogos.length > 1) {
-      footer = `\\noindent ${footerLogos.join("\\hfill ")}`;
+      footer = `\\vfill\\noindent{\\color{posteraccent}\\rule{\\linewidth}{2.5pt}}\\par\\vspace{0.4em}\\noindent ${footerLogos.join("\\hfill ")}`;
     }
+
     const sections = data.sections || [];
     const buckets = Array.from({ length: count }, () => []);
     const perColumn = Math.ceil(sections.length / count);
     sections.forEach((section, index) => buckets[Math.min(count - 1, Math.floor(index / perColumn))].push(section));
     const columnGap = "1.2em";
     const columnWidth = `\\dimexpr(\\linewidth-${count - 1}\\columnsep)/${count}\\relax`;
-    const columns = buckets.map(bucket => `\\begin{minipage}[t][0.79\\textheight][s]{${columnWidth}}
-${bucket.map((section, sectionIndex) => {
-      const title = escapeTex(section.title || section.id || "Section");
+
+    let secCounter = 0;
+    const columns = buckets.map(bucket => `\\begin{minipage}[t]{${columnWidth}}
+${bucket.map(section => {
+      const rawTitle = (section.title || section.id || "Section").trim();
+      const cleanTitle = rawTitle.replace(/^\\s*\\d+[\\.\\-\\)]\\s*/, "");
+      const isRef = section.id === "references" || /refer[eê]nc/i.test(rawTitle);
+      let displayTitle = cleanTitle;
+      if (!isRef) {
+        secCounter++;
+        displayTitle = `${secCounter}. ${cleanTitle}`;
+      }
       const content = renderContent(section.content || "", `#${accent}`);
       const images = (section.images || []).map(image => imageNames.get(image.path)
         ? `\\par\\begin{center}\\includegraphics[width=0.95\\linewidth,height=0.18\\textheight,keepaspectratio]{${imageNames.get(image.path)}}${image.caption ? `\\\\{\\small\\itshape ${escapeTex(image.caption)}}` : ""}\\end{center}` : "").join("\n");
-      return `${sectionIndex ? "\\vfill\n" : ""}\\noindent{\\color{posteraccent}\\rule{\\linewidth}{1.2pt}}\\par
-{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 1.25)}pt}{${Math.round(points * 1.5)}pt}\\selectfont ${title}}\\par\\smallskip
-{\\color{posterbody}\\fontsize{${points}pt}{${Math.round(points * 1.25)}pt}\\selectfont ${content}${images}}`;
+
+      return `\\noindent\\begin{minipage}{\\linewidth}
+\\fcolorbox{posteraccent}{white}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{
+  \\vspace{0.25em}
+  {\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 1.3)}pt}{${Math.round(points * 1.55)}pt}\\selectfont \\MakeUppercase{${escapeTex(displayTitle)}}}\\par\\vspace{0.2em}
+  {\\color{posteraccent}\\rule{\\linewidth}{1.4pt}}\\par\\vspace{0.35em}
+  {\\color{posterbody}\\fontsize{${points}pt}{${Math.round(points * 1.32)}pt}\\selectfont
+    ${content}
+    ${images}
+  }\\par\\vspace{0.2em}
+}}\\vspace{0.8em}
+\\end{minipage}`;
     }).join("\n")}
 \\end{minipage}`).join(`\\hspace{${columnGap}}`);
+
     return `\\documentclass{article}
 \\usepackage[paperwidth=${width}cm,paperheight=${height}cm,margin=${margin}cm]{geometry}
 \\usepackage[table]{xcolor}
@@ -365,16 +421,15 @@ ${bucket.map((section, sectionIndex) => {
 \\setmainfont{Latin Modern Sans}
 \\pagestyle{empty}\\setlength{\\parindent}{0pt}\\setlength{\\parskip}{0.25em}
 \\setlength{\\columnsep}{1.2em}
+\\setlength{\\fboxsep}{10pt}
+\\setlength{\\fboxrule}{1.6pt}
 \\definecolor{posteraccent}{HTML}{${accent}}\\definecolor{posterbg}{HTML}{${background}}\\definecolor{posterbody}{HTML}{${bodyColor}}
 \\definecolor{tableHead}{HTML}{F1F5F9}\\definecolor{tableLine}{HTML}{334155}\\definecolor{diagFrame}{HTML}{CBD5E1}
 \\pagecolor{posterbg}
 \\begin{document}\\color{posterbody}
-\\noindent${header}\\par\\vspace{0.4em}
-{\\centering{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 1.8)}pt}{${Math.round(points * 2.1)}pt}\\selectfont ${escapeTex(data.title || "Poster") }\\par}
-\\vspace{0.2em}{\\fontsize{${Math.round(points * 1.1)}pt}{${Math.round(points * 1.3)}pt}\\selectfont ${escapeTex(data.authors || "")}\\par}
-{\\small ${escapeTex([data.affiliations || "", data.email || ""].filter(Boolean).join(" / "))}\\par}}
-\\vspace{0.8em}\\noindent${columns}\\par
-\\vfill\\noindent${footer}
+${headerTex}
+\\noindent${columns}\\par
+${footer}
 \\end{document}`;
   }
 

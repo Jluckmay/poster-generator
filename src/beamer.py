@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any, Dict, List
 
 from .config import POSTER_SIZES
@@ -67,10 +68,14 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     for ci, col in enumerate(cols):
         blocks_in_col: List[str] = []
         for sec in col:
-            title = _inline(sec["title"])
-            if sec["id"] not in _UNNUMBERED:
+            raw_title = sec.get("title") or sec.get("id") or "Section"
+            clean_title = re.sub(r"^\s*\d+[\.\-\)]\s*", "", str(raw_title)).strip()
+            is_ref = sec["id"] in _UNNUMBERED or bool(re.search(r"refer[eê]nc", raw_title, re.IGNORECASE))
+            if not is_ref:
                 counter += 1
-                title = f"{counter}. {title}"
+                title = f"{counter}. {clean_title}"
+            else:
+                title = clean_title
             if sec["id"] == "references":
                 text = references_to_latex(sec["content"], small=True)
             else:
@@ -108,6 +113,19 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         institute_content = f"{left_logo}\\hfill {center_affil}\\hfill {right_spacer}"
     else:
         institute_content = affil
+
+    footer_logos = [images[p] for p in poster.get("logos_footer", []) if p in images]
+    footer_tex = ""
+    if footer_logos:
+        if len(footer_logos) == 1:
+            f_boxes = f"\\hfill \\includegraphics[height=3.5cm,keepaspectratio]{{{footer_logos[0]}}} \\hfill\\null"
+        else:
+            f_boxes = " \\hfill ".join(f"\\includegraphics[height=3.5cm,keepaspectratio]{{{f}}}" for f in footer_logos)
+        footer_tex = (
+            f"\\vfill\n"
+            f"\\textcolor{{tudBlue}}{{\\rule{{\\linewidth}}{{2.5pt}}}}\\par\\vspace{{0.4cm}}\n"
+            f"\\noindent {f_boxes}\n"
+        )
 
     return f"""\\documentclass{{beamer}}
 \\usepackage[{beamer_opts}]{{beamerposter}}
@@ -149,6 +167,7 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\begin{{columns}}[t]
 {''.join(col_blocks)}
 \\end{{columns}}
+{footer_tex}
 \\end{{frame}}
 \\end{{document}}
 """
