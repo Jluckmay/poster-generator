@@ -336,7 +336,7 @@ ${items}
     const background = (colors.bg || template.bg || "FFFFFF").replace(/^#/, "");
     const bodyColor = (colors.body || "1A1A1A").replace(/^#/, "");
     const [width, height] = dimensions(data, theme);
-    const points = ({ a0: 25, "90x120": 25, "60x90": 20, a1: 20, a2: 17 })[data.paper] || 25;
+    const points = ({ a0: 27, "90x120": 27, "60x90": 22, a1: 22, a2: 18 })[data.paper] || 25;
     const count = Math.max(1, Math.min(4, Number(data.columns) || 2));
     const margin = Math.max(1.8, Math.min(3.0, width * 0.028));
     const logo = (id, maxWidth) => imageNames.get(id)
@@ -346,12 +346,13 @@ ${items}
     let headerTex = "";
     if (tplId === "uzh") {
       const headerLogos = (data.logos_header || []).map(id => logo(id, 0.45)).filter(Boolean).join(" \\quad ");
-      const affilText = [data.email || "", ...String(data.affiliations || "").split(/\n/).map(s => s.trim())].filter(Boolean).join(" \\\\ ");
+      const affilItems = [data.email || "", ...String(data.affiliations || "").split(/\n/).map(s => s.trim())].filter(Boolean);
+      const affilText = affilItems.map(escapeTex).join(" \\\\ ");
       headerTex = `\\noindent
 \\begin{minipage}[t]{0.62\\linewidth}
   {\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 2.1)}pt}{${Math.round(points * 2.4)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par\\vspace{0.4em}}
   {\\fontsize{${Math.round(points * 1.25)}pt}{${Math.round(points * 1.5)}pt}\\selectfont \\textbf{${escapeTex(data.authors || "")}}\\par\\vspace{0.3em}}
-  {\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${escapeTex(affilText)}\\par}
+  {\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilText}\\par}
 \\end{minipage}%
 \\hfill
 \\begin{minipage}[t]{0.36\\linewidth}
@@ -361,11 +362,20 @@ ${items}
 \\vspace{0.6em}\\par
 {\\color{posteraccent}\\rule{\\linewidth}{3.5pt}}\\vspace{0.8em}`;
     } else {
-      const header = (data.logos_header || []).map(id => logo(id, 0.17)).filter(Boolean).join("\\hfill ");
-      headerTex = `${header ? `\\noindent${header}\\par\\vspace{0.4em}` : ""}
-{\\centering{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 2.0)}pt}{${Math.round(points * 2.3)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par}
+      const logos = (data.logos_header || []).map(id => logo(id, 0.18)).filter(Boolean);
+      const affilItems = [data.email || "", ...String(data.affiliations || "").split(/\n/).map(s => s.trim())].filter(Boolean);
+      const affilTex = affilItems.map(escapeTex).join(" \\\\ ");
+      let instLine = "";
+      if (logos.length >= 2) {
+        instLine = `\\noindent\\begin{minipage}[c]{0.18\\linewidth}\\raggedright ${logos[0]}\\end{minipage}\\hfill\\begin{minipage}[c]{0.60\\linewidth}\\centering{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\end{minipage}\\hfill\\begin{minipage}[c]{0.18\\linewidth}\\raggedleft ${logos[1]}\\end{minipage}`;
+      } else if (logos.length === 1) {
+        instLine = `\\noindent\\begin{minipage}[c]{0.18\\linewidth}\\raggedright ${logos[0]}\\end{minipage}\\hfill\\begin{minipage}[c]{0.60\\linewidth}\\centering{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\end{minipage}\\hfill\\begin{minipage}[c]{0.18\\linewidth}\\null\\end{minipage}`;
+      } else {
+        instLine = `{\\centering{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\par}`;
+      }
+      headerTex = `{\\centering{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 2.0)}pt}{${Math.round(points * 2.3)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par}
 \\vspace{0.3em}{\\fontsize{${Math.round(points * 1.2)}pt}{${Math.round(points * 1.45)}pt}\\selectfont \\textbf{${escapeTex(data.authors || "")}}\\par}
-\\vspace{0.2em}{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${escapeTex([data.affiliations || "", data.email || ""].filter(Boolean).join(" / "))}\\par}}
+\\vspace{0.2em}${instLine}\\par}
 \\vspace{0.8em}`;
     }
 
@@ -388,7 +398,7 @@ ${items}
     const columns = buckets.map(bucket => `\\begin{minipage}[t]{${columnWidth}}
 ${bucket.map(section => {
       const rawTitle = (section.title || section.id || "Section").trim();
-      const cleanTitle = rawTitle.replace(/^\\s*\\d+[\\.\\-\\)]\\s*/, "");
+      const cleanTitle = rawTitle.replace(/^\s*\d+[\.\-\)]\s*/, "");
       const isRef = section.id === "references" || /refer[eê]nc/i.test(rawTitle);
       let displayTitle = cleanTitle;
       if (!isRef) {
@@ -398,6 +408,30 @@ ${bucket.map(section => {
       const content = renderContent(section.content || "", `#${accent}`);
       const images = (section.images || []).map(image => imageNames.get(image.path)
         ? `\\par\\begin{center}\\includegraphics[width=0.95\\linewidth,height=0.18\\textheight,keepaspectratio]{${imageNames.get(image.path)}}${image.caption ? `\\\\{\\small\\itshape ${escapeTex(image.caption)}}` : ""}\\end{center}` : "").join("\n");
+
+      if (tplId === "uzh") {
+        return `\\noindent\\begin{minipage}{\\linewidth}
+\\vspace{0.35em}
+\\colorbox{cardBg}{%
+  \\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{%
+    \\vspace{0.35em}%
+    \\hbox{%
+      \\textcolor{posteraccent}{\\vrule width 5pt}%
+      \\hspace{14pt}%
+      \\begin{minipage}{\\dimexpr\\linewidth-5pt-28pt\\relax}
+        \\vspace{0.15em}%
+        {\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 1.35)}pt}{${Math.round(points * 1.65)}pt}\\selectfont \\MakeUppercase{${escapeTex(displayTitle)}}}\\par\\vspace{0.35em}
+        {\\color{posterbody}\\fontsize{${Math.round(points * 0.98)}pt}{${Math.round(points * 1.35)}pt}\\selectfont
+          ${content}
+          ${images}
+        }\\par\\vspace{0.2em}
+      \\end{minipage}%
+    }%
+    \\vspace{0.35em}%
+  }%
+}\\vspace{0.8em}
+\\end{minipage}`;
+      }
 
       return `\\noindent\\begin{minipage}{\\linewidth}
 \\fcolorbox{posteraccent}{white}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{
@@ -425,6 +459,7 @@ ${bucket.map(section => {
 \\setlength{\\fboxrule}{1.6pt}
 \\definecolor{posteraccent}{HTML}{${accent}}\\definecolor{posterbg}{HTML}{${background}}\\definecolor{posterbody}{HTML}{${bodyColor}}
 \\definecolor{tableHead}{HTML}{F1F5F9}\\definecolor{tableLine}{HTML}{334155}\\definecolor{diagFrame}{HTML}{CBD5E1}
+\\definecolor{cardBg}{HTML}{F8FAFC}
 \\pagecolor{posterbg}
 \\begin{document}\\color{posterbody}
 ${headerTex}

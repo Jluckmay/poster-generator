@@ -179,13 +179,13 @@ def _arrow_pipeline_to_latex(text: str) -> str:
         # Layout 2x2 com setas e moldura externa idêntico ao preview (.draft-diagram flex-wrap)
         pos_lines = [
             f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black] (n0) at (0, 0) {{{_inline(nodes[0])}}};",
+            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black] (n0) at (0, 0) {{{_inline(nodes[0])}}};",
             f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black, right=28pt of n0] (n1) {{{_inline(nodes[1])}}};",
+            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, right=28pt of n0] (n1) {{{_inline(nodes[1])}}};",
             f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black, below=20pt of n0] (n2) {{{_inline(nodes[2])}}};",
+            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, below=24pt of n0] (n2) {{{_inline(nodes[2])}}};",
             f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=11pt, font=\\Large\\bfseries, text=black, right=28pt of n2] (n3) {{{_inline(nodes[3])}}};",
+            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, right=28pt of n2] (n3) {{{_inline(nodes[3])}}};",
         ]
         arrow_lines = [
             r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n0) -- (n1);",

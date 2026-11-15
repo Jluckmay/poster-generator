@@ -56,11 +56,11 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
     # Escala proporcional de fontes de acordo com as dimensões do papel
     scale = (min(w, h) / 84.1)
-    title_fs = max(38, int(52 * scale))
-    author_fs = max(20, int(26 * scale))
-    meta_fs = max(15, int(19 * scale))
-    sec_title_fs = max(22, int(28 * scale))
-    body_fs = max(16, int(20 * scale))
+    title_fs = max(46, int(64 * scale))
+    author_fs = max(24, int(34 * scale))
+    meta_fs = max(18, int(24 * scale))
+    sec_title_fs = max(28, int(38 * scale))
+    body_fs = max(21, int(30 * scale))
     body_lh = int(body_fs * 1.35)
 
     sections = [
@@ -83,18 +83,21 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         text = references_to_latex(sec["content"], small=False) if is_ref else text_to_latex(sec["content"])
         img_tex = _images_to_latex(sec["images"], labels["figure"], fig, r"\large")
 
-        # Cartão fechado com borda e espaçamento idêntico ao preview (.draft-block)
+        # Cartão estilizado com faixa lateral esquerda e fundo idêntico ao preview (.draft-block da UZH)
         body_cards.append(
             f"\\noindent\\begin{{minipage}}{{\\linewidth}}\n"
-            f"\\vspace{{0.4cm}}\n"
-            f"\\fcolorbox{{uzhAccent}}{{white}}{{\\parbox{{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}}{{\n"
+            f"\\vspace{{0.35cm}}\n"
+            f"\\colorbox{{uzhCardBg}}{{\\parbox{{\\dimexpr\\linewidth-2\\fboxsep\\relax}}{{\n"
             f"  \\vspace{{0.35cm}}\n"
-            f"  {{\\color{{uzhAccent}}\\bfseries\\fontsize{{{sec_title_fs}pt}}{{{int(sec_title_fs * 1.25)}pt}}\\selectfont \\MakeUppercase{{{escape_latex(display_title)}}}}}\\par\\vspace{{0.25cm}}\n"
-            f"  {{\\color{{uzhAccent}}\\rule{{\\linewidth}}{{2pt}}}}\\par\\vspace{{0.4cm}}\n"
-            f"  {{\\color{{uzhDark}}\\fontsize{{{body_fs}pt}}{{{body_lh}pt}}\\selectfont\n"
-            f"    {text}\n"
-            f"    {img_tex}\n"
-            f"  }}\\par\\vspace{{0.3cm}}\n"
+            f"  \\hbox{{\\textcolor{{uzhAccent}}{{\\vrule width 5pt}}\\hspace{{14pt}}\\begin{{minipage}}{{\\dimexpr\\linewidth-5pt-28pt\\relax}}\n"
+            f"    \\vspace{{0.15cm}}\n"
+            f"    {{\\color{{uzhAccent}}\\bfseries\\fontsize{{{sec_title_fs}pt}}{{{int(sec_title_fs * 1.25)}pt}}\\selectfont \\MakeUppercase{{{escape_latex(display_title)}}}}}\\par\\vspace{{0.35cm}}\n"
+            f"    {{\\color{{uzhDark}}\\fontsize{{{body_fs}pt}}{{{body_lh}pt}}\\selectfont\n"
+            f"      {text}\n"
+            f"      {img_tex}\n"
+            f"    }}\\par\\vspace{{0.25cm}}\n"
+            f"  \\end{{minipage}}}}\n"
+            f"  \\vspace{{0.35cm}}\n"
             f"}}}}\n"
             f"\\vspace{{0.4cm}}\n"
             f"\\end{{minipage}}\n"
@@ -165,6 +168,7 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
 \\definecolor{{tableLine}}{{HTML}}{{334155}}
 \\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
+\\definecolor{{uzhCardBg}}{{HTML}}{{F8FAFC}}
 
 \\setlength{{\\fboxsep}}{{14pt}}
 \\setlength{{\\fboxrule}}{{1.8pt}}

@@ -231,7 +231,7 @@ def test_uzh_template_rendering_and_clean_titles():
     assert "1. Introdu" in tex
     assert "4. Refer" not in tex
     assert "Refer" in tex
-    assert "fcolorbox" in tex
+    assert "uzhCardBg" in tex
     assert "f1.png" in tex and "f2.png" in tex
 
 

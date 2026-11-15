@@ -77,7 +77,7 @@ def renumber_citations(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             return "[" + ", ".join(dedup) + "]" if dedup else ""
 
         res = re.sub(r"\[(\d+(?:[,;\s\u2013-]+\d+)*)\]", replace_bracket, text)
-        return re.sub(r"\s{2,}", " ", res).replace(" .", ".").replace(" ,", ",")
+        return re.sub(r"[ \t]{2,}", " ", res).replace(" .", ".").replace(" ,", ",")
 
     # Apply remapping to all sections
     result = []
