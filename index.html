@@ -3705,14 +3705,14 @@ $("#quickSampleBtn").onclick = () => {
   const sampleTexts = isEn ? {
     introduction: "Modulation of the electromagnetic spectrum in controlled environments optimizes photosynthesis, quantum yield, and biomass accumulation [1]. Targeted wavelengths steer photomorphogenesis:\n\n- **Blue light (450nm):** stimulates cryptochromes, enhancing stomatal opening and chlorophyll synthesis.\n- **Red light (660nm):** targets phytochrome absorption peaks, maximizing PSII quantum yield and CO2 fixation [2].\n- **Far-red (730nm):** drives the Emerson enhancement effect, increasing net carbon assimilation by 18.4%.",
     methods: "Factorial trial with 80 seedlings across 4 automated microclimate chambers under continuous environmental control:\n\n[80 Uniform Seedlings] → [IoT Climate Chambers] → [Spectral Modulation] → [Biomass & Gas Exchange]\n\n- **IoT microclimate:** continuous 1 Hz logging of temperature, relative humidity, and VPD.\n- **Spectral irradiance:** calibrated spectroradiometer (380–780nm) [1] guaranteeing uniform photon flux density.\n- **Closed-loop fertigation:** recirculating hydroponics maintaining steady electrical conductivity and pH.",
-    results: "Comparative dry biomass accumulation, phenological cycle duration, and photosynthetic photon efficiency:\n\n| Light Treatment | Dry Biomass (g) | Cycle Reduction | Photon Efficiency (g/mol) |\n| :--- | :---: | :---: | :---: |\n| White Control (Fluorescent) | 4.2 ± 0.3 | Baseline (0d) | 1.05 |\n| Monochromatic Blue (450nm) | 5.1 ± 0.4 | -4 days | 1.28 |\n| Monochromatic Red (660nm) | 5.8 ± 0.5 | -7 days | 1.45 |\n| Dynamic Combined (B+R+FR) | **7.4 ± 0.3** | **-12 days** | **1.86** |\n\n- Dynamic combined spectrum delivered a **76.2% increase in dry biomass** over the control baseline [2].\n- Crop development cycles were shortened by 12 days, reducing specific electrical energy demand by 38.7%.",
-    conclusions: "- **Precision lighting** demonstrates high biological and energetic feasibility for vertical farming.\n- Multi-channel dynamic spectrum paired with real-time IoT sensing ensures high quality and reproducibility [1, 2].\n- Dynamic spectral protocols establish a scalable, sustainable standard for industrial vertical agriculture.",
+    results: "Comparative dry biomass accumulation, phenological cycle duration, and photosynthetic photon efficiency:\n\n| Light Treatment | Dry Biomass (g) | Cycle Reduction | Photon Efficiency (g/mol) |\n| :--- | :---: | :---: | :---: |\n| White Control (Fluorescent) | 4.2 ± 0.3 | Baseline (0d) | 1.05 |\n| Monochromatic Blue (450nm) | 5.1 ± 0.4 | -4 days | 1.28 |\n| Monochromatic Red (660nm) | 5.8 ± 0.5 | -7 days | 1.45 |\n| Dynamic Combined (B+R+FR) | **7.4 ± 0.3** | **-12 days** | **1.86** |\n\n- Dynamic combined spectrum delivered a **76.2% increase in dry biomass** over the control baseline.\n- Crop development cycles were shortened by 12 days, reducing specific electrical energy demand by 38.7%.",
+    conclusions: "- **Precision lighting** demonstrates high biological and energetic feasibility for vertical farming.\n- Multi-channel dynamic spectrum paired with real-time IoT sensing ensures high quality and reproducibility.\n- Dynamic spectral protocols establish a scalable, sustainable standard for industrial vertical agriculture.",
     references: "[1] Smith, J., Watson, H. et al. (2024). Photobiology & Plant Physiology. Nature Plants, 10:142–155.\n[2] Doe, J. & Turing, A. (2023). Precision Agricultural Systems. IEEE Transactions on AgriTech, 18:204–215."
   } : {
     introduction: "A modulação do espectro eletromagnético em cultivo protegido otimiza a taxa fotossintética, o rendimento quântico e o acúmulo de biomassa vegetal [1]. O controle espectral direciona o desenvolvimento:\n\n- **Espectro azul (450nm):** estimula criptocromos, promovendo abertura estomática e síntese de clorofila.\n- **Espectro vermelho (660nm):** ativa fitocromos Pr, maximizando a fixação de CO2 e rendimento do fotossistema II [2].\n- **Vermelho-distante (730nm):** induz efeito Emerson, elevando em 18.4% a taxa de assimilação líquida.",
     methods: "Ensaio fatorial com 80 mudas em 4 câmaras climatizadas automatizadas sob controle contínuo de variáveis ambientais:\n\n[80 Mudas Padronizadas] → [Câmaras Climatizadas IoT] → [Modulação Espectral] → [Biomassa & Trocas Gasosas]\n\n- **Microclima IoT:** monitoramento contínuo a 1 Hz de temperatura, umidade e VPD com calibração em tempo real.\n- **Irradiância espectral:** espectrorradiômetro (380–780nm) [1] assegurando densidade uniforme de fluxo de fótons.\n- **Fertirrigação autônoma:** recirculação hidropônica em malha fechada mantendo condutividade e pH estáveis.",
-    results: "Comparativo de acúmulo de biomassa seca, redução do ciclo fenológico e eficiência de fótons fotossintéticos:\n\n| Tratamento Espectral | Biomassa Seca (g) | Redução de Ciclo | Eficiência Fotônica (g/mol) |\n| :--- | :---: | :---: | :---: |\n| Controle Branco (Fluorescente) | 4.2 ± 0.3 | Linha de Base (0d) | 1.05 |\n| Azul Monocromático (450nm) | 5.1 ± 0.4 | -4 dias | 1.28 |\n| Vermelho Monocromático (660nm) | 5.8 ± 0.5 | -7 dias | 1.45 |\n| Dinâmico Combinado (A+V+VD) | **7.4 ± 0.3** | **-12 dias** | **1.86** |\n\n- O espectro combinado dinâmico proporcionou aumento de **76.2% na biomassa seca** contra o controle [2].\n- Redução de 12 dias no ciclo fenológico, viabilizando menor consumo elétrico por kg de matéria seca colhida.",
-    conclusions: "- **Iluminação de precisão** comprova viabilidade agronômica superior com expressiva economia energética.\n- O espectro dinâmico multicanal acelera o desenvolvimento vegetal sob sensoriamento IoT autônomo [1, 2].\n- Protocolos espectrais dinâmicos estabelecem novo padrão de sustentabilidade para agricultura vertical urbana.",
+    results: "Comparativo de acúmulo de biomassa seca, redução do ciclo fenológico e eficiência de fótons fotossintéticos:\n\n| Tratamento Espectral | Biomassa Seca (g) | Redução de Ciclo | Eficiência Fotônica (g/mol) |\n| :--- | :---: | :---: | :---: |\n| Controle Branco (Fluorescente) | 4.2 ± 0.3 | Linha de Base (0d) | 1.05 |\n| Azul Monocromático (450nm) | 5.1 ± 0.4 | -4 dias | 1.28 |\n| Vermelho Monocromático (660nm) | 5.8 ± 0.5 | -7 dias | 1.45 |\n| Dinâmico Combinado (A+V+VD) | **7.4 ± 0.3** | **-12 dias** | **1.86** |\n\n- O espectro combinado dinâmico proporcionou aumento de **76.2% na biomassa seca** contra o controle.\n- Redução de 12 dias no ciclo fenológico, viabilizando menor consumo elétrico por kg de matéria seca colhida.",
+    conclusions: "- **Iluminação de precisão** comprova viabilidade agronômica superior com expressiva economia energética.\n- O espectro dinâmico multicanal acelera o desenvolvimento vegetal sob sensoriamento IoT autônomo.\n- Protocolos espectrais dinâmicos estabelecem novo padrão de sustentabilidade para agricultura vertical urbana.",
     references: "[1] Silva, M., Pereira, R. et al. (2024). Fotobiologia Vegetal Aplicada. Journal of Plant Science, 12:88–99.\n[2] Santos, C. & Rostova, E. (2023). Sistemas Agrícolas de Precisão. Revista Brasileira de Agrocomputação, 15:45–58."
   };
 
@@ -4216,9 +4216,26 @@ function formatInlineText(str) {
   return esc;
 }
 
+function isResultsOrConclusionsSection(s) {
+  if (!s) return false;
+  const sid = String(s.id || "").trim();
+  const title = String(s.title || "").trim();
+  return /^(results?|resultados?|conclusions?|conclus[oõ]es?)$/i.test(sid) || /\b(results?|resultados?|conclusions?|conclus[oõ]es?)\b/i.test(title);
+}
+
+function stripDraftCitations(str) {
+  if (!str) return str;
+  return str
+    .replace(/\s*\[\s*\d+(?:\s*[,;\s–-]+\s*\d+)*\s*\]/g, "")
+    .replace(/\s*\[[A-Za-zÀ-ÿ]+(?:\s+et\s+al\.?)?,?\s*\d{4}\]/g, "")
+    .replace(/[ \t]+([.,;:!?])/g, "$1");
+}
+
 function getRenumberedDraftSections(activeSections) {
   const refSec = activeSections.find(s => s && (s.id === "references" || /refer[eê]nc/i.test(s.title || "")));
-  if (!refSec || !refSec.content) return activeSections;
+  if (!refSec || !refSec.content) {
+    return activeSections.map(s => isResultsOrConclusionsSection(s) ? { ...s, content: stripDraftCitations(s.content) } : s);
+  }
 
   let clean = refSec.content.trim();
   clean = clean.replace(/(?:^|\s+)(?:\[\d{1,3}\]|\d{1,2}[.)]?)\s+(?=[A-ZÀ-ÿ])/g, "\n$1 ");
@@ -4245,7 +4262,9 @@ function getRenumberedDraftSections(activeSections) {
     }
   });
 
-  if (Object.keys(oldToNew).length === 0) return activeSections;
+  if (Object.keys(oldToNew).length === 0) {
+    return activeSections.map(s => isResultsOrConclusionsSection(s) ? { ...s, content: stripDraftCitations(s.content) } : s);
+  }
 
   function remap(str) {
     if (!str) return str;
@@ -4276,6 +4295,9 @@ function getRenumberedDraftSections(activeSections) {
   return activeSections.map(s => {
     if (s === refSec) {
       return { ...s, content: newRefs.join("\n") };
+    }
+    if (isResultsOrConclusionsSection(s)) {
+      return { ...s, content: stripDraftCitations(s.content) };
     }
     return { ...s, content: remap(s.content) };
   });
@@ -4977,7 +4999,7 @@ async function buildForm() {
     sections: sections.map(s => ({
       id: s.id,
       title: s.title || secLabel(s.id),
-      content: s.content,
+      content: isResultsOrConclusionsSection(s) ? stripDraftCitations(s.content) : s.content,
       images: s.images.map(im => ({ path: im.field, caption: im.caption }))
     }))
   };

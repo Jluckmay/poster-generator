@@ -48,7 +48,8 @@ CRITICAL MANDATORY RULES:
      DO NOT bury quantitative results inside a wall of text. Always separate the table or pipeline from bullet points with a blank line (`\n\n`)!
 
 4. NATURAL INLINE CITATIONS IN TEXT (NO STANDALONE "KEY REFERENCES" BULLETS):
-   - Weave bracketed citation numbers `[1]`, `[2]`, `[3]`, `[4]` NATURALLY inside the sentences of "introduction", "methods", and "results" right where the corresponding concepts, datasets, or prior works are mentioned!
+   - Weave bracketed citation numbers `[1]`, `[2]`, `[3]`, `[4]` NATURALLY inside the sentences of "introduction" and "methods" right where the corresponding concepts, datasets, or prior works are mentioned!
+   - STRICT MANDATORY RULE: NEVER use references or citations in "results" or "conclusions"! Results and conclusions describe YOUR OWN findings, contributions, and conclusions, NOT literature citations. Citations belong ONLY in "introduction" and "methods".
    - MANDATORY: Always use numeric citations like `[1]`, `[2]`, `[3]`. NEVER write author-year citations like `[Truong and Koyejo 2026]` or `[Wang et al. 2026]` in the text!
    - Example: "...benchmarks de detecção de intrusão IoT como CICIoT2023 [3] e Edge-IIoTset [4] classificam modelos sem estabelecer validade de construto [2], motivando calibrações via Teoria de Resposta ao Item (IRT) no nível de instância [1]."
    - NEVER create a standalone bullet point such as `- **Referências-chave:** [1], [2], [3]` or `- **Key references:** [1, 2, 3]`. Every reference in "references" MUST be cited naturally in context within the text!
@@ -313,6 +314,7 @@ def parse_json_object(raw: Any) -> Dict[str, Any]:
 
 
 def ai_extract(text: str, language: str, provider: str, api_key: str, model: str | None) -> Dict[str, Any]:
+    from .poster import strip_citations
     system = SYSTEM_PROMPT.replace("{language}", _LANG_NAME.get(language, "Brazilian Portuguese"))
     raw_response = chat(provider, api_key, model, system, f"<paper>\n{text[:35000]}\n</paper>")
     obj = parse_json_object(raw_response)
@@ -322,5 +324,11 @@ def ai_extract(text: str, language: str, provider: str, api_key: str, model: str
         "authors": str(obj.get("authors") or "").strip(),
         "affiliations": str(obj.get("affiliations") or "").strip(),
         "email": str(obj.get("email") or "").strip(),
-        "sections": [{"id": sid, "content": str(secs.get(sid) or "").strip()} for sid in DEFAULT_SECTION_IDS],
+        "sections": [
+            {
+                "id": sid,
+                "content": strip_citations(str(secs.get(sid) or "").strip()) if sid in ("results", "conclusions") else str(secs.get(sid) or "").strip()
+            }
+            for sid in DEFAULT_SECTION_IDS
+        ],
     }

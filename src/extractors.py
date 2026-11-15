@@ -438,6 +438,9 @@ def heuristic_parse(text: str) -> Dict[str, Any]:
             content = "\n".join(buf).strip()
             if content:
                 body = _format_references(content) if sid == "references" else _unwrap(clean_hyphens(content))
+                if sid in ("results", "conclusions"):
+                    from .poster import strip_citations
+                    body = strip_citations(body)
                 out_sections.append({"id": sid, "content": _condense(body, limits.get(sid, 1100))})
 
     return {

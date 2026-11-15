@@ -6,10 +6,30 @@ import re
 from typing import Any, Dict, List
 
 
+def _is_results_or_conclusions(sec: Dict[str, Any]) -> bool:
+    sid = str(sec.get("id") or "").strip().lower()
+    title = str(sec.get("title") or "").strip().lower()
+    return bool(re.search(r"\b(results?|resultados?|conclusions?|conclus[oõ]es?)\b", f"{sid} {title}"))
+
+
+def strip_citations(text: str) -> str:
+    """Removes citations like [1], [1, 2], [1-3] or [Author, 2024] from text."""
+    if not text:
+        return ""
+    # Strip numeric brackets [1], [1, 2], [1-3], [1–3]
+    res = re.sub(r"\s*\[\s*\d+(?:\s*[,;\s–-]+\s*\d+)*\s*\]", "", text)
+    # Strip author-year citations like [Truong and Koyejo 2026]
+    res = re.sub(r"\s*\[[A-Za-zÀ-ÿ]+(?:\s+et\s+al\.?)?,?\s*\d{4}\]", "", res)
+    # Fix spacing before punctuation (e.g. "comparações ." -> "comparações.")
+    res = re.sub(r"[ \t]+([.,;:!?])", r"\1", res)
+    return res
+
+
 def renumber_citations(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     """
     Remaps citation numbers in all section texts so they match the references list.
     Supports bracketed numbers [9], dot numbers 9., or plain numbers at line starts (9 Author...).
+    Also strips citations from Results and Conclusions sections, where references should not be used.
     """
     # Find references section
     ref_sec = None
@@ -19,7 +39,10 @@ def renumber_citations(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             break
 
     if not ref_sec or not ref_sec.get("content"):
-        return sections
+        return [
+            {**sec, "content": strip_citations(sec.get("content", ""))} if _is_results_or_conclusions(sec) else sec
+            for sec in sections
+        ]
 
     ref_text = ref_sec["content"].replace("\r\n", "\n").replace("\r", "\n")
     # Break into items if separated on single lines or spaces before numbers
@@ -44,7 +67,10 @@ def renumber_citations(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
             new_idx += 1
 
     if not old_to_new:
-        return sections
+        return [
+            {**sec, "content": strip_citations(sec.get("content", ""))} if _is_results_or_conclusions(sec) else sec
+            for sec in sections
+        ]
 
     valid_keys = set(old_to_new.keys())
 
@@ -79,11 +105,13 @@ def renumber_citations(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         res = re.sub(r"\[(\d+(?:[,;\s\u2013-]+\d+)*)\]", replace_bracket, text)
         return re.sub(r"[ \t]{2,}", " ", res).replace(" .", ".").replace(" ,", ",")
 
-    # Apply remapping to all sections
+    # Apply remapping to all sections (stripping citations from results and conclusions)
     result = []
     for sec in sections:
         if sec is ref_sec:
             result.append({**sec, "content": "\n".join(new_refs)})
+        elif _is_results_or_conclusions(sec):
+            result.append({**sec, "content": strip_citations(sec.get("content", ""))})
         else:
             result.append({**sec, "content": remap_text(sec.get("content", ""))})
 

@@ -626,3 +626,58 @@ def test_nvidia_chat_skips_non_json_reasoning_and_disables_thinking(monkeypatch)
     assert len(calls) == 2
     assert calls[0].get("chat_template_kwargs") == {"enable_thinking": False}
     assert calls[0].get("max_tokens") == 8192
+
+
+def test_no_citations_in_results_and_conclusions():
+    from src.poster import renumber_citations, strip_citations
+
+    # Test strip_citations helper
+    raw = "O modelo superou o baseline [3]. Correlação significativa [1, 3]. Robustez comprovada [1–2]."
+    assert strip_citations(raw) == "O modelo superou o baseline. Correlação significativa. Robustez comprovada."
+
+    sections = [
+        {"id": "introduction", "title": "1. Introdução", "content": "Contexto do problema [1] e lacuna [2]."},
+        {"id": "methods", "title": "2. Metodologia", "content": "Design experimental [2] e dataset [3]."},
+        {
+            "id": "results",
+            "title": "3. Resultados",
+            "content": "Acurácia de 98% [3].\n| M | F1 |\n|---|---|\n| RF | 0.965 [3] |\n\n- Ganho expressivo [1, 3].",
+        },
+        {
+            "id": "conclusions",
+            "title": "4. Conclusões",
+            "content": "- Recomendação de implantação [3].\n- Escala invariante [1, 2].",
+        },
+        {
+            "id": "references",
+            "title": "Referências",
+            "content": "[1] Ref Alpha.\n[2] Ref Beta.\n[3] Ref Gamma.",
+        },
+    ]
+
+    processed = renumber_citations(sections)
+    intro = next(s for s in processed if s["id"] == "introduction")
+    methods = next(s for s in processed if s["id"] == "methods")
+    results = next(s for s in processed if s["id"] == "results")
+    conclusions = next(s for s in processed if s["id"] == "conclusions")
+
+    # Introduction and Methods MUST keep citations
+    assert "[1]" in intro["content"]
+    assert "[2]" in intro["content"]
+    assert "[2]" in methods["content"]
+    assert "[3]" in methods["content"]
+
+    # Results and Conclusions MUST NOT have citations
+    assert "[1]" not in results["content"]
+    assert "[2]" not in results["content"]
+    assert "[3]" not in results["content"]
+    assert "Acurácia de 98%." in results["content"]
+    assert "| RF | 0.965 |" in results["content"]
+    assert "- Ganho expressivo." in results["content"]
+
+    assert "[1]" not in conclusions["content"]
+    assert "[2]" not in conclusions["content"]
+    assert "[3]" not in conclusions["content"]
+    assert "- Recomendação de implantação." in conclusions["content"]
+    assert "- Escala invariante." in conclusions["content"]
+
