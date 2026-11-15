@@ -232,7 +232,7 @@
     }));
     const count = rows[0].length;
     const columns = "|>{\\raggedright\\arraybackslash}X|" + "Y|".repeat(Math.max(0, count - 1));
-    return `\\begingroup\\setlength{\\tabcolsep}{12pt}\\renewcommand{\\arraystretch}{1.45}
+    return `\\begingroup\\fontsize{18pt}{24pt}\\selectfont\\setlength{\\tabcolsep}{14pt}\\renewcommand{\\arraystretch}{1.75}
 \\arrayrulecolor{tableLine}
 \\begin{center}\\begin{tabularx}{\\linewidth}{${columns}}\\hline
 \\rowcolor{tableHead}

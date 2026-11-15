@@ -792,7 +792,7 @@ button.sm {
   flex: 1;
   overflow: visible;
   position: relative;
-  background: var(--viewer-bg);
+  background: var(--viewer-bg, #07080a) !important;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -848,6 +848,7 @@ button.sm {
   align-items: center;
   justify-content: center;
   width: 100%;
+  background: transparent;
 }
 .pdf-page-wrapper {
   margin: 0 auto 24px auto;
@@ -859,7 +860,7 @@ button.sm {
   align-items: center;
 }
 .pdf-page-canvas { display: block; border-radius: 2px; max-width: none; }
-#pdf-iframe { width: 100%; min-height: 900px; height: 100%; border: none; background: #fff; display: none; }
+#pdf-iframe { width: 100%; min-height: 900px; height: 100%; border: none; background: var(--viewer-bg, #07080a); display: none; }
 .hidden { display: none !important; }
 
 /* ── Preview Mode Switcher (Draft vs PDF) ── */
@@ -3826,7 +3827,7 @@ function setDraftZoom(newScale) {
   const poster = $("#draftPoster");
   if (poster) {
     poster.style.transform = `scale(${draftScale})`;
-    poster.style.transformOrigin = "top left";
+    poster.style.transformOrigin = "top center";
     const naturalH = poster.offsetHeight;
     if (naturalH > 0 && draftScale !== 1.0) {
       poster.style.marginBottom = `${Math.round(naturalH * (draftScale - 1))}px`;
@@ -3868,7 +3869,7 @@ function setViewMode(mode) {
     if (draftCont) draftCont.classList.add("hidden");
     if (state.pdfDoc) {
       if (toolbar) toolbar.style.display = "flex";
-      if (canvasList) canvasList.style.display = "block";
+      if (canvasList) canvasList.style.display = "flex";
       if (iframe) iframe.style.display = "none";
       const zd = $("#zoomDisplay");
       if (zd) zd.textContent = Math.round((state.scale || 1.0) * 100) + "%";
@@ -5113,7 +5114,7 @@ function renderPdfJsViewer(bytes, blobUrl) {
         state.totalPages = pdfDoc.numPages;
         toolbar.style.display = "flex";
         iframe.style.display = "none";
-        canvasList.style.display = "block";
+        canvasList.style.display = "flex";
         $("#loadingOverlay").classList.add("hidden");
 
         if (state.totalPages > 1) {
@@ -5141,6 +5142,7 @@ function fallbackViewer(blobUrl) {
   $("#pdf-toolbar").style.display = "none";
   $("#pdfCanvasList").style.display = "none";
   const ifr = $("#pdf-iframe");
+  ifr.style.background = "var(--viewer-bg, #07080a)";
   ifr.style.display = "block";
   ifr.src = blobUrl;
   $("#loadingOverlay").classList.add("hidden");

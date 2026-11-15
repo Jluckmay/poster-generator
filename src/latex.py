@@ -183,13 +183,13 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
             f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, right=28pt of n0] (n1) {{{_inline(nodes[1])}}};",
             f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, below=24pt of n0] (n2) {{{_inline(nodes[2])}}};",
+            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, below=36pt of n0] (n2) {{{_inline(nodes[2])}}};",
             f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
             f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, right=28pt of n2] (n3) {{{_inline(nodes[3])}}};",
         ]
         arrow_lines = [
             r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n0) -- (n1);",
-            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n1.east) -- ++(14pt,0) |- (n2.west);",
+            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n1.south) -- ++(0,-18pt) -| (n2.north);",
             r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n2) -- (n3);",
         ]
         frame_line = [r"  \node[draw=diagFrame, line width=1.5pt, rounded corners=12pt, fit=(n0) (n1) (n2) (n3), inner sep=14pt] {};"]
@@ -295,7 +295,7 @@ def _markdown_table_to_latex(lines: List[str]) -> str:
     body = "\n".join(rows)
     return (
         f"\\begin{{center}}\n"
-        f"{{\\renewcommand{{\\arraystretch}}{{1.45}}\\setlength{{\\tabcolsep}}{{12pt}}\n"
+        f"{{\\fontsize{{20pt}}{{26pt}}\\selectfont\\renewcommand{{\\arraystretch}}{{1.75}}\\setlength{{\\tabcolsep}}{{14pt}}\n"
         f"\\arrayrulecolor{{tableLine}}\n"
         f"\\resizebox{{\\linewidth}}{{!}}{{%\n"
         f"\\begin{{tabular}}{{{col_spec}}}\n"

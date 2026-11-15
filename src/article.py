@@ -32,7 +32,16 @@ def _logo_row(files: List[str], height_cm: float, header: bool) -> str:
     if not files:
         return ""
     n = len(files)
-    width = "0.22" if header else ("0.2" if n <= 4 else "0.17")
+    if header:
+        width = "0.26"
+    elif n == 1:
+        width = "0.45"
+    elif n == 2:
+        width = "0.36"
+    elif n == 3:
+        width = "0.29"
+    else:
+        width = "0.22"
     cells = [_logo(f, width, height_cm) for f in files]
     if header:
         return "\\noindent" + "\\hfill".join(cells) + "\\par\n"
@@ -76,8 +85,7 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     body: List[str] = []
     counter, fig = 0, [0]
     for idx, sec in enumerate(sections):
-        if idx:
-            body.append(f"\\noindent\\textcolor{{accent}}{{\\rule{{\\linewidth}}{{{_pt(5 * s)}pt}}}}\\par\\vspace{{{cm(0.5)}}}")
+        body.append(f"\\noindent\\textcolor{{accent}}{{\\rule{{\\linewidth}}{{{_pt(5 * s)}pt}}}}\\par\\vspace{{{cm(0.4)}}}")
         raw_title = sec.get("title") or sec.get("id") or "Section"
         clean_title = re.sub(r"^\s*\d+[\.\-\)]\s*", "", str(raw_title)).strip()
         is_ref = sec["id"] in _UNNUMBERED or bool(re.search(r"refer[eê]nc", raw_title, re.IGNORECASE))
@@ -109,29 +117,29 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     if footer_logos:
         footer = (
             f"\\noindent\\textcolor{{lightgray}}{{\\rule{{\\textwidth}}{{{_pt(3 * s)}pt}}}}\\par\\vspace{{{cm(1.2)}}}\n"
-            + _logo_row(footer_logos, 6 * s, False)
+            + _logo_row(footer_logos, 7.5 * s, False)
         )
 
     left_logo_tex = ""
     right_logo_tex = ""
     center_w = "1.0"
     if len(header_logos) >= 2:
-        left_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\raggedright\\includegraphics[width=\\linewidth,height={_pt(5.5 * s)}cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
-        right_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\raggedleft\\includegraphics[width=\\linewidth,height={_pt(5.5 * s)}cm,keepaspectratio]{{{header_logos[1]}}}\\end{{minipage}}"
-        center_w = "0.56"
+        left_logo_tex = f"\\begin{{minipage}}[c]{{0.26\\textwidth}}\\raggedright\\includegraphics[width=\\linewidth,height={_pt(7.0 * s)}cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_logo_tex = f"\\begin{{minipage}}[c]{{0.26\\textwidth}}\\raggedleft\\includegraphics[width=\\linewidth,height={_pt(7.0 * s)}cm,keepaspectratio]{{{header_logos[1]}}}\\end{{minipage}}"
+        center_w = "0.45"
     elif len(header_logos) == 1:
-        left_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\raggedright\\includegraphics[width=\\linewidth,height={_pt(5.5 * s)}cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
-        right_logo_tex = f"\\begin{{minipage}}[c]{{0.20\\textwidth}}\\null\\end{{minipage}}"
-        center_w = "0.56"
+        left_logo_tex = f"\\begin{{minipage}}[c]{{0.26\\textwidth}}\\raggedright\\includegraphics[width=\\linewidth,height={_pt(7.0 * s)}cm,keepaspectratio]{{{header_logos[0]}}}\\end{{minipage}}"
+        right_logo_tex = f"\\begin{{minipage}}[c]{{0.26\\textwidth}}\\null\\end{{minipage}}"
+        center_w = "0.45"
 
     if left_logo_tex:
         meta_block = (
             f"\\begin{{center}}\n"
-            f"  {{{_fs(34, s, 1.2)}\\textbf{{{authors}}}}}\\par\n"
+            f"  {{{_fs(34, s, 1.25)}\\textbf{{{authors}}}\\par}}\n"
             f"  \\vspace{{{cm(0.3)}}}\n"
             f"  \\noindent{left_logo_tex}\\hfill\n"
             f"  \\begin{{minipage}}[c]{{{center_w}\\textwidth}}\\centering\n"
-            f"    {{{_fs(26, s, 1.2)}\\textcolor{{darkgray}}{{{affil}}}}}\\par\n"
+            f"    {{{_fs(26, s, 1.25)}\\textcolor{{darkgray}}{{{affil}}}\\par}}\n"
             f"  \\end{{minipage}}\\hfill\n"
             f"  {right_logo_tex}\\par\n"
             f"\\end{{center}}"
@@ -139,9 +147,9 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     else:
         meta_block = (
             f"\\begin{{center}}\n"
-            f"  {{{_fs(34, s, 1.2)}\\textbf{{{authors}}}}}\\par\n"
+            f"  {{{_fs(34, s, 1.25)}\\textbf{{{authors}}}\\par}}\n"
             f"  \\vspace{{{cm(0.4)}}}\n"
-            f"  {{{_fs(26, s, 1.2)}\\textcolor{{darkgray}}{{{affil}}}}}\\par\n"
+            f"  {{{_fs(26, s, 1.25)}\\textcolor{{darkgray}}{{{affil}}}\\par}}\n"
             f"\\end{{center}}"
         )
 
@@ -180,7 +188,7 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\raggedright
 {_fs(28, s)}
 \\begin{{center}}
-  {{{_fs(48, s, 1.2)}\\textbf{{\\MakeUppercase{{{_inline(poster['title']) or '~'}}}}}}}\\par
+  {{\\fontsize{{{_pt(48 * s)}}}{{{_pt(48 * s * 1.25)}}}\\selectfont \\textbf{{\\MakeUppercase{{{_inline(poster['title']) or '~'}}}}}\\par}}
 \\end{{center}}
 \\vspace{{{cm(0.6)}}}
 \\noindent\\textcolor{{accent}}{{\\rule{{\\textwidth}}{{{_pt(8 * s)}pt}}}}\\par
