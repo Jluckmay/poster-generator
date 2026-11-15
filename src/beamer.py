@@ -117,12 +117,19 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage{{amsmath,amssymb}}
 \\usepackage{{graphicx}}
 \\usepackage{{qrcode}}
-\\usepackage{{xcolor}}
+\\usepackage[table]{{xcolor}}
+\\usepackage{{colortbl}}
 \\usepackage{{booktabs,array,tikz}}
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
 
 \\usetheme{{Madrid}}
 {_hex_to_latex('tudBlue', c1)}
+{_hex_to_latex('colorOne', c1)}
+{_hex_to_latex('colorTwo', c2)}
+{_hex_to_latex('colorThree', c3)}
+\\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
+\\definecolor{{tableLine}}{{HTML}}{{334155}}
+\\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
 {_hex_to_latex('tudDark', c2)}
 {_hex_to_latex('tudBg', bg_color)}
 

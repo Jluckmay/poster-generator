@@ -175,29 +175,29 @@ def _arrow_pipeline_to_latex(text: str) -> str:
     nodes = bracket_nodes[:6]
     stacked = len(nodes) >= 4
 
-    # TikZ colorido: usa colorOne (accent do poster) para bordas e fundo do header
+    # TikZ colorido: usa colorOne (accent do poster) para bordas e setas, idêntico ao preview
     if stacked:
-        # Layout vertical com setas para baixo
+        # Layout vertical com setas para baixo e moldura externa
         tikz_nodes = []
         for i, st in enumerate(nodes):
             tikz_nodes.append(
-                f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
-                f"        text width=0.82\\linewidth, align=center, inner sep=10pt,\n"
-                f"        font=\\Large\\bfseries] (n{i}) {{{_inline(st)}}};"
+                f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+                f"        text width=0.82\\linewidth, align=center, inner sep=11pt,\n"
+                f"        font=\\LARGE\\bfseries, text=black] (n{i}) {{{_inline(st)}}};"
             )
-        # posicionamento: cada nó abaixo do anterior com espaço para seta
         pos_lines = [tikz_nodes[0]]
         for i in range(1, len(nodes)):
             pos_lines.append(
-                f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
-                f"        text width=0.82\\linewidth, align=center, inner sep=10pt,\n"
-                f"        font=\\Large\\bfseries, below=18pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
+                f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+                f"        text width=0.82\\linewidth, align=center, inner sep=11pt,\n"
+                f"        font=\\LARGE\\bfseries, text=black, below=20pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
             )
         arrow_lines = [
-            f"  \\draw[-{{Stealth[scale=1.4]}}, line width=2pt, color=colorOne] (n{i}.south) -- (n{i+1}.north);"
+            f"  \\draw[-{{Stealth[scale=1.6]}}, line width=2.4pt, color=colorOne] (n{i}.south) -- (n{i+1}.north);"
             for i in range(len(nodes) - 1)
         ]
-        body = "\n".join(pos_lines + arrow_lines)
+        frame_line = [f"  \\node[draw=diagFrame, line width=1.5pt, rounded corners=12pt, fit=(n0) (n{len(nodes)-1}), inner sep=14pt] {{}};"]
+        body = "\n".join(pos_lines + arrow_lines + frame_line)
         return (
             "\\begin{center}\n"
             "\\resizebox{0.95\\linewidth}{!}{%\n"
@@ -208,24 +208,25 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             "\\end{center}"
         )
     else:
-        # Layout horizontal com setas para a direita
+        # Layout horizontal com setas para a direita e moldura externa
         tikz_nodes = []
         tikz_nodes.append(
-            f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
-            f"        align=center, inner sep=10pt,\n"
-            f"        font=\\Large\\bfseries] (n0) {{{_inline(nodes[0])}}};"
+            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+            f"        align=center, inner sep=11pt,\n"
+            f"        font=\\Large\\bfseries, text=black] (n0) {{{_inline(nodes[0])}}};"
         )
         for i in range(1, len(nodes)):
             tikz_nodes.append(
-                f"  \\node[draw=colorOne, line width=1.6pt, fill=none, rounded corners=4pt,\n"
-                f"        align=center, inner sep=10pt,\n"
-                f"        font=\\Large\\bfseries, right=18pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
+                f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
+                f"        align=center, inner sep=11pt,\n"
+                f"        font=\\Large\\bfseries, text=black, right=20pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
             )
         arrow_lines = [
-            f"  \\draw[-{{Stealth[scale=1.4]}}, line width=2pt, color=colorOne] (n{i}.east) -- (n{i+1}.west);"
+            f"  \\draw[-{{Stealth[scale=1.6]}}, line width=2.4pt, color=colorOne] (n{i}.east) -- (n{i+1}.west);"
             for i in range(len(nodes) - 1)
         ]
-        body = "\n".join(tikz_nodes + arrow_lines)
+        frame_line = [f"  \\node[draw=diagFrame, line width=1.5pt, rounded corners=12pt, fit=(n0) (n{len(nodes)-1}), inner sep=14pt] {{}};"]
+        body = "\n".join(tikz_nodes + arrow_lines + frame_line)
         return (
             "\\begin{center}\n"
             "\\resizebox{0.98\\linewidth}{!}{%\n"
@@ -267,10 +268,12 @@ def _markdown_table_to_latex(lines: List[str]) -> str:
     body = "\n".join(rows)
     return (
         f"\\begin{{center}}\n"
-        f"{{\\renewcommand{{\\arraystretch}}{{1.4}}\\setlength{{\\tabcolsep}}{{9pt}}\n"
+        f"{{\\renewcommand{{\\arraystretch}}{{1.45}}\\setlength{{\\tabcolsep}}{{12pt}}\n"
+        f"\\arrayrulecolor{{tableLine}}\n"
         f"\\resizebox{{\\linewidth}}{{!}}{{%\n"
         f"\\begin{{tabular}}{{{col_spec}}}\n"
         f"\\hline\n"
+        f"\\rowcolor{{tableHead}}\n"
         f"{header_tex}\n"
         f"{body}\n"
         f"\\end{{tabular}}%\n"
@@ -673,8 +676,11 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage{{amsmath,amssymb}}
 \\usepackage{{graphicx}}
 \\usepackage{{qrcode}}
-\\usepackage{{booktabs,array}}
+\\usepackage{{booktabs,array,colortbl}}
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
+\\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
+\\definecolor{{tableLine}}{{HTML}}{{334155}}
+\\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
 {font}\\definecolorstyle{{PosterColors}}{{
   {_hex_to_latex('colorOne', c1)}
   {_hex_to_latex('colorTwo', c2)}

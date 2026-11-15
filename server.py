@@ -52,7 +52,11 @@ def _get_allowed_origin() -> str | None:
     origin = (request.headers.get("Origin") or "").strip()
     if not origin:
         return None
-    # Permite estritamente jluckmay.github.io em produção
+    # No Render (produção), aceita ESTRITAMENTE https://jluckmay.github.io
+    if os.environ.get("RENDER"):
+        return PROD_ALLOWED_ORIGIN if origin == PROD_ALLOWED_ORIGIN else None
+
+    # Permite estritamente jluckmay.github.io
     if origin == PROD_ALLOWED_ORIGIN:
         return PROD_ALLOWED_ORIGIN
     # Permite origens locais de desenvolvimento
@@ -98,6 +102,7 @@ def _validate_origin() -> Response | None:
         if (
             origin == PROD_ALLOWED_ORIGIN
             and request.method != "OPTIONS"
+            and request.path != "/api/config"
             and not _client_header_allowed()
         ):
             return jsonify({"error": "Cabeçalho cliente não autorizado."}), 403

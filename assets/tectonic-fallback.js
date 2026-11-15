@@ -231,9 +231,11 @@
       return rowIndex === 0 ? `\\textbf{${value}}` : value;
     }));
     const count = rows[0].length;
-    const columns = "|X|" + "Y|".repeat(Math.max(0, count - 1));
-    return `\\begingroup\\setlength{\\tabcolsep}{4pt}\\renewcommand{\\arraystretch}{1.15}\\small
+    const columns = "|>{\\raggedright\\arraybackslash}X|" + "Y|".repeat(Math.max(0, count - 1));
+    return `\\begingroup\\setlength{\\tabcolsep}{10pt}\\renewcommand{\\arraystretch}{1.38}
+\\arrayrulecolor{tableLine}
 \\begin{center}\\begin{tabularx}{\\linewidth}{${columns}}\\hline
+\\rowcolor{tableHead}
 ${rows.map(row => `${Array.from({ length: count }, (_, i) => row[i] || "").join(" & ")} \\\\ \\hline`).join("\n")}
 \\end{tabularx}\\end{center}\\endgroup`;
   }
@@ -242,13 +244,61 @@ ${rows.map(row => `${Array.from({ length: count }, (_, i) => row[i] || "").join(
     const nodes = [...text.matchAll(/\[([^\[\]]+)\]/g)].map(match => match[1].trim());
     const parsed = nodes.length >= 2 ? nodes : text.split(/\s*(?:->|\u2192|=>)\s*/).map(part => part.trim().replace(/^\[|\]$/g, "")).filter(Boolean);
     if (parsed.length < 2) return inlineTex(text);
-    const box = node => `\\textcolor{posteraccent}{\\fbox{\\color{posterbody}\\strut\\parbox{0.18\\linewidth}{\\centering\\bfseries ${inlineTex(node)}}}}`;
-    return `\\begingroup\\setlength{\\fboxsep}{5pt}\\setlength{\\fboxrule}{0.8pt}
-\\begin{center}\\small ${parsed.map((node, i) => `${box(node)}${i < parsed.length - 1 ? `\\,\\textcolor{posteraccent}{$\\rightarrow$}\\,` : ""}`).join("")}\\end{center}\\endgroup`;
+    if (parsed.length >= 4) {
+      const items = parsed.map((node, i) => {
+        const box = `\\centerline{\\fcolorbox{posteraccent}{white}{\\parbox{0.86\\linewidth}{\\centering\\bfseries\\strut ${inlineTex(node)}}}}`;
+        const arrow = i < parsed.length - 1 ? `\\vspace{2pt}\\centerline{\\color{posteraccent}{\\Large $\\downarrow$}}\\vspace{2pt}` : "";
+        return box + "\n" + arrow;
+      }).join("\n");
+      return `\\begingroup\\setlength{\\fboxsep}{8pt}\\setlength{\\fboxrule}{1.4pt}
+\\begin{center}\\fcolorbox{diagFrame}{white}{\\parbox{0.96\\linewidth}{\\vspace{6pt}
+${items}
+\\vspace{4pt}}}\\end{center}\\endgroup`;
+    } else {
+      const box = node => `\\fcolorbox{posteraccent}{white}{\\strut\\parbox{0.24\\linewidth}{\\centering\\bfseries ${inlineTex(node)}}}`;
+      return `\\begingroup\\setlength{\\fboxsep}{6pt}\\setlength{\\fboxrule}{1.4pt}
+\\begin{center}\\fcolorbox{diagFrame}{white}{\\parbox{0.96\\linewidth}{\\vspace{4pt}\\centering ${parsed.map((node, i) => `${box(node)}${i < parsed.length - 1 ? `\\,\\textcolor{posteraccent}{$\\rightarrow$}\\,` : ""}`).join("")}\\vspace{4pt}}}\\end{center}\\endgroup`;
+    }
+  }
+
+  function preprocessBlocks(str) {
+    const lines = str.trim().split("\n");
+    const out = [];
+    let inTable = false;
+    for (let i = 0; i < lines.length; i++) {
+      const ln = lines[i];
+      const s = ln.trim();
+      const next = lines[i + 1] ? lines[i + 1].trim() : "";
+      const isTblStart = !inTable && s.includes("|") && /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(next);
+      if (isTblStart) {
+        if (out.length && out[out.length - 1].trim()) out.push("");
+        inTable = true;
+        out.push(ln);
+        continue;
+      }
+      if (inTable) {
+        if (s.includes("|")) {
+          out.push(ln);
+          continue;
+        } else {
+          inTable = false;
+          if (s) out.push("");
+        }
+      }
+      const isPipeline = /(?:->|\u2192|=>)/.test(s) && (s.includes("[") || s.split(/\s*(?:->|\u2192|=>)\s*/).filter(Boolean).length >= 2);
+      if (isPipeline) {
+        if (out.length && out[out.length - 1].trim()) out.push("");
+        out.push(ln);
+        out.push("");
+        continue;
+      }
+      out.push(ln);
+    }
+    return out.join("\n");
   }
 
   function renderContent(text, accent) {
-    const blocks = String(text || "").trim().split(/\n\s*\n/).filter(Boolean);
+    const blocks = preprocessBlocks(String(text || "")).split(/\n\s*\n/).filter(Boolean);
     return blocks.map(block => {
       const lines = block.split("\n").map(line => line.trim()).filter(Boolean);
       if (lines.length > 1 && lines[0].includes("|") && /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(lines[1])) return renderTable(lines);
@@ -283,7 +333,13 @@ ${rows.map(row => `${Array.from({ length: count }, (_, i) => row[i] || "").join(
     const logo = (id, maxWidth) => imageNames.get(id)
       ? `\\includegraphics[height=0.055\\textheight,width=${maxWidth}\\linewidth,keepaspectratio]{${imageNames.get(id)}}` : "";
     const header = (data.logos_header || []).map(id => logo(id, 0.17)).filter(Boolean).join("\\hfill ");
-    const footer = (data.logos_footer || []).map(id => logo(id, 0.16)).filter(Boolean).join("\\hfill ");
+    const footerLogos = (data.logos_footer || []).map(id => logo(id, 0.16)).filter(Boolean);
+    let footer = "";
+    if (footerLogos.length === 1) {
+      footer = `\\noindent\\hfill ${footerLogos[0]}\\hfill\\null`;
+    } else if (footerLogos.length > 1) {
+      footer = `\\noindent ${footerLogos.join("\\hfill ")}`;
+    }
     const sections = data.sections || [];
     const buckets = Array.from({ length: count }, () => []);
     const perColumn = Math.ceil(sections.length / count);
@@ -303,12 +359,14 @@ ${bucket.map((section, sectionIndex) => {
 \\end{minipage}`).join(`\\hspace{${columnGap}}`);
     return `\\documentclass{article}
 \\usepackage[paperwidth=${width}cm,paperheight=${height}cm,margin=${margin}cm]{geometry}
-\\usepackage{fontspec,xcolor,graphicx,tabularx,array,amsmath,amssymb}
+\\usepackage[table]{xcolor}
+\\usepackage{fontspec,graphicx,tabularx,array,amsmath,amssymb}
 \\newcolumntype{Y}{>{\\centering\\arraybackslash}X}
 \\setmainfont{Latin Modern Sans}
 \\pagestyle{empty}\\setlength{\\parindent}{0pt}\\setlength{\\parskip}{0.25em}
 \\setlength{\\columnsep}{1.2em}
 \\definecolor{posteraccent}{HTML}{${accent}}\\definecolor{posterbg}{HTML}{${background}}\\definecolor{posterbody}{HTML}{${bodyColor}}
+\\definecolor{tableHead}{HTML}{F1F5F9}\\definecolor{tableLine}{HTML}{334155}\\definecolor{diagFrame}{HTML}{CBD5E1}
 \\pagecolor{posterbg}
 \\begin{document}\\color{posterbody}
 \\noindent${header}\\par\\vspace{0.4em}

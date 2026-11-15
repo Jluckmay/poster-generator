@@ -98,13 +98,21 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage{{amsmath,amssymb}}
 \\usepackage{{graphicx}}
 \\usepackage{{qrcode}}
-\\usepackage{{xcolor}}
+\\usepackage[table]{{xcolor}}
+\\usepackage{{colortbl}}
 \\usepackage{{titlesec}}
 \\usepackage{{booktabs,array,tikz}}
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
 
 {_hex_to_latex('uzhAccent', c1)}
+{_hex_to_latex('colorOne', c1)}
+{_hex_to_latex('colorTwo', c2)}
+{_hex_to_latex('colorThree', c3)}
 {_hex_to_latex('uzhDark', c2)}{page_bg_tex}
+
+\\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
+\\definecolor{{tableLine}}{{HTML}}{{334155}}
+\\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
 
 \\titleformat{{\\section}}
   {{\\huge\\bfseries\\color{{uzhAccent}}}}

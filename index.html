@@ -1020,8 +1020,12 @@ button.sm {
 }
 .draft-footer .draft-logos-row {
   margin-bottom: 0;
-  justify-content: space-around;
-  padding: 4px 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 4px 0;
+  box-sizing: border-box;
 }
 .draft-footer .draft-logo-img {
   background: transparent;
@@ -3208,29 +3212,30 @@ async function _tryBackend(baseUrl, maxAttempts) {
 async function wakeUpServer() {
   updateServerBadge("connecting");
 
+  // Se estiver em ambiente local e sem URL customizada, testa apenas o servidor local
+  if (isLocalEnvironment() && !localStorage.getItem("poster_api_base")) {
+    const ok = await _tryBackend("http://127.0.0.1:5000", 1);
+    if (ok) {
+      _activeApiBase = "http://127.0.0.1:5000";
+      return;
+    }
+    // Servidor local offline: o Render aceita exclusivamente conexões do domínio jluckmay.github.io,
+    // portanto em ambiente local alternamos diretamente para o compilador local Tectonic WASM.
+    updateServerBadge("offline", uiLang === "en-US" ? "Offline (WASM Fallback)" : "Offline (Compilador WASM)");
+    console.info("[PosterGenerator] Servidor local offline. Compilador Tectonic WASM ativo para ambiente local.");
+    return;
+  }
+
+  // Em produção (GitHub Pages jluckmay.github.io) ou se o usuário configurou URL manual
   const preferredBase = getApiBase();
-  // Se for ambiente local (Live Preview), tenta o local primeiro (1 tentativa rápida)
-  let ok = await _tryBackend(preferredBase, isLocalEnvironment() ? 1 : 2);
+  const ok = await _tryBackend(preferredBase, 2);
   if (ok) {
     _activeApiBase = preferredBase;
     return;
   }
 
-  // Se o servidor local estiver offline e o usuário não definiu URL manual, tenta o Render
-  if (isLocalEnvironment() && !localStorage.getItem("poster_api_base")) {
-    const cloudBase = _resolveBackend();
-    if (cloudBase && cloudBase !== preferredBase) {
-      console.log("[PosterGenerator] Servidor local offline, alternando para backend em nuvem (Render)...");
-      ok = await _tryBackend(cloudBase, 2);
-      if (ok) {
-        _activeApiBase = cloudBase;
-        return;
-      }
-    }
-  }
-
   updateServerBadge("offline", uiLang === "en-US" ? "Offline (WASM Fallback)" : "Offline (Compilador WASM)");
-  console.warn(`[PosterGenerator] Backends offline. Modo fallback Tectonic WASM ativo.`);
+  console.warn(`[PosterGenerator] Backend indisponível. Modo fallback Tectonic WASM ativo.`);
 }
 
 function populateProviders() {
@@ -3883,6 +3888,9 @@ if ($("#btnViewPdf")) {
 
 /* ---------- Pré-visualização Dinâmica em Tempo Real (Draft Preview) ---------- */
 function updateDraftPreview() {
+  if (currentViewMode === "pdf") {
+    setViewMode("draft");
+  }
   const poster = $("#draftPoster");
   if (!poster) return;
 
@@ -4069,7 +4077,13 @@ function updateDraftPreview() {
     const images = Array.from(row.querySelectorAll(".draft-logo-img"));
     const count = images.length;
     const rightDock = isHeader && tplId === "uzh";
-    row.style.justifyContent = rightDock ? "space-between" : (isHeader && count === 1 ? "center" : alignment);
+    if (!isHeader) {
+      row.style.justifyContent = count === 1 ? "center" : "space-between";
+      row.style.width = "100%";
+      row.style.padding = "4px 0";
+    } else {
+      row.style.justifyContent = rightDock ? "space-between" : (count === 1 ? "center" : alignment);
+    }
     row.style.gap = `${Math.max(8, poster.clientWidth * 0.012)}px`;
     if (isHeader) {
       row.style.position = "absolute";
@@ -4085,7 +4099,7 @@ function updateDraftPreview() {
       row.style.zIndex = "2";
     }
     const widthPercent = !count ? 100 : !isHeader
-      ? Math.max(20, (100 - (count - 1) * 5) / count)
+      ? Math.max(16, (90 - (count - 1) * 4) / count)
       : rightDock ? Math.min(48, 96 / count) : Math.min(24, 48 / count);
     images.forEach(img => {
       img.style.maxWidth = `${widthPercent}%`;
@@ -4095,7 +4109,7 @@ function updateDraftPreview() {
   if (tplId !== "dcc") {
     fitLogoRow(headerLogosEl, "space-between", 0.1, true);
   }
-  fitLogoRow(footerLogosEl, "space-around", 0.05);
+  fitLogoRow(footerLogosEl, "space-between", 0.05);
 
   // Seções e Grade de Colunas (Fluxo em Colunas Acadêmicas)
   const grid = $("#draftGrid");
@@ -5297,6 +5311,18 @@ function init() {
       if (details) details.open = true;
       $("#backendUrlInput").focus();
     };
+  }
+
+  // Mudança em qualquer configuração ou campo do formulário reexibe o preview em tempo real
+  const formEl = $("#form");
+  if (formEl) {
+    const switchToDraftOnFormChange = () => {
+      if (currentViewMode === "pdf") {
+        setViewMode("draft");
+      }
+    };
+    formEl.addEventListener("input", switchToDraftOnFormChange, { passive: true });
+    formEl.addEventListener("change", switchToDraftOnFormChange, { passive: true });
   }
 
   setupFloatingGenButton();

@@ -146,7 +146,8 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage[utf8]{{inputenc}}
 \\usepackage[{labels['babel']}]{{babel}}
 \\IfFileExists{{noto-sans.sty}}{{\\usepackage[sfdefault]{{noto-sans}}}}{{\\usepackage{{helvet}}\\renewcommand{{\\familydefault}}{{\\sfdefault}}}}
-\\usepackage{{xcolor}}
+\\usepackage[table]{{xcolor}}
+\\usepackage{{colortbl}}
 \\usepackage{{multicol}}
 \\usepackage{{enumitem}}
 \\usepackage{{needspace}}
@@ -157,8 +158,14 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
 \\pagestyle{{empty}}{page_bg_tex}
 {_hex_to_latex('accent', c1)}
+{_hex_to_latex('colorOne', c1)}
+{_hex_to_latex('colorTwo', c2)}
+{_hex_to_latex('colorThree', c3)}
 {_hex_to_latex('darkgray', c2)}
 {_hex_to_latex('barblack', c3)}
+\\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
+\\definecolor{{tableLine}}{{HTML}}{{334155}}
+\\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
 \\setlength{{\\columnsep}}{{{cm(3)}}}
 \\setlength{{\\parindent}}{{0pt}}
 \\setlength{{\\parskip}}{{{cm(0.3)}}}

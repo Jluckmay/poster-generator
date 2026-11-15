@@ -109,16 +109,23 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage{{multicol}}
 \\usepackage{{graphicx}}
 \\usepackage{{qrcode}}
-\\usepackage{{xcolor}}
+\\usepackage[table]{{xcolor}}
+\\usepackage{{colortbl}}
 \\usepackage{{booktabs,array,tikz}}
 \\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
 
 {_hex_to_latex('mainCol', c1)}
+{_hex_to_latex('colorOne', c1)}
+{_hex_to_latex('colorTwo', c2)}
+{_hex_to_latex('colorThree', c3)}
 {_hex_to_latex('titleCol', c2)}
 {_hex_to_latex('bgCol', bg_color)}{page_bg_tex}
 
 \\definecolor{{BoxCol}}{{HTML}}{{{c1}}}
 \\definecolor{{SectionCol}}{{HTML}}{{{c1}}}
+\\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
+\\definecolor{{tableLine}}{{HTML}}{{334155}}
+\\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
 
 \\title{{{_inline(poster.get('title', '')) or '~'}}}
 \\author{{{authors}}}

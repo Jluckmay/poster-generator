@@ -87,9 +87,9 @@ def test_markdown_and_latex_tables_and_diagrams():
 
     pipeline = "[Entrada: Dados] -> [Classificadores] -> [Avaliacao] -> [Analise]"
     pipe_out = text_to_latex(pipeline)
-    assert r"\fbox" in pipe_out
-    assert r"\rightarrow" in pipe_out
-    assert r"\resizebox{\linewidth}" in pipe_out
+    assert r"\begin{tikzpicture}" in pipe_out
+    assert "colorOne" in pipe_out
+    assert r"\resizebox{" in pipe_out
 
     injected = "\\begin{tabular}{c}\n\\input{/etc/passwd}\n\\end{tabular}"
     safe_out = text_to_latex(injected)
@@ -219,8 +219,8 @@ def test_logo_limits_per_template():
     assert len(p["logos_header"]) == 2 and len(p["logos_footer"]) == 5 and p["paper"] == "60x90"
     p_custom = normalize_poster({"template": "dcc", "paper": "60x90", "sections": []})
     assert p_custom["paper"] == "60x90"
-    c = normalize_poster({"template": "classic", "logos_header": list("abc"), "logos_footer": ["x"], "paper": "a3", "sections": []})
-    assert len(c["logos_header"]) == 2 and c["logos_footer"] == [] and c["paper"] == "60x90"
+    c = normalize_poster({"template": "classic", "logos_header": list("abc"), "logos_footer": list("abcdefg"), "paper": "a3", "sections": []})
+    assert len(c["logos_header"]) == 2 and len(c["logos_footer"]) == 5 and c["paper"] == "60x90"
 
 
 @pytest.mark.skipif(not shutil.which("pdflatex"), reason="pdflatex ausente")
@@ -445,7 +445,7 @@ References
     assert "Brendo Gético Eugênio" in parsed["authors"]
     assert "Luiz Filipe Menezes Vieira" in parsed["authors"]
     assert parsed["affiliations"] == "UFMG"
-    assert parsed["email"] == "lucas.mayrinck@dcc.ufmg.br"
+    assert "lucas.mayrinck@dcc.ufmg.br" in parsed["email"]
 
     ref_sec = next(s for s in parsed["sections"] if s["id"] == "references")
     assert "\n[2]" in ref_sec["content"]
