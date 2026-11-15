@@ -35,13 +35,13 @@ def _logo_row(files: List[str], height_cm: float, header: bool) -> str:
     if header:
         width = "0.26"
     elif n == 1:
-        width = "0.45"
+        width = "0.28"
     elif n == 2:
-        width = "0.36"
-    elif n == 3:
-        width = "0.29"
-    else:
         width = "0.22"
+    elif n == 3:
+        width = "0.18"
+    else:
+        width = "0.15"
     cells = [_logo(f, width, height_cm) for f in files]
     if header:
         return "\\noindent" + "\\hfill".join(cells) + "\\par\n"
@@ -117,7 +117,7 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     if footer_logos:
         footer = (
             f"\\noindent\\textcolor{{lightgray}}{{\\rule{{\\textwidth}}{{{_pt(3 * s)}pt}}}}\\par\\vspace{{{cm(1.2)}}}\n"
-            + _logo_row(footer_logos, 7.5 * s, False)
+            + _logo_row(footer_logos, 4.0 * s, False)
         )
 
     left_logo_tex = ""
