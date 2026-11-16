@@ -820,13 +820,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
                 target_h = (usable_body_h * weights[idx]) / total_w
                 min_h = min(6.0, usable_body_h / K)
                 target_h = max(min_h, target_h)
-
-                content_len = len(s.get("content", ""))
-                img_count = len(s.get("images", []))
-                has_tbl_or_diag = 1 if ("|" in s.get("content", "") or "->" in s.get("content", "") or "→" in s.get("content", "")) else 0
-                est_h = (content_len / 140.0) * 2.2 + (8.5 if img_count == 1 else 6.5 if img_count > 1 else 0) + has_tbl_or_diag * 5.0
-                if target_h > est_h + 1.5:
-                    body = f"\\parbox[t][{target_h:.1f}cm][t]{{\\linewidth}}{{\n{body}\n}}"
+                body = f"\\cardminbox{{{target_h:.1f}cm}}{{\n{body}\n}}"
 
             title_text = _inline(s['title'])
             if tpl["block"] == "AcademicCard":
@@ -877,6 +871,15 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
 \\definecolor{{tableLine}}{{HTML}}{{334155}}
 \\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
+\\newsavebox{{\\cardminboxbox}}
+\\newcommand{{\\cardminbox}}[2]{{%
+  \\sbox{{\\cardminboxbox}}{{\\begin{{minipage}}{{\\linewidth}}#2\\end{{minipage}}}}%
+  \\ifdim\\dimexpr\\ht\\cardminboxbox+\\dp\\cardminboxbox\\relax<#1%
+    \\begin{{minipage}}[t][#1][t]{{\\linewidth}}\\usebox{{\\cardminboxbox}}\\end{{minipage}}%
+  \\else%
+    \\usebox{{\\cardminboxbox}}%
+  \\fi%
+}}
 \\defineblockstyle{{AcademicCard}}{{
     titlewidthscale=1, bodywidthscale=1, titleleft,
     titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
