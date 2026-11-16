@@ -718,8 +718,12 @@ button.sm {
   font-family: var(--font-mono);
   font-size: 9px;
   font-weight: 700;
-  cursor: pointer;
+  cursor: grab;
+  user-select: none;
   line-height: 1.2;
+}
+.thumb .tag-btn:active {
+  cursor: grabbing;
 }
 .thumb .tag-btn:hover {
   background: var(--red);
@@ -3600,7 +3604,7 @@ function thumbHTML(img, withCaption, kind, idx) {
   const safeUrl = escapeHtml(img.url);
   const safeCap = escapeHtml(img.caption || "");
   const tagBadge = withCaption && kind.startsWith("sec")
-    ? `<button type="button" class="tag-btn" data-tag-btn="${kind}" data-idx="${idx}" title="Inserir [imagem:${idx + 1}] na posição do cursor">[img:${idx + 1}]</button>`
+    ? `<button type="button" class="tag-btn" draggable="true" data-tag-btn="${kind}" data-idx="${idx}" title="Arrastar para o texto ou clicar para posicionar [imagem:${idx + 1}]">[img:${idx + 1}]</button>`
     : "";
   return `
     <div class="thumb">
@@ -3654,6 +3658,29 @@ $("#logoHInput").onchange = e => { addLogos(e.target.files, logosH, slots().head
 $("#logoFInput").onchange = e => { addLogos(e.target.files, logosF, slots().footer); e.target.value = ""; };
 
 /* ---------- Seções e Imagens Específicas ---------- */
+function insertTagCleanly(ta, tagStr) {
+  const val = ta.value || "";
+  const start = ta.selectionStart != null ? ta.selectionStart : val.length;
+  const end = ta.selectionEnd != null ? ta.selectionEnd : val.length;
+  const before = val.substring(0, start);
+  const after = val.substring(end);
+
+  let prefix = "";
+  if (before.length > 0 && !before.endsWith("\n")) {
+    prefix = "\n";
+  }
+  let suffix = "";
+  if (after.length > 0 && !after.startsWith("\n")) {
+    suffix = "\n";
+  }
+
+  const inserted = prefix + tagStr + suffix;
+  ta.value = before + inserted + after;
+  const newPos = start + inserted.length;
+  ta.focus();
+  ta.setSelectionRange(newPos, newPos);
+}
+
 function renderSections() {
   const el = $("#sections");
   el.innerHTML = sections.map((s, i) => {
@@ -3693,6 +3720,30 @@ function renderSections() {
       s.content = e.target.value;
       updateDraftPreview();
     };
+    taContent.addEventListener("dragover", e => {
+      e.dataTransfer.dropEffect = "copy";
+    });
+    taContent.addEventListener("drop", e => {
+      const dt = e.dataTransfer;
+      if (dt && dt.files && dt.files.length > 0) {
+        const imageFiles = Array.from(dt.files).filter(f => f.type && f.type.startsWith("image/"));
+        if (imageFiles.length > 0) {
+          e.preventDefault();
+          const startIdx = s.images.length + 1;
+          addFiles(imageFiles, s.images);
+          const tagStr = imageFiles.map((_, k) => `[imagem:${startIdx + k}]`).join(" ");
+          insertTagCleanly(taContent, tagStr);
+          s.content = taContent.value;
+          renderSections();
+          updateDraftPreview();
+          return;
+        }
+      }
+      setTimeout(() => {
+        s.content = taContent.value;
+        updateDraftPreview();
+      }, 10);
+    });
     taContent.addEventListener("paste", e => {
       const cd = e.clipboardData || window.clipboardData;
       if (!cd || !cd.items) return;
@@ -3707,10 +3758,8 @@ function renderSections() {
         e.preventDefault();
         const startIdx = s.images.length + 1;
         addFiles(imageFiles, s.images);
-        const start = taContent.selectionStart != null ? taContent.selectionStart : taContent.value.length;
-        const end = taContent.selectionEnd != null ? taContent.selectionEnd : taContent.value.length;
-        const tags = imageFiles.map((_, k) => `\n\n[imagem:${startIdx + k}]\n\n`).join("");
-        taContent.value = taContent.value.substring(0, start) + tags + taContent.value.substring(end);
+        const tagStr = imageFiles.map((_, k) => `[imagem:${startIdx + k}]`).join(" ");
+        insertTagCleanly(taContent, tagStr);
         s.content = taContent.value;
         renderSections();
         const curDiv = el.querySelector(`.sec[data-i="${i}"]`);
@@ -3718,7 +3767,7 @@ function renderSections() {
           const curTa = curDiv.querySelector("textarea[data-f=content]");
           if (curTa) {
             curTa.focus();
-            const newPos = start + tags.length;
+            const newPos = curTa.value.length;
             curTa.setSelectionRange(newPos, newPos);
           }
         }
@@ -3729,36 +3778,39 @@ function renderSections() {
       if (e.target.files && e.target.files.length) {
         const startIdx = s.images.length + 1;
         const ta = div.querySelector("textarea[data-f=content]");
-        const start = ta && ta.selectionStart != null ? ta.selectionStart : (s.content || "").length;
-        const end = ta && ta.selectionEnd != null ? ta.selectionEnd : (s.content || "").length;
         addFiles(e.target.files, s.images);
-        const tags = Array.from(e.target.files).map((_, k) => `\n\n[imagem:${startIdx + k}]\n\n`).join("");
-        s.content = (s.content || "").substring(0, start) + tags + (s.content || "").substring(end);
+        const tagStr = Array.from(e.target.files).map((_, k) => `[imagem:${startIdx + k}]`).join(" ");
+        if (ta) {
+          insertTagCleanly(ta, tagStr);
+          s.content = ta.value;
+        } else {
+          s.content = ((s.content || "") + "\n" + tagStr).trim();
+        }
         renderSections();
         const curDiv = el.querySelector(`.sec[data-i="${i}"]`);
         if (curDiv) {
           const curTa = curDiv.querySelector("textarea[data-f=content]");
           if (curTa) {
             curTa.focus();
-            const newPos = start + tags.length;
+            const newPos = curTa.value.length;
             curTa.setSelectionRange(newPos, newPos);
           }
         }
+        updateDraftPreview();
       }
     };
     div.querySelectorAll("[data-tag-btn]").forEach(b => {
+      b.addEventListener("dragstart", e => {
+        const imgIdx = +b.dataset.idx + 1;
+        e.dataTransfer.setData("text/plain", `[imagem:${imgIdx}]`);
+        e.dataTransfer.effectAllowed = "copyMove";
+      });
       b.onclick = () => {
         const imgIdx = +b.dataset.idx + 1;
         const ta = div.querySelector("textarea[data-f=content]");
         if (!ta) return;
-        const tag = `\n\n[imagem:${imgIdx}]\n\n`;
-        const start = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
-        const end = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
-        ta.value = ta.value.substring(0, start) + tag + ta.value.substring(end);
+        insertTagCleanly(ta, `[imagem:${imgIdx}]`);
         s.content = ta.value;
-        ta.focus();
-        const newPos = start + tag.length;
-        ta.setSelectionRange(newPos, newPos);
         updateDraftPreview();
       };
     });
@@ -3803,12 +3855,29 @@ function renderSections() {
     });
     div.querySelectorAll("[data-rm]").forEach(b => {
       b.onclick = () => {
-        const removed = s.images.splice(+b.dataset.idx, 1)[0];
+        const rmIdx = +b.dataset.idx;
+        const rmNum = rmIdx + 1;
+        const removed = s.images.splice(rmIdx, 1)[0];
         if (removed) {
           if (removed.url && removed.url.startsWith("blob:")) URL.revokeObjectURL(removed.url);
           if (removed.field) files.delete(removed.field);
         }
+        if (s.content) {
+          const imgTagGlobal = /\[(imagem|figura|img|image)(?::(\d+))?(\|[^\]]*)?\]/gi;
+          s.content = s.content.replace(imgTagGlobal, (match, prefix, numStr, cap) => {
+            if (!numStr) return match;
+            const num = parseInt(numStr, 10);
+            if (num === rmNum) return "";
+            if (num > rmNum) return `[${prefix}:${num - 1}${cap || ""}]`;
+            return match;
+          });
+          s.content = s.content
+            .replace(/[ \t]{2,}/g, " ")
+            .replace(/\n{3,}/g, "\n\n")
+            .trim();
+        }
         renderSections();
+        updateDraftPreview();
       };
     });
     div.querySelectorAll("[data-cap]").forEach(inp => {
@@ -4681,7 +4750,28 @@ function renderDraftBody(text, sectionImages, placedIndices) {
   normalized = separated.join("\n");
 
   const rawBlocks = normalized.split(/\n\s*\n/);
-  return rawBlocks.map(block => {
+  const imgTagRe = /\[(?:imagem|figura|img|image)(?::(\d+))?(?:\|([^\]]+))?\]/gi;
+  const mergedBlocks = [];
+  let curImgTags = [];
+  for (const b of rawBlocks) {
+    const s = b.trim();
+    if (!s) continue;
+    imgTagRe.lastIndex = 0;
+    if (sectionImages && sectionImages.length > 0 && imgTagRe.test(s) && !s.replace(imgTagRe, "").trim()) {
+      curImgTags.push(s);
+    } else {
+      if (curImgTags.length > 0) {
+        mergedBlocks.push(curImgTags.join(" "));
+        curImgTags = [];
+      }
+      mergedBlocks.push(b);
+    }
+  }
+  if (curImgTags.length > 0) {
+    mergedBlocks.push(curImgTags.join(" "));
+  }
+
+  return mergedBlocks.map(block => {
     let trimmed = block.trim();
     if (!trimmed) return "";
 

@@ -511,8 +511,25 @@ def text_to_latex(
         flags=re.IGNORECASE,
     )
     blocks = re.split(r"\n\s*\n", normalized)
+    # Agrupa blocos consecutivos compostos puramente por tags de imagem para exibição lado a lado
+    merged_blocks: List[str] = []
+    pending_img_tags: List[str] = []
+    for b in blocks:
+        s = b.strip()
+        if not s:
+            continue
+        if images and _IMG_TAG_RE.search(s) and not _IMG_TAG_RE.sub("", s).strip():
+            pending_img_tags.append(s)
+        else:
+            if pending_img_tags:
+                merged_blocks.append(" ".join(pending_img_tags))
+                pending_img_tags = []
+            merged_blocks.append(b)
+    if pending_img_tags:
+        merged_blocks.append(" ".join(pending_img_tags))
+
     out: List[str] = []
-    for block in blocks:
+    for block in merged_blocks:
         if not block.strip():
             continue
         # Tags de imagens inline: [imagem:1], [figura:2|Legenda], etc.
