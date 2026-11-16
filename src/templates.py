@@ -17,7 +17,7 @@ TEMPLATES: Dict[str, Dict[str, Any]] = {
     "classic": {
         "name": {"pt-BR": "Clássico", "en-US": "Classic"},
         "engine": "tikzposter",
-        "block": "Default", "title": "Filled", "background": "Default",
+        "block": "AcademicCard", "title": "Filled", "background": "Default",
         "colors": ("1F3A5F", "2E5C8A", "9DB9D8"), "bg": "EEF2F7", "sans": False,
         "logos": {"header": MAX_LOGOS_HEADER, "footer": MAX_LOGOS_FOOTER},
     },

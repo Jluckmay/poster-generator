@@ -653,6 +653,12 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
     body_fg_def = f"\n  {_hex_to_latex('colorBody', body_color)}" if body_color else ""
     body_fg_let = "colorBody" if body_color else "black"
     block_body_bg = "posterbg" if has_custom_bg else "white"
+    if tpl["block"] == "AcademicCard":
+        block_title_bg = "colorOne!8!white" if not has_custom_bg else "colorOne!12!posterbg"
+        block_title_fg = "colorOne"
+    else:
+        block_title_bg = "colorTwo"
+        block_title_fg = "white"
 
     sections = []
     for s in poster["sections"]:
@@ -660,23 +666,57 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             {**s, "images": [{"file": images[i["path"]], "caption": i["caption"]} for i in s["images"] if i["path"] in images]}
         )
     cols = split_columns(sections, poster["columns"])
-    counter = [0]
-    col_tex: List[str] = []
-    for ci, col in enumerate(cols):
-        parts = [f"\\column{{{1 / len(cols):.4f}}}"]
-        for s in col:
-            body = references_to_latex(s["content"]) if s["id"] == "references" else text_to_latex(s["content"])
-            body += "\n" + _images_to_latex(s["images"], labels["figure"], counter)
-            parts.append(f"\\block{{{_inline(s['title'])}}}{{\n{body}\n}}")
-        col_tex.append("\n".join(parts))
 
     footer_imgs = [images[p] for p in poster.get("logos_footer", []) if p in images]
     footer_tex = ""
     if footer_imgs:
-        cells = "\\hfill ".join(f"\\includegraphics[height=4.5cm,width=0.16\\linewidth,keepaspectratio]{{{f}}}" for f in footer_imgs)
-        footer_tex = f"\n\\node[above=15mm of bottomright, anchor=south east, xshift=-15mm] {{\\begin{{minipage}}{{\\linewidth}} {cells}\\end{{minipage}}}};\n"
+        cells = "\\hfill ".join(f"\\includegraphics[height=3.5cm,width=0.15\\linewidth,keepaspectratio]{{{f}}}" for f in footer_imgs)
+        footer_tex = f"\n\\node[above=12mm of bottomright, anchor=south east, xshift=-12mm] {{\\begin{{minipage}}{{\\linewidth}} {cells}\\end{{minipage}}}};\n"
 
     header_imgs = [images[p] for p in poster["logos_header"] if p in images]
+
+    header_h = 18.0 if (header_imgs or poster.get("affiliations") or poster.get("email")) else 14.0
+    footer_h = 8.0 if footer_imgs else 0.0
+    avail_h = max(25.0, ph - 4.0 - 2.4 - header_h - footer_h - 4.0)
+
+    counter = [0]
+    col_tex: List[str] = []
+    for ci, col in enumerate(cols):
+        parts = [f"\\column{{{1 / len(cols):.4f}}}"]
+        K = len(col)
+        usable_body_h = max(10.0, avail_h - (K * 3.0) - ((K - 1) * 1.2)) if K else 10.0
+        weights = []
+        for s in col:
+            content_len = len(s.get("content", ""))
+            img_count = len(s.get("images", []))
+            has_tbl_or_diag = 1 if ("|" in s.get("content", "") or "->" in s.get("content", "") or "→" in s.get("content", "")) else 0
+            w = max(100, content_len + img_count * 450 + has_tbl_or_diag * 300)
+            weights.append(w)
+        total_w = sum(weights) or 1
+
+        for idx, s in enumerate(col):
+            body = references_to_latex(s["content"]) if s["id"] == "references" else text_to_latex(s["content"])
+            img_tex = _images_to_latex(s["images"], labels["figure"], counter)
+            if img_tex:
+                body += "\n" + img_tex
+
+            if tpl["block"] == "AcademicCard" and K > 0:
+                target_h = (usable_body_h * weights[idx]) / total_w
+                min_h = min(6.0, usable_body_h / K)
+                target_h = max(min_h, target_h)
+
+                content_len = len(s.get("content", ""))
+                img_count = len(s.get("images", []))
+                has_tbl_or_diag = 1 if ("|" in s.get("content", "") or "->" in s.get("content", "") or "→" in s.get("content", "")) else 0
+                est_h = (content_len / 140.0) * 2.2 + (8.5 if img_count == 1 else 6.5 if img_count > 1 else 0) + has_tbl_or_diag * 5.0
+                if target_h > est_h + 1.5:
+                    body = f"\\parbox[t][{target_h:.1f}cm][t]{{\\linewidth}}{{\n{body}\n}}"
+
+            title_text = _inline(s['title'])
+            if tpl["block"] == "AcademicCard":
+                title_text = f"\\textbf{{{title_text}}}"
+            parts.append(f"\\block{{{title_text}}}{{\n{body}\n}}")
+        col_tex.append("\n".join(parts))
     title = _inline(poster["title"]) or "~"
     authors = escape_latex(poster["authors"]).replace("\n", ", ")
     institute_bits = [escape_latex(ln.strip()) for ln in poster["affiliations"].split("\n") if ln.strip()]
@@ -704,6 +744,11 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
     return f"""\\documentclass[{poster.get('_font') or paper['font']},a0paper,margin=20mm,innermargin=12mm,blockverticalspace=12mm,colspace=12mm,subcolspace=8mm]{{tikzposter}}
 \\geometry{{paperwidth={pw * 10:.0f}mm,paperheight={ph * 10:.0f}mm,margin=20mm}}
+\\makeatletter
+\\setlength{{\\TP@visibletextwidth}}{{\\textwidth-2\\TP@innermargin}}
+\\setlength{{\\TP@visibletextheight}}{{\\textheight-2\\TP@innermargin}}
+\\makeatother
+\\tikzposterlatexaffectionproofoff
 \\usepackage[T1]{{fontenc}}
 \\usepackage[utf8]{{inputenc}}
 \\usepackage[{labels['babel']}]{{babel}}
@@ -716,6 +761,24 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
 \\definecolor{{tableLine}}{{HTML}}{{334155}}
 \\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}
+\\defineblockstyle{{AcademicCard}}{{
+    titlewidthscale=1, bodywidthscale=1, titleleft,
+    titleoffsetx=0pt, titleoffsety=0pt, bodyoffsetx=0pt, bodyoffsety=0pt,
+    bodyverticalshift=0pt, roundedcorners=10, linewidth=2.5pt,
+    titleinnersep=6mm, bodyinnersep=8mm
+}}{{
+    \\begin{{scope}}[line width=\\blocklinewidth, rounded corners=\\blockroundedcorners]
+        \\ifBlockHasTitle
+           \\clip (blockbody.south west) rectangle (blocktitle.north east);
+           \\fill[blockbodybgcolor] (blockbody.south west) rectangle (blocktitle.north east);
+           \\fill[blocktitlebgcolor] (blocktitle.south west) rectangle (blocktitle.north east);
+           \\draw[color=framecolor, line width=2pt] (blocktitle.south west) -- (blocktitle.south east);
+           \\draw[color=framecolor] (blockbody.south west) rectangle (blocktitle.north east);
+        \\else
+           \\draw[color=framecolor, fill=blockbodybgcolor] (blockbody.south west) rectangle (blockbody.north east);
+        \\fi
+    \\end{{scope}}
+}}
 {font}\\definecolorstyle{{PosterColors}}{{
   {_hex_to_latex('colorOne', c1)}
   {_hex_to_latex('colorTwo', c2)}
@@ -726,8 +789,8 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
   \\colorlet{{framecolor}}{{colorOne}}
   \\colorlet{{titlefgcolor}}{{white}}
   \\colorlet{{titlebgcolor}}{{colorOne}}
-  \\colorlet{{blocktitlebgcolor}}{{colorTwo}}
-  \\colorlet{{blocktitlefgcolor}}{{white}}
+  \\colorlet{{blocktitlebgcolor}}{{{block_title_bg}}}
+  \\colorlet{{blocktitlefgcolor}}{{{block_title_fg}}}
   \\colorlet{{blockbodybgcolor}}{{{block_body_bg}}}
   \\colorlet{{blockbodyfgcolor}}{{{body_fg_let}}}
   \\colorlet{{innerblocktitlebgcolor}}{{colorThree}}

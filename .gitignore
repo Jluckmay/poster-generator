@@ -26,6 +26,7 @@ build/
 output/
 tmp/
 *.tmp
+scratch/
 
 # --- Resíduos de Compilação LaTeX ---
 *.aux
