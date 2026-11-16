@@ -705,6 +705,27 @@ button.sm {
   background: var(--red);
   border-color: var(--red);
 }
+.thumb .tag-btn {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  padding: 1px 5px;
+  min-height: 16px;
+  background: var(--bg-card);
+  color: var(--fg-bright);
+  border: 1px solid var(--line-strong);
+  border-radius: 3px;
+  font-family: var(--font-mono);
+  font-size: 9px;
+  font-weight: 700;
+  cursor: pointer;
+  line-height: 1.2;
+}
+.thumb .tag-btn:hover {
+  background: var(--red);
+  color: #fff;
+  border-color: var(--red);
+}
 
 /* Mensagens de Feedback */
 .msg {
@@ -3574,12 +3595,16 @@ function applyTemplateOptions(reset) {
   updateDraftPreview();
 }
 
-/* ---------- Logotipos ---------- */
+/* ---------- Logotipos & Imagens ---------- */
 function thumbHTML(img, withCaption, kind, idx) {
   const safeUrl = escapeHtml(img.url);
   const safeCap = escapeHtml(img.caption || "");
+  const tagBadge = withCaption && kind.startsWith("sec")
+    ? `<button type="button" class="tag-btn" data-tag-btn="${kind}" data-idx="${idx}" title="Inserir [imagem:${idx + 1}] na posição do cursor">[img:${idx + 1}]</button>`
+    : "";
   return `
     <div class="thumb">
+      ${tagBadge}
       <button type="button" class="rm-btn" data-rm="${kind}" data-idx="${idx}" title="${t("remove")}">✕</button>
       <img src="${safeUrl}" alt="Preview">
       ${withCaption ? `<input type="text" data-cap="${kind}" data-idx="${idx}" value="${safeCap}" placeholder="${t("caption")}">` : ""}
@@ -3663,14 +3688,80 @@ function renderSections() {
       s.title = e.target.value;
       updateDraftPreview();
     };
-    div.querySelector("[data-f=content]").oninput = e => {
+    const taContent = div.querySelector("textarea[data-f=content]");
+    taContent.oninput = e => {
       s.content = e.target.value;
       updateDraftPreview();
     };
+    taContent.addEventListener("paste", e => {
+      const cd = e.clipboardData || window.clipboardData;
+      if (!cd || !cd.items) return;
+      const imageFiles = [];
+      for (let j = 0; j < cd.items.length; j++) {
+        if (cd.items[j].type && cd.items[j].type.startsWith("image/")) {
+          const file = cd.items[j].getAsFile();
+          if (file) imageFiles.push(file);
+        }
+      }
+      if (imageFiles.length > 0) {
+        e.preventDefault();
+        const startIdx = s.images.length + 1;
+        addFiles(imageFiles, s.images);
+        const start = taContent.selectionStart != null ? taContent.selectionStart : taContent.value.length;
+        const end = taContent.selectionEnd != null ? taContent.selectionEnd : taContent.value.length;
+        const tags = imageFiles.map((_, k) => `\n\n[imagem:${startIdx + k}]\n\n`).join("");
+        taContent.value = taContent.value.substring(0, start) + tags + taContent.value.substring(end);
+        s.content = taContent.value;
+        renderSections();
+        const curDiv = el.querySelector(`.sec[data-i="${i}"]`);
+        if (curDiv) {
+          const curTa = curDiv.querySelector("textarea[data-f=content]");
+          if (curTa) {
+            curTa.focus();
+            const newPos = start + tags.length;
+            curTa.setSelectionRange(newPos, newPos);
+          }
+        }
+        updateDraftPreview();
+      }
+    });
     div.querySelector("[data-f=img]").onchange = e => {
-      addFiles(e.target.files, s.images);
-      renderSections();
+      if (e.target.files && e.target.files.length) {
+        const startIdx = s.images.length + 1;
+        const ta = div.querySelector("textarea[data-f=content]");
+        const start = ta && ta.selectionStart != null ? ta.selectionStart : (s.content || "").length;
+        const end = ta && ta.selectionEnd != null ? ta.selectionEnd : (s.content || "").length;
+        addFiles(e.target.files, s.images);
+        const tags = Array.from(e.target.files).map((_, k) => `\n\n[imagem:${startIdx + k}]\n\n`).join("");
+        s.content = (s.content || "").substring(0, start) + tags + (s.content || "").substring(end);
+        renderSections();
+        const curDiv = el.querySelector(`.sec[data-i="${i}"]`);
+        if (curDiv) {
+          const curTa = curDiv.querySelector("textarea[data-f=content]");
+          if (curTa) {
+            curTa.focus();
+            const newPos = start + tags.length;
+            curTa.setSelectionRange(newPos, newPos);
+          }
+        }
+      }
     };
+    div.querySelectorAll("[data-tag-btn]").forEach(b => {
+      b.onclick = () => {
+        const imgIdx = +b.dataset.idx + 1;
+        const ta = div.querySelector("textarea[data-f=content]");
+        if (!ta) return;
+        const tag = `\n\n[imagem:${imgIdx}]\n\n`;
+        const start = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
+        const end = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
+        ta.value = ta.value.substring(0, start) + tag + ta.value.substring(end);
+        s.content = ta.value;
+        ta.focus();
+        const newPos = start + tag.length;
+        ta.setSelectionRange(newPos, newPos);
+        updateDraftPreview();
+      };
+    });
     div.querySelectorAll("[data-snip]").forEach(btn => {
       btn.onclick = () => {
         const type = btn.dataset.snip;
@@ -4244,9 +4335,13 @@ function updateDraftPreview() {
           const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
           const sBody = (s.content && s.content.trim()) || dFb.content;
           const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
-          const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody);
-          const imgHtml = (s.images && s.images.length > 0)
-            ? `<div class="draft-block-imgs" data-count="${s.images.length}">${s.images.map(im => `<figure class="draft-fig"><img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">${im.caption ? `<figcaption>${posterLang === "en-US" || posterLang === "en" ? "Figure" : "Figura"} ${++figN}: ${escapeHtml(im.caption)}</figcaption>` : (figN++, "")}</figure>`).join("")}</div>`
+          const placedIndices = new Set();
+          const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody, s.images, placedIndices);
+          const remainingImages = (s.images && s.images.length > 0)
+            ? s.images.map((im, idx) => ({ im, idx })).filter(x => !placedIndices.has(x.idx)).map(x => x.im)
+            : [];
+          const imgHtml = remainingImages.length > 0
+            ? `<div class="draft-block-imgs" data-count="${remainingImages.length}">${remainingImages.map(im => `<figure class="draft-fig"><img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">${im.caption ? `<figcaption>${posterLang === "en-US" || posterLang === "en" ? "Figure" : "Figura"} ${++figN}: ${escapeHtml(im.caption)}</figcaption>` : (figN++, "")}</figure>`).join("")}</div>`
             : "";
 
           const isDccOrUzh = tplId === "dcc" || tplId === "uzh";
@@ -4540,7 +4635,7 @@ function explodeInlineTables(text) {
   }).join("\n");
 }
 
-function renderDraftBody(text) {
+function renderDraftBody(text, sectionImages, placedIndices) {
   if (!text) return "";
   // Pré-processa tabelas inline e isola blocos LaTeX com placeholders seguros
   const latexBlocks = [];
@@ -4552,6 +4647,10 @@ function renderDraftBody(text) {
       return `\n\n@@LATEX_ENV_BLOCK_${idx}@@\n\n`;
     }
   );
+
+  // Isola tags de imagens inline em blocos próprios, mantendo agrupadas tags adjacentes na mesma linha
+  normalized = normalized.replace(/([^\n\s\]])\s*(\[(?:imagem|figura|img|image)[^\]]*\])/gi, "$1\n\n$2");
+  normalized = normalized.replace(/(\[(?:imagem|figura|img|image)[^\]]*\])\s*([^\n\s\[])/gi, "$1\n\n$2");
 
   // Garante que fluxogramas com setas fiquem em blocos isolados, sem quebrar comandos LaTeX
   const preLines = normalized.split("\n");
@@ -4607,6 +4706,52 @@ function renderDraftBody(text) {
         return inner ? `<p style="margin:0 0 4px;text-align:center;">${formatInlineText(inner)}</p>` : "";
       }
       trimmed = originalBlock;
+    }
+
+    // 0. Tags de imagens inline: [imagem:1], [figura:2|Legenda], etc.
+    const imgTagRe = /\[(?:imagem|figura|img|image)(?::(\d+))?(?:\|([^\]]+))?\]/gi;
+    if (sectionImages && sectionImages.length > 0 && imgTagRe.test(trimmed)) {
+      imgTagRe.lastIndex = 0;
+      if (!trimmed.replace(imgTagRe, "").trim()) {
+        imgTagRe.lastIndex = 0;
+        const matches = [...trimmed.matchAll(imgTagRe)];
+        const rowImgs = [];
+        for (const m of matches) {
+          const rawIdx = m[1];
+          const customCap = m[2];
+          let idx = -1;
+          if (rawIdx && /^\d+$/.test(rawIdx)) {
+            idx = parseInt(rawIdx, 10) - 1;
+          } else {
+            for (let k = 0; k < sectionImages.length; k++) {
+              if ((!placedIndices || !placedIndices.has(k)) && !rowImgs.some(x => x.idx === k)) {
+                idx = k;
+                break;
+              }
+            }
+          }
+          if (idx >= 0 && idx < sectionImages.length) {
+            const im = sectionImages[idx];
+            rowImgs.push({
+              idx,
+              url: im.url || im.preview || "",
+              caption: (customCap && customCap.trim()) || im.caption || ""
+            });
+          }
+        }
+        if (rowImgs.length > 0) {
+          if (placedIndices) {
+            rowImgs.forEach(x => placedIndices.add(x.idx));
+          }
+          const figPrefix = posterLang === "en-US" || posterLang === "en" ? "Figure" : "Figura";
+          return `<div class="draft-block-imgs" data-count="${rowImgs.length}" style="margin:8px 0;">${rowImgs.map(im => `
+            <figure class="draft-fig">
+              <img class="draft-block-img" src="${escapeHtml(im.url)}" alt="Figura">
+              ${im.caption ? `<figcaption>${figPrefix}: ${escapeHtml(im.caption)}</figcaption>` : ""}
+            </figure>
+          `).join("")}</div>`;
+        }
+      }
     }
 
     // 1. Tabela LaTeX

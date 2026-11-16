@@ -65,8 +65,14 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             title = f"{counter}. {clean_title}"
         else:
             title = clean_title
-        text = references_to_latex(sec["content"], small=True) if sec["id"] == "references" else text_to_latex(sec["content"])
-        img_tex = _images_to_latex(sec["images"], labels["figure"], fig, r"\small")
+        if sec["id"] == "references":
+            text = references_to_latex(sec["content"], small=True)
+            img_tex = ""
+        else:
+            placed_indices = set()
+            text = text_to_latex(sec["content"], sec.get("images"), labels["figure"], fig, placed_indices)
+            unplaced = [im for i, im in enumerate(sec.get("images", [])) if i not in placed_indices]
+            img_tex = _images_to_latex(unplaced, labels["figure"], fig, r"\small") if unplaced else ""
         body.append(
             f"\\section{{{title}}}\n"
             f"{text}\n"

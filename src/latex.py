@@ -481,14 +481,62 @@ def _parse_tikz_pipeline_nodes(block: str) -> List[str] | None:
     return None
 
 
-def text_to_latex(text: str) -> str:
-    """Converte texto simples, listas, tabelas e diagramas em LaTeX."""
+_IMG_TAG_RE = re.compile(r"\[(?:imagem|figura|img|image)(?::(\d+))?(?:\|([^\]]+))?\]", re.IGNORECASE)
+
+
+def text_to_latex(
+    text: str,
+    images: Optional[List[Dict[str, str]]] = None,
+    fig_label: str = "Figura",
+    counter: Optional[List[int]] = None,
+    placed_indices: Optional[set] = None,
+) -> str:
+    """Converte texto simples, listas, tabelas, diagramas e imagens inline em LaTeX."""
+    if counter is None:
+        counter = [0]
+    if placed_indices is None:
+        placed_indices = set()
     normalized = _preprocess_structured_blocks(explode_inline_tables(text.strip()))
+    # Isola tags de imagem em blocos próprios, mantendo agrupadas tags adjacentes na mesma linha
+    normalized = re.sub(
+        r"([^\n\s\]])\s*(\[(?:imagem|figura|img|image)[^\]]*\])",
+        r"\1\n\n\2",
+        normalized,
+        flags=re.IGNORECASE,
+    )
+    normalized = re.sub(
+        r"(\[(?:imagem|figura|img|image)[^\]]*\])\s*([^\n\s\[])",
+        r"\1\n\n\2",
+        normalized,
+        flags=re.IGNORECASE,
+    )
     blocks = re.split(r"\n\s*\n", normalized)
     out: List[str] = []
     for block in blocks:
         if not block.strip():
             continue
+        # Tags de imagens inline: [imagem:1], [figura:2|Legenda], etc.
+        if images and _IMG_TAG_RE.search(block):
+            tag_matches = list(_IMG_TAG_RE.finditer(block))
+            if not _IMG_TAG_RE.sub("", block).strip():
+                row_imgs = []
+                for tm in tag_matches:
+                    raw_idx, custom_cap = tm.groups()
+                    if raw_idx and raw_idx.isdigit():
+                        idx = int(raw_idx) - 1
+                    else:
+                        avail = [k for k in range(len(images)) if k not in placed_indices and k not in [x[0] for x in row_imgs]]
+                        idx = avail[0] if avail else -1
+                    if 0 <= idx < len(images):
+                        im_data = dict(images[idx])
+                        if custom_cap and custom_cap.strip():
+                            im_data["caption"] = custom_cap.strip()
+                        row_imgs.append((idx, im_data))
+                if row_imgs:
+                    for k, _ in row_imgs:
+                        placed_indices.add(k)
+                    out.append(_images_to_latex([im for _, im in row_imgs], fig_label, counter) + "\n")
+                    continue
         tikz_nodes = _parse_tikz_pipeline_nodes(block)
         if tikz_nodes:
             synthetic_arrow = " -> ".join(f"[{n}]" for n in tikz_nodes)
@@ -740,8 +788,14 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         total_w = sum(weights) or 1
 
         for idx, s in enumerate(col):
-            body = references_to_latex(s["content"]) if s["id"] == "references" else text_to_latex(s["content"])
-            img_tex = _images_to_latex(s["images"], labels["figure"], counter)
+            if s["id"] == "references":
+                body = references_to_latex(s["content"])
+                img_tex = ""
+            else:
+                placed_indices = set()
+                body = text_to_latex(s["content"], s.get("images"), labels["figure"], counter, placed_indices)
+                unplaced = [im for i, im in enumerate(s.get("images", [])) if i not in placed_indices]
+                img_tex = _images_to_latex(unplaced, labels["figure"], counter) if unplaced else ""
             if img_tex:
                 body += "\n" + img_tex
 

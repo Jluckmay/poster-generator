@@ -78,10 +78,12 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
                 title = clean_title
             if sec["id"] == "references":
                 text = references_to_latex(sec["content"], small=True)
+                img_tex = ""
             else:
-                text = text_to_latex(sec["content"])
-
-            img_tex = _images_to_latex(sec["images"], labels["figure"], fig, "\\small")
+                placed_indices = set()
+                text = text_to_latex(sec["content"], sec.get("images"), labels["figure"], fig, placed_indices)
+                unplaced = [im for i, im in enumerate(sec.get("images", [])) if i not in placed_indices]
+                img_tex = _images_to_latex(unplaced, labels["figure"], fig, "\\small") if unplaced else ""
             blocks_in_col.append(
                 f"  \\begin{{block}}{{{title}}}\n"
                 f"    {text}\n"

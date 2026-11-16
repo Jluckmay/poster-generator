@@ -94,12 +94,18 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             title = f"{counter}. {clean_title}"
         else:
             title = clean_title
-        text = references_to_latex(sec["content"], small=False) if sec["id"] == "references" else text_to_latex(sec["content"])
         if sec["id"] == "references":
-            text = f"{{{_fs(24, s)}{text}}}"
+            text = f"{{{_fs(24, s)}{references_to_latex(sec['content'], small=False)}}}"
+            img_tex = ""
+        else:
+            placed_indices = set()
+            text = text_to_latex(sec["content"], sec.get("images"), labels["figure"], fig, placed_indices)
+            unplaced = [im for i, im in enumerate(sec.get("images", [])) if i not in placed_indices]
+            img_tex = _images_to_latex(unplaced, labels["figure"], fig, cap) if unplaced else ""
+        img_part = f"\n{img_tex}" if img_tex else ""
         body.append(
             f"\\Needspace{{{cm(8)}}}\\noindent\\textcolor{{accent}}{{{_fs(40, s)}\\textbf{{\\MakeUppercase{{{title}}}}}}}\\par\\vspace{{{cm(1)}}}\n"
-            f"{text}\n{_images_to_latex(sec['images'], labels['figure'], fig, cap)}\n\\vspace{{{cm(1)}}}"
+            f"{text}{img_part}\n\\vspace{{{cm(1)}}}"
         )
 
 

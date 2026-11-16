@@ -80,8 +80,14 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         else:
             display_title = clean_title
 
-        text = references_to_latex(sec["content"], small=False) if is_ref else text_to_latex(sec["content"])
-        img_tex = _images_to_latex(sec["images"], labels["figure"], fig, r"\large")
+        if is_ref:
+            text = references_to_latex(sec["content"], small=False)
+            img_tex = ""
+        else:
+            placed_indices = set()
+            text = text_to_latex(sec["content"], sec.get("images"), labels["figure"], fig, placed_indices)
+            unplaced = [im for i, im in enumerate(sec.get("images", [])) if i not in placed_indices]
+            img_tex = _images_to_latex(unplaced, labels["figure"], fig, r"\large") if unplaced else ""
 
         # Cartão estilizado com faixa lateral esquerda e fundo idêntico ao preview (.draft-block da UZH)
         body_cards.append(
