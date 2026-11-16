@@ -41,6 +41,7 @@ def build_sciposter_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
     has_custom_bg = bool(poster.get("colors") and poster["colors"].get("bg"))
     page_bg_tex = "\n\\pagecolor{bgCol}" if has_custom_bg else ""
+    c1, c2, c3, bg_color = [str(x).lstrip("#") for x in (c1, c2, c3, bg_color)]
     paper_key = poster.get("paper", "a0")
     orient = poster.get("orientation", "portrait")
     cols = max(1, poster.get("columns", 2))

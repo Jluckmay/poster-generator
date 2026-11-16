@@ -175,6 +175,9 @@
 
   async function rasterize(file) {
     if (!file) throw new Error("Arquivo de imagem inválido.");
+    if (file.type === "image/png") {
+      return new Uint8Array(await file.arrayBuffer());
+    }
     const extension = String(file.name || "").split(".").pop().toLowerCase();
     const accepted = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "svg"]);
     if (!(file.type && file.type.startsWith("image/")) && !accepted.has(extension)) {
@@ -310,18 +313,19 @@ ${items}
   }
 
   function renderContent(text, accent) {
-    const blocks = preprocessBlocks(String(text || "")).split(/\n\s*\n/).filter(Boolean);
+    let normalized = String(text || "").replace(/\\begin\{tikzpicture\}[\s\S]*?(?:\\end\{tikzpicture\}|$)/gi, match => {
+      const nodeMatches = [...match.matchAll(/\\node\b.*?\{([^}]+)\}/gi)];
+      if (nodeMatches.length >= 2) {
+        const nodes = nodeMatches.map(m => m[1].replace(/\\textbf\{([^}]+)\}/g, "$1").trim());
+        return `\n\n${renderPipeline(nodes.map(n => `[${n}]`).join(" -> "), accent)}\n\n`;
+      }
+      return "";
+    });
+    const blocks = preprocessBlocks(normalized).split(/\n\s*\n/).filter(Boolean);
     return blocks.map(block => {
       const lines = block.split("\n").map(line => line.trim()).filter(Boolean);
       if (lines.length > 1 && lines[0].includes("|") && /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(lines[1])) return renderTable(lines);
-      if (/\\begin\{tikzpicture\}/i.test(block)) {
-        const nodeMatches = [...block.matchAll(/\\node\b.*?\{([^}]+)\}/gi)];
-        if (nodeMatches.length >= 2) {
-          const nodes = nodeMatches.map(m => m[1].replace(/\\textbf\{([^}]+)\}/g, "$1").trim());
-          return renderPipeline(nodes.map(n => `[${n}]`).join(" -> "), accent);
-        }
-        return "";
-      }
+      if (block.includes("\\fcolorbox{diagFrame}")) return block;
       const flow = lines.length === 1 ? lines[0] : block;
       if (/(?:->|\u2192|=>)/.test(flow) && !flow.startsWith("\\") && !/\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b/.test(flow) && (flow.includes("[") || lines.length === 1)) return renderPipeline(flow, accent);
       if (lines.every(line => /^[-*\u2022\u2013]\s+/.test(line))) {
@@ -431,42 +435,75 @@ ${items}
     }
     const columnGap = "1.2em";
     const columnWidth = `\\dimexpr(\\linewidth-${(count - 1) * 1.2}em)/${count}\\relax`;
+    const hasInst = Boolean(data.email || data.affiliations);
+    const headerHeightCm = (data.title ? 11 : 7) + (hasInst ? 4 : 0);
+    const footerHeightCm = footerLogos.length ? 7.5 : 0;
+    const availableHeightCm = Math.max(30, height - 2 * margin - headerHeightCm - footerHeightCm - 8.5);
 
     let secCounter = 0;
-    const columns = buckets.map(bucket => `\\begin{minipage}[t]{${columnWidth}}
-${bucket.map(section => {
-      const rawTitle = (section.title || section.id || "Section").trim();
-      const cleanTitle = rawTitle.replace(/^\s*\d+[\.\-\)]\s*/, "");
-      const isRef = section.id === "references" || /refer[eê]nc/i.test(rawTitle);
-      let displayTitle = cleanTitle;
-      if ((tplId === "dcc" || tplId === "uzh") && !isRef) {
-        secCounter++;
-        displayTitle = `${secCounter}. ${cleanTitle}`;
-      }
-      const content = renderContent(section.content || "", `#${accent}`);
-      const validImages = (section.images || []).filter(img => imageNames.get(img.path));
-      let images = "";
-      if (validImages.length > 0) {
-        const rows = [];
-        const step = validImages.length === 3 ? 3 : 2;
-        for (let i = 0; i < validImages.length; i += step) {
-          const row = validImages.slice(i, i + step);
-          const w = row.length === 3 ? "0.31" : (row.length === 2 ? "0.48" : "0.85");
-          const cells = row.map(img => {
-            const fileName = imageNames.get(img.path);
-            const cap = img.caption ? `\\\\{\\small\\itshape ${escapeTex(img.caption)}}` : "";
-            return `\\begin{minipage}[t]{${w}\\linewidth}\\centering\\includegraphics[width=\\linewidth,height=0.18\\textheight,keepaspectratio]{${fileName}}${cap}\\end{minipage}`;
-          });
-          rows.push(`\\begin{center}\n${cells.join("\\hfill ")}\n\\end{center}`);
+    const columns = buckets.map(bucket => {
+      const weights = bucket.map(s => Math.max(120, (s.content || "").length + (s.images || []).length * 400));
+      const totalW = weights.reduce((a, b) => a + b, 0) || 1;
+      const K = bucket.length;
+      const overheadCm = K * 0.85 + (K > 1 ? (K - 1) * 0.8 : 0);
+      const usableCm = Math.max(15, availableHeightCm - overheadCm);
+
+      const minH = Math.min(7.0, usableCm / K);
+      let heights = weights.map(w => (usableCm * w) / totalW);
+      for (let iter = 0; iter < 3; iter++) {
+        let excess = 0;
+        const dyn = [];
+        let dynW = 0;
+        for (let i = 0; i < heights.length; i++) {
+          if (heights[i] < minH) {
+            excess += (minH - heights[i]);
+            heights[i] = minH;
+          } else {
+            dyn.push(i);
+            dynW += weights[i];
+          }
         }
-        images = `\\par\\vspace{0.2em}\n${rows.join("\n")}`;
+        if (excess > 0 && dynW > 0) {
+          for (const idx of dyn) {
+            heights[idx] = Math.max(minH, heights[idx] - excess * (weights[idx] / dynW));
+          }
+        }
       }
 
-      if (tplId === "uzh") {
-        return `\\noindent\\begin{minipage}{\\linewidth}
-\\vspace{0.35em}
-\\colorbox{cardBg}{%
-  \\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{%
+      return `\\begin{minipage}[t]{${columnWidth}}
+${bucket.map((section, secIdx) => {
+        const rawTitle = (section.title || section.id || "Section").trim();
+        const cleanTitle = rawTitle.replace(/^\s*\d+[\.\-\)]\s*/, "");
+        const isRef = section.id === "references" || /refer[eê]nc/i.test(rawTitle);
+        let displayTitle = cleanTitle;
+        if ((tplId === "dcc" || tplId === "uzh") && !isRef) {
+          secCounter++;
+          displayTitle = `${secCounter}. ${cleanTitle}`;
+        }
+        const content = renderContent(section.content || "", `#${accent}`);
+        const validImages = (section.images || []).filter(img => imageNames.get(img.path));
+        let images = "";
+        if (validImages.length > 0) {
+          const rows = [];
+          const step = validImages.length === 3 ? 3 : 2;
+          for (let i = 0; i < validImages.length; i += step) {
+            const row = validImages.slice(i, i + step);
+            const w = row.length === 3 ? "0.31" : (row.length === 2 ? "0.48" : "0.85");
+            const cells = row.map(img => {
+              const fileName = imageNames.get(img.path);
+              const cap = img.caption ? `\\\\{\\small\\itshape ${escapeTex(img.caption)}}` : "";
+              return `\\begin{minipage}[t]{${w}\\linewidth}\\centering\\includegraphics[width=\\linewidth,height=0.18\\textheight,keepaspectratio]{${fileName}}${cap}\\end{minipage}`;
+            });
+            rows.push(`\\begin{center}\n${cells.join("\\hfill ")}\n\\end{center}`);
+          }
+          images = `\\par\\vspace{0.2em}\n${rows.join("\n")}`;
+        }
+
+        const secHeight = heights[secIdx].toFixed(1);
+
+        if (tplId === "uzh") {
+          return `\\noindent\\colorbox{cardBg}{%
+  \\parbox[t][${secHeight}cm][t]{\\dimexpr\\linewidth-2\\fboxsep\\relax}{%
     \\vspace{0.35em}%
     \\hbox{%
       \\textcolor{posteraccent}{\\vrule width 5pt}%
@@ -482,23 +519,19 @@ ${bucket.map(section => {
     }%
     \\vspace{0.35em}%
   }%
-}\\vspace{0.8em}
-\\end{minipage}`;
-      }
+}\\par\\vspace{0.8em}`;
+        }
 
-      return `\\noindent\\begin{minipage}{\\linewidth}
-\\fcolorbox{posteraccent}{white}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{
-  \\vspace{0.25em}
-  {\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 1.3)}pt}{${Math.round(points * 1.55)}pt}\\selectfont \\MakeUppercase{${escapeTex(displayTitle)}}}\\par\\vspace{0.2em}
-  {\\color{posteraccent}\\rule{\\linewidth}{1.4pt}}\\par\\vspace{0.35em}
+        return `\\noindent\\fcolorbox{posteraccent}{white}{\\parbox[t][${secHeight}cm][t]{\\dimexpr\\linewidth-2\\fboxsep-2\\fboxrule\\relax}{
+  \\noindent\\colorbox{cardTitleBg}{\\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{\\vspace{0.15em}{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 1.3)}pt}{${Math.round(points * 1.55)}pt}\\selectfont \\MakeUppercase{${escapeTex(displayTitle)}}}\\par\\vspace{0.2em}{\\color{posteraccent}\\rule{\\linewidth}{1.6pt}}}}\\par\\vspace{0.35em}
   {\\color{posterbody}\\fontsize{${points}pt}{${Math.round(points * 1.32)}pt}\\selectfont
     ${content}
     ${images}
   }\\par\\vspace{0.2em}
-}}\\vspace{0.8em}
+}}\\par\\vspace{0.8em}`;
+      }).join("\n")}
 \\end{minipage}`;
-    }).join("\n")}
-\\end{minipage}`).join(`\\hspace{${columnGap}}`);
+    }).join(`\\hspace{${columnGap}}`);
 
     return `\\documentclass{article}
 \\usepackage[paperwidth=${width}cm,paperheight=${height}cm,margin=${margin}cm]{geometry}
@@ -514,8 +547,10 @@ ${bucket.map(section => {
 \\definecolor{posteraccent}{HTML}{${accent}}\\definecolor{posterbg}{HTML}{${background}}\\definecolor{posterbody}{HTML}{${bodyColor}}
 \\definecolor{tableHead}{HTML}{F1F5F9}\\definecolor{tableLine}{HTML}{334155}\\definecolor{diagFrame}{HTML}{CBD5E1}
 \\definecolor{cardBg}{HTML}{F8FAFC}
+\\colorlet{cardTitleBg}{posteraccent!8!white}
 \\pagecolor{posterbg}
 \\begin{document}\\color{posterbody}
+\\enlargethispage{6cm}
 ${headerTex}
 \\noindent${columns}\\par
 ${footer}

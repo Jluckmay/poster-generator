@@ -5132,14 +5132,14 @@ async function svgFileToPng(file) {
 async function buildForm() {
   const fd = new FormData();
   const useColors = $("#useColors") && $("#useColors").checked;
-  const accentVal = useColors ? $("#accent").value : "";
+  const accentVal = useColors ? ($("#accent").value || "").replace(/^#/, "") : "";
   const customColors = useColors ? {
-    accent: $("#accent").value,
-    title: $("#colorTitle").value,
-    subtitle: $("#colorSubtitle").value,
-    body: $("#colorBody").value,
-    caption: $("#colorCaption").value,
-    bg: $("#colorBg").value
+    accent: ($("#accent").value || "").replace(/^#/, ""),
+    title: ($("#colorTitle").value || "").replace(/^#/, ""),
+    subtitle: ($("#colorSubtitle").value || "").replace(/^#/, ""),
+    body: ($("#colorBody").value || "").replace(/^#/, ""),
+    caption: ($("#colorCaption").value || "").replace(/^#/, ""),
+    bg: ($("#colorBg").value || "").replace(/^#/, "")
   } : null;
 
   const dFb = draftFallbacks[posterLang] || draftFallbacks["pt-BR"];

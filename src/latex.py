@@ -599,7 +599,8 @@ _QR_OK = re.compile(r"^https?://[A-Za-z0-9\-._~:/?=@+]+$")
 
 
 def _hex_to_latex(name: str, value: str) -> str:
-    return f"\\definecolor{{{name}}}{{HTML}}{{{value}}}"
+    clean = str(value or "").lstrip("#")
+    return f"\\definecolor{{{name}}}{{HTML}}{{{clean}}}"
 
 
 def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
