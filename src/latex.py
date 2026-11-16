@@ -539,9 +539,10 @@ def references_to_latex(text: str, small: bool = True) -> str:
 
 def _images_to_latex(images: List[Dict[str, str]], fig_label: str, counter: List[int], cap_cmd: str = "\\small") -> str:
     out: List[str] = []
-    for start in range(0, len(images), 2):
-        row = images[start : start + 2]
-        w = "0.48" if len(row) == 2 else "0.9"
+    step = 3 if len(images) == 3 else 2
+    for start in range(0, len(images), step):
+        row = images[start : start + step]
+        w = "0.31" if len(row) == 3 else ("0.48" if len(row) == 2 else "0.85")
         cells = []
         for img in row:
             counter[0] += 1

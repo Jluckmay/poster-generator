@@ -1186,22 +1186,56 @@ button.sm {
   font-weight: 900;
   font-size: 1.25em;
 }
-.draft-fig { margin: 4px 0; text-align: center; }
-.draft-fig figcaption { font-size: 0.85em; font-style: italic; margin-top: 2px; }
+.draft-fig {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  flex: 0 1 auto;
+}
+.draft-fig figcaption {
+  font-size: 0.85em;
+  font-style: italic;
+  margin-top: 3px;
+  text-align: center;
+  width: 100%;
+}
 .draft-block-imgs {
   display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 4px;
+  gap: 10px;
+  margin: 10px auto 4px auto;
+  width: 100%;
+  text-align: center;
+}
+.draft-block-imgs[data-count="1"] .draft-fig {
+  max-width: 90%;
+  width: auto;
+}
+.draft-block-imgs[data-count="2"] .draft-fig {
+  max-width: calc(50% - 6px);
+  width: auto;
+}
+.draft-block-imgs[data-count="3"] .draft-fig {
+  max-width: calc(33.333% - 7px);
+  width: auto;
 }
 .draft-block-img {
-  width: 100%;
-  max-height: 140px;
+  max-width: 100%;
+  max-height: 145px;
+  width: auto;
+  height: auto;
   object-fit: contain;
   background: transparent;
-  border-radius: 2px;
-  border: 1px solid #e2e8f0;
-  margin-bottom: 4px;
+  border-radius: 4px;
+  border: 1px solid #cbd5e1;
+  display: block;
+  margin: 0 auto;
 }
 .draft-footer {
   margin-top: 14px;
@@ -4213,7 +4247,7 @@ function updateDraftPreview() {
           const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
           const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody);
           const imgHtml = (s.images && s.images.length > 0)
-            ? `<div class="draft-block-imgs">${s.images.map(im => `<figure class="draft-fig"><img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">${im.caption ? `<figcaption>${posterLang === "en-US" || posterLang === "en" ? "Figure" : "Figura"} ${++figN}: ${escapeHtml(im.caption)}</figcaption>` : (figN++, "")}</figure>`).join("")}</div>`
+            ? `<div class="draft-block-imgs" data-count="${s.images.length}">${s.images.map(im => `<figure class="draft-fig"><img class="draft-block-img" src="${escapeHtml(im.url || im.preview || "")}" alt="Figura">${im.caption ? `<figcaption>${posterLang === "en-US" || posterLang === "en" ? "Figure" : "Figura"} ${++figN}: ${escapeHtml(im.caption)}</figcaption>` : (figN++, "")}</figure>`).join("")}</div>`
             : "";
 
           const isDccOrUzh = tplId === "dcc" || tplId === "uzh";
@@ -5058,6 +5092,11 @@ async function buildForm() {
     bg: $("#colorBg").value
   } : null;
 
+  const dFb = draftFallbacks[posterLang] || draftFallbacks["pt-BR"];
+  const titleVal = ($("#title") && $("#title").value.trim()) || dFb.title;
+  const authorsVal = ($("#authors") && $("#authors").value.trim()) || dFb.authors;
+  const affilVal = ($("#affiliations") && $("#affiliations").value.trim()) || dFb.affil;
+
   const data = {
     language: posterLang,
     template: state.template,
@@ -5066,19 +5105,24 @@ async function buildForm() {
     columns: +$("#columns").value,
     accent: accentVal,
     colors: customColors,
-    title: $("#title").value,
-    authors: $("#authors").value,
-    affiliations: $("#affiliations").value,
+    title: titleVal,
+    authors: authorsVal,
+    affiliations: affilVal,
     email: $("#email").value,
     url: $("#url").value,
     logos_header: logosH.map(l => l.field),
     logos_footer: logosF.map(l => l.field),
-    sections: sections.map(s => ({
-      id: s.id,
-      title: s.title || secLabel(s.id),
-      content: isResultsOrConclusionsSection(s) ? stripDraftCitations(s.content) : s.content,
-      images: s.images.map(im => ({ path: im.field, caption: im.caption }))
-    }))
+    sections: sections.map(s => {
+      const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
+      const rawContent = isResultsOrConclusionsSection(s) ? stripDraftCitations(s.content) : s.content;
+      const sBody = (rawContent && rawContent.trim()) || dFb.content;
+      return {
+        id: s.id,
+        title: sTitle,
+        content: sBody,
+        images: s.images.map(im => ({ path: im.field, caption: im.caption }))
+      };
+    })
   };
   fd.append("data", JSON.stringify(data));
   if ($("#useCustomTex") && $("#useCustomTex").checked && customTexFileObj) {

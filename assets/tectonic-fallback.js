@@ -406,8 +406,18 @@ ${items}
 
     const sections = data.sections || [];
     const buckets = Array.from({ length: count }, () => []);
-    const perColumn = Math.ceil(sections.length / count);
-    sections.forEach((section, index) => buckets[Math.min(count - 1, Math.floor(index / perColumn))].push(section));
+    if (count === 1) {
+      buckets[0] = sections;
+    } else if (count === 2) {
+      const splitIdx = Math.max(1, Math.min(sections.length - 1, Math.floor(sections.length / 2)));
+      buckets[0] = sections.slice(0, splitIdx);
+      buckets[1] = sections.slice(splitIdx);
+    } else {
+      const perColumn = Math.ceil(sections.length / count);
+      for (let c = 0; c < count; c++) {
+        buckets[c] = sections.slice(c * perColumn, (c + 1) * perColumn);
+      }
+    }
     const columnGap = "1.2em";
     const columnWidth = `\\dimexpr(\\linewidth-${(count - 1) * 1.2}em)/${count}\\relax`;
 
@@ -418,13 +428,28 @@ ${bucket.map(section => {
       const cleanTitle = rawTitle.replace(/^\s*\d+[\.\-\)]\s*/, "");
       const isRef = section.id === "references" || /refer[eê]nc/i.test(rawTitle);
       let displayTitle = cleanTitle;
-      if (!isRef) {
+      if ((tplId === "dcc" || tplId === "uzh") && !isRef) {
         secCounter++;
         displayTitle = `${secCounter}. ${cleanTitle}`;
       }
       const content = renderContent(section.content || "", `#${accent}`);
-      const images = (section.images || []).map(image => imageNames.get(image.path)
-        ? `\\par\\begin{center}\\includegraphics[width=0.95\\linewidth,height=0.18\\textheight,keepaspectratio]{${imageNames.get(image.path)}}${image.caption ? `\\\\{\\small\\itshape ${escapeTex(image.caption)}}` : ""}\\end{center}` : "").join("\n");
+      const validImages = (section.images || []).filter(img => imageNames.get(img.path));
+      let images = "";
+      if (validImages.length > 0) {
+        const rows = [];
+        const step = validImages.length === 3 ? 3 : 2;
+        for (let i = 0; i < validImages.length; i += step) {
+          const row = validImages.slice(i, i + step);
+          const w = row.length === 3 ? "0.31" : (row.length === 2 ? "0.48" : "0.85");
+          const cells = row.map(img => {
+            const fileName = imageNames.get(img.path);
+            const cap = img.caption ? `\\\\{\\small\\itshape ${escapeTex(img.caption)}}` : "";
+            return `\\begin{minipage}[t]{${w}\\linewidth}\\centering\\includegraphics[width=\\linewidth,height=0.18\\textheight,keepaspectratio]{${fileName}}${cap}\\end{minipage}`;
+          });
+          rows.push(`\\begin{center}\n${cells.join("\\hfill ")}\n\\end{center}`);
+        }
+        images = `\\par\\vspace{0.2em}\n${rows.join("\n")}`;
+      }
 
       if (tplId === "uzh") {
         return `\\noindent\\begin{minipage}{\\linewidth}
