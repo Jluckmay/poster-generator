@@ -2944,6 +2944,22 @@ const TPL_TAGS = {
 const $ = s => document.querySelector(s);
 let CFG = DEFAULT_CFG, uiLang = "pt-BR", posterLang = "pt-BR", sections = [], logosH = [], logosF = [], uid = 0, pdfBlob = null, docFile = null;
 let customTexFileObj = null;
+const draftFallbacks = {
+  "pt-BR": {
+    title: "Título do Pôster",
+    authors: "Autores do Pôster",
+    affil: "Afiliação Institucional",
+    section: "Seção",
+    content: "Conteúdo descritivo da seção de pesquisa."
+  },
+  "en-US": {
+    title: "Research Poster Title",
+    authors: "Authors of the Poster",
+    affil: "Institutional Affiliation",
+    section: "Section",
+    content: "Descriptive content of the research section."
+  }
+};
 const files = new Map(); // field id -> File
 let backendAvailable = false;
 let serverHasPdflatex = null;
@@ -4086,22 +4102,6 @@ function updateDraftPreview() {
   }
 
   // Textos Principais
-  const draftFallbacks = {
-    "pt-BR": {
-      title: "Título do Pôster",
-      authors: "Autores do Pôster",
-      affil: "Afiliação Institucional",
-      section: "Seção",
-      content: "Conteúdo descritivo da seção de pesquisa."
-    },
-    "en-US": {
-      title: "Research Poster Title",
-      authors: "Authors of the Poster",
-      affil: "Institutional Affiliation",
-      section: "Section",
-      content: "Descriptive content of the research section."
-    }
-  };
   const dFb = draftFallbacks[posterLang] || draftFallbacks["pt-BR"];
 
   const titleVal = ($("#title") && $("#title").value.trim()) || dFb.title;
