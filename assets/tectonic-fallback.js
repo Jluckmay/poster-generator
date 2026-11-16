@@ -241,6 +241,9 @@ ${rows.map(row => `${Array.from({ length: count }, (_, i) => row[i] || "").join(
   }
 
   function renderPipeline(text, accent) {
+    if (/\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b/.test(text) || text.trim().startsWith("\\")) {
+      return inlineTex(text);
+    }
     const nodes = [...text.matchAll(/\[([^\[\]]+)\]/g)].map(match => match[1].trim());
     const parsed = nodes.length >= 2 ? nodes : text.split(/\s*(?:->|\u2192|=>)\s*/).map(part => part.trim().replace(/^\[|\]$/g, "")).filter(Boolean);
     if (parsed.length < 2) return inlineTex(text);
@@ -293,7 +296,7 @@ ${items}
           if (s) out.push("");
         }
       }
-      const isPipeline = /(?:->|\u2192|=>)/.test(s) && (s.includes("[") || s.split(/\s*(?:->|\u2192|=>)\s*/).filter(Boolean).length >= 2);
+      const isPipeline = !s.startsWith("\\") && !/\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b/.test(s) && /(?:->|\u2192|=>)/.test(s) && (s.includes("[") || s.split(/\s*(?:->|\u2192|=>)\s*/).filter(Boolean).length >= 2);
       if (isPipeline) {
         if (out.length && out[out.length - 1].trim()) out.push("");
         out.push(ln);
@@ -311,7 +314,7 @@ ${items}
       const lines = block.split("\n").map(line => line.trim()).filter(Boolean);
       if (lines.length > 1 && lines[0].includes("|") && /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(lines[1])) return renderTable(lines);
       const flow = lines.length === 1 ? lines[0] : block;
-      if (/(?:->|\u2192|=>)/.test(flow) && (flow.includes("[") || lines.length === 1)) return renderPipeline(flow, accent);
+      if (/(?:->|\u2192|=>)/.test(flow) && !flow.startsWith("\\") && !/\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b/.test(flow) && (flow.includes("[") || lines.length === 1)) return renderPipeline(flow, accent);
       if (lines.every(line => /^[-*\u2022\u2013]\s+/.test(line))) {
         return `\\begin{itemize}\\setlength{\\itemsep}{0.15em}${lines.map(line => `\\item ${inlineTex(line.replace(/^[-*\u2022\u2013]\s+/, ""))}`).join("\n")}\\end{itemize}`;
       }
@@ -362,21 +365,35 @@ ${items}
 \\vspace{0.6em}\\par
 {\\color{posteraccent}\\rule{\\linewidth}{3.5pt}}\\vspace{0.8em}`;
     } else {
+      const isDarkHeader = tplId === "classic" || tplId === "bold" || tplId === "corner" || tplId === "tudelft";
       const logos = (data.logos_header || []).map(id => logo(id, 0.18)).filter(Boolean);
       const affilItems = [data.email || "", ...String(data.affiliations || "").split(/\n/).map(s => s.trim())].filter(Boolean);
       const affilTex = affilItems.map(escapeTex).join(" \\\\ ");
+      const subColor = isDarkHeader ? "white" : "posterbody";
       let instLine = "";
       if (logos.length >= 2) {
-        instLine = `\\noindent\\begin{minipage}[c]{0.18\\linewidth}\\raggedright ${logos[0]}\\end{minipage}\\hfill\\begin{minipage}[c]{0.60\\linewidth}\\centering{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\end{minipage}\\hfill\\begin{minipage}[c]{0.18\\linewidth}\\raggedleft ${logos[1]}\\end{minipage}`;
+        instLine = `\\noindent\\begin{minipage}[c]{0.18\\linewidth}\\raggedright ${logos[0]}\\end{minipage}\\hfill\\begin{minipage}[c]{0.60\\linewidth}\\centering{\\color{${subColor}}\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\end{minipage}\\hfill\\begin{minipage}[c]{0.18\\linewidth}\\raggedleft ${logos[1]}\\end{minipage}`;
       } else if (logos.length === 1) {
-        instLine = `\\noindent\\begin{minipage}[c]{0.18\\linewidth}\\raggedright ${logos[0]}\\end{minipage}\\hfill\\begin{minipage}[c]{0.60\\linewidth}\\centering{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\end{minipage}\\hfill\\begin{minipage}[c]{0.18\\linewidth}\\null\\end{minipage}`;
+        instLine = `\\noindent\\begin{minipage}[c]{0.18\\linewidth}\\raggedright ${logos[0]}\\end{minipage}\\hfill\\begin{minipage}[c]{0.60\\linewidth}\\centering{\\color{${subColor}}\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\end{minipage}\\hfill\\begin{minipage}[c]{0.18\\linewidth}\\null\\end{minipage}`;
       } else {
-        instLine = `{\\centering{\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\par}`;
+        instLine = `{\\centering{\\color{${subColor}}\\fontsize{${Math.round(points * 0.95)}pt}{${Math.round(points * 1.2)}pt}\\selectfont ${affilTex}}\\par}`;
       }
-      headerTex = `{\\centering{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 2.0)}pt}{${Math.round(points * 2.3)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par}
+      if (isDarkHeader) {
+        headerTex = `\\noindent\\colorbox{posteraccent}{%
+  \\parbox{\\dimexpr\\linewidth-2\\fboxsep\\relax}{%
+    \\vspace{0.4em}%
+    {\\centering{\\color{white}\\bfseries\\fontsize{${Math.round(points * 2.0)}pt}{${Math.round(points * 2.3)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par}}%
+    \\vspace{0.3em}{\\centering{\\color{white}\\fontsize{${Math.round(points * 1.2)}pt}{${Math.round(points * 1.45)}pt}\\selectfont \\textbf{${escapeTex(data.authors || "")}}\\par}}%
+    \\vspace{0.2em}${instLine}%
+    \\vspace{0.4em}%
+  }%
+}\\par\\vspace{0.8em}`;
+      } else {
+        headerTex = `{\\centering{\\color{posteraccent}\\bfseries\\fontsize{${Math.round(points * 2.0)}pt}{${Math.round(points * 2.3)}pt}\\selectfont ${escapeTex(data.title || "Poster")}\\par}
 \\vspace{0.3em}{\\fontsize{${Math.round(points * 1.2)}pt}{${Math.round(points * 1.45)}pt}\\selectfont \\textbf{${escapeTex(data.authors || "")}}\\par}
 \\vspace{0.2em}${instLine}\\par}
 \\vspace{0.8em}`;
+      }
     }
 
     const footerLogos = (data.logos_footer || []).map(id => logo(id, 0.16)).filter(Boolean);
@@ -392,7 +409,7 @@ ${items}
     const perColumn = Math.ceil(sections.length / count);
     sections.forEach((section, index) => buckets[Math.min(count - 1, Math.floor(index / perColumn))].push(section));
     const columnGap = "1.2em";
-    const columnWidth = `\\dimexpr(\\linewidth-${count - 1}\\columnsep)/${count}\\relax`;
+    const columnWidth = `\\dimexpr(\\linewidth-${(count - 1) * 1.2}em)/${count}\\relax`;
 
     let secCounter = 0;
     const columns = buckets.map(bucket => `\\begin{minipage}[t]{${columnWidth}}
@@ -450,9 +467,10 @@ ${bucket.map(section => {
     return `\\documentclass{article}
 \\usepackage[paperwidth=${width}cm,paperheight=${height}cm,margin=${margin}cm]{geometry}
 \\usepackage[table]{xcolor}
-\\usepackage{fontspec,graphicx,tabularx,array,amsmath,amssymb}
+\\makeatletter\\providecommand\\insert@pcolumn{\\insert@column}\\makeatother
+\\usepackage{fontspec,graphicx,tabularx,array}
 \\newcolumntype{Y}{>{\\centering\\arraybackslash}X}
-\\setmainfont{Latin Modern Sans}
+\\setmainfont{lmroman10-regular.otf}[BoldFont=lmroman10-bold.otf, ItalicFont=lmroman10-italic.otf, BoldItalicFont=lmroman10-bolditalic.otf]
 \\pagestyle{empty}\\setlength{\\parindent}{0pt}\\setlength{\\parskip}{0.25em}
 \\setlength{\\columnsep}{1.2em}
 \\setlength{\\fboxsep}{10pt}

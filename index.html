@@ -3720,79 +3720,137 @@ $("#quickSampleBtn").onclick = () => {
     if (sampleTexts[s.id]) s.content = sampleTexts[s.id];
   });
 
-  // Gera logos fictícios vetoriais realistas (com ícones geométricos/acadêmicos)
-  function createFictionalLogoSvg(brandName, subText, mainColor, accentColor, iconShape) {
-    let iconSvg = "";
+  // Gera logos fictícios diretamente como PNG nativo via canvas (compatível com Pillow / XeTeX / Tectonic)
+  function createFictionalLogoPng(brandName, subText, mainColor, accentColor, iconShape) {
+    const canvas = document.createElement("canvas");
+    canvas.width = 440;
+    canvas.height = 136;
+    const ctx = canvas.getContext("2d");
+    ctx.scale(2, 2);
+
+    ctx.save();
     if (iconShape === "shield") {
-      iconSvg = `
-        <path d="M 32 14 L 52 22 C 52 38 42 48 32 54 C 22 48 12 38 12 22 Z" fill="${accentColor}"/>
-        <path d="M 32 20 L 44 26 C 44 38 36 44 32 48 C 28 44 20 38 20 26 Z" fill="#ffffff" opacity="0.9"/>
-        <circle cx="32" cy="33" r="5" fill="${mainColor}"/>
-      `;
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.moveTo(32, 14);
+      ctx.lineTo(52, 22);
+      ctx.quadraticCurveTo(52, 38, 32, 54);
+      ctx.quadraticCurveTo(12, 38, 12, 22);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "rgba(255,255,255,0.9)";
+      ctx.beginPath();
+      ctx.moveTo(32, 20);
+      ctx.lineTo(44, 26);
+      ctx.quadraticCurveTo(44, 38, 32, 48);
+      ctx.quadraticCurveTo(20, 38, 20, 26);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = mainColor;
+      ctx.beginPath();
+      ctx.arc(32, 33, 5, 0, Math.PI * 2);
+      ctx.fill();
     } else if (iconShape === "leaf") {
-      iconSvg = `
-        <path d="M 16 48 C 16 28 32 16 50 16 C 50 36 34 48 16 48 Z" fill="${accentColor}"/>
-        <path d="M 16 48 C 28 42 38 34 50 16" stroke="#ffffff" stroke-width="2.5" fill="none"/>
-        <path d="M 28 38 Q 36 38 40 34" stroke="#ffffff" stroke-width="1.8" fill="none"/>
-        <path d="M 22 44 Q 28 46 32 44" stroke="#ffffff" stroke-width="1.8" fill="none"/>
-      `;
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.moveTo(16, 48);
+      ctx.bezierCurveTo(16, 28, 32, 16, 50, 16);
+      ctx.bezierCurveTo(50, 36, 34, 48, 16, 48);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.moveTo(16, 48);
+      ctx.quadraticCurveTo(28, 42, 50, 16);
+      ctx.stroke();
+
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(28, 38);
+      ctx.quadraticCurveTo(36, 38, 40, 34);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(22, 44);
+      ctx.quadraticCurveTo(28, 46, 32, 44);
+      ctx.stroke();
     } else if (iconShape === "atom") {
-      iconSvg = `
-        <ellipse cx="32" cy="34" rx="20" ry="8" fill="none" stroke="${accentColor}" stroke-width="2.5" transform="rotate(30 32 34)"/>
-        <ellipse cx="32" cy="34" rx="20" ry="8" fill="none" stroke="${accentColor}" stroke-width="2.5" transform="rotate(-30 32 34)"/>
-        <circle cx="32" cy="34" r="5" fill="${mainColor}"/>
-      `;
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 2.5;
+      ctx.save();
+      ctx.translate(32, 34);
+      ctx.rotate(30 * Math.PI / 180);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 20, 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.save();
+      ctx.translate(32, 34);
+      ctx.rotate(-30 * Math.PI / 180);
+      ctx.beginPath();
+      ctx.ellipse(0, 0, 20, 8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.fillStyle = mainColor;
+      ctx.beginPath();
+      ctx.arc(32, 34, 5, 0, Math.PI * 2);
+      ctx.fill();
     } else if (iconShape === "gear") {
-      iconSvg = `
-        <circle cx="32" cy="34" r="14" fill="none" stroke="${accentColor}" stroke-width="6" stroke-dasharray="7 3"/>
-        <circle cx="32" cy="34" r="7" fill="${mainColor}"/>
-      `;
+      ctx.strokeStyle = accentColor;
+      ctx.lineWidth = 6;
+      ctx.setLineDash([7, 3]);
+      ctx.beginPath();
+      ctx.arc(32, 34, 14, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.setLineDash([]);
+      ctx.fillStyle = mainColor;
+      ctx.beginPath();
+      ctx.arc(32, 34, 7, 0, Math.PI * 2);
+      ctx.fill();
     } else {
-      iconSvg = `
-        <polygon points="32,14 50,48 14,48" fill="${accentColor}"/>
-        <circle cx="32" cy="36" r="6" fill="#ffffff"/>
-      `;
+      ctx.fillStyle = accentColor;
+      ctx.beginPath();
+      ctx.moveTo(32, 14);
+      ctx.lineTo(50, 48);
+      ctx.lineTo(14, 48);
+      ctx.closePath();
+      ctx.fill();
+
+      ctx.fillStyle = "#ffffff";
+      ctx.beginPath();
+      ctx.arc(32, 36, 6, 0, Math.PI * 2);
+      ctx.fill();
     }
+    ctx.restore();
 
-    return `
-      <svg xmlns="http://www.w3.org/2000/svg" width="220" height="68" viewBox="0 0 220 68">
-        <g>${iconSvg}</g>
-        <text x="66" y="32" fill="${mainColor}" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="13" letter-spacing="-0.02em">${escapeXml(brandName)}</text>
-        <text x="66" y="48" fill="#64748b" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif" font-weight="600" font-size="8.5" letter-spacing="0.04em">${escapeXml(subText)}</text>
-      </svg>
-    `.trim();
-  }
+    ctx.fillStyle = mainColor;
+    ctx.font = "800 13px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText(brandName, 66, 32);
 
-  function escapeXml(value) {
-    return String(value).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/\"/g, "&quot;").replace(/'/g, "&apos;");
+    ctx.fillStyle = "#64748b";
+    ctx.font = "600 8.5px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.fillText(subText, 66, 48);
+
+    const dataUrl = canvas.toDataURL("image/png");
+    const bin = atob(dataUrl.split(",")[1]);
+    const arr = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+    return new Blob([arr], { type: "image/png" });
   }
 
   function makeDemoLogo(brand, sub, mainCol, accCol, icon) {
-    const svg = createFictionalLogoSvg(brand, sub, mainCol, accCol, icon);
-    const blob = new Blob([svg], { type: "image/svg+xml;charset=utf-8" });
-    const url = URL.createObjectURL(blob);
+    const pngBlob = createFictionalLogoPng(brand, sub, mainCol, accCol, icon);
+    const url = URL.createObjectURL(pngBlob);
     const field = "f" + (++uid);
-
-    // Rasterização imediata para PNG nativo (compatível com Pillow / XeTeX / Tectonic)
-    const img = new Image();
-    img.onload = () => {
-      try {
-        const canvas = document.createElement("canvas");
-        canvas.width = 440;
-        canvas.height = 136;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, 440, 136);
-        canvas.toBlob(pngBlob => {
-          if (pngBlob) {
-            const pngFile = new File([pngBlob], `${brand.toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`, { type: "image/png" });
-            files.set(field, pngFile);
-          }
-        }, "image/png");
-      } catch (_) {}
-    };
-    img.src = url;
-
-    files.set(field, new File([blob], `${brand.toLowerCase().replace(/[^a-z0-9]/g, "_")}.svg`, { type: "image/svg+xml" }));
+    const pngFile = new File([pngBlob], `${brand.toLowerCase().replace(/[^a-z0-9]/g, "_")}.png`, { type: "image/png" });
+    files.set(field, pngFile);
     return { field, caption: "", url };
   }
 
@@ -4934,36 +4992,55 @@ async function svgFileToPng(file) {
   if (!isSvg) return file;
 
   return new Promise(resolve => {
-    const url = URL.createObjectURL(file);
-    const img = new Image();
-    img.onload = () => {
+    file.text().then(svgText => {
+      let w = 440, h = 136;
       try {
-        const canvas = document.createElement("canvas");
-        const w = Math.max(1, (img.naturalWidth || 440) * 2);
-        const h = Math.max(1, (img.naturalHeight || 136) * 2);
-        canvas.width = w;
-        canvas.height = h;
-        const ctx = canvas.getContext("2d");
-        ctx.drawImage(img, 0, 0, w, h);
-        canvas.toBlob(blob => {
-          URL.revokeObjectURL(url);
-          if (blob) {
-            const pngName = (file.name || "logo").replace(/\.svg$/i, "") + ".png";
-            resolve(new File([blob], pngName, { type: "image/png" }));
-          } else {
-            resolve(file);
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svgText, "image/svg+xml");
+        const svgEl = doc.documentElement;
+        if (svgEl && svgEl.tagName.toLowerCase() === "svg") {
+          const vb = svgEl.getAttribute("viewBox");
+          if (vb) {
+            const parts = vb.trim().split(/[\s,]+/).map(Number);
+            if (parts.length === 4 && parts[2] > 0 && parts[3] > 0) {
+              w = parts[2] * 2;
+              h = parts[3] * 2;
+            }
           }
-        }, "image/png");
-      } catch (_) {
-        URL.revokeObjectURL(url);
-        resolve(file);
-      }
-    };
-    img.onerror = () => {
-      URL.revokeObjectURL(url);
-      resolve(file);
-    };
-    img.src = url;
+          const rawW = parseFloat(svgEl.getAttribute("width"));
+          const rawH = parseFloat(svgEl.getAttribute("height"));
+          if (rawW > 0 && rawH > 0) {
+            w = rawW * 2;
+            h = rawH * 2;
+          }
+        }
+      } catch (_) {}
+
+      const dataUrl = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          const finalW = Math.max(10, Math.min(3600, img.naturalWidth || w));
+          const finalH = Math.max(10, Math.min(3600, img.naturalHeight || h));
+          canvas.width = finalW;
+          canvas.height = finalH;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, finalW, finalH);
+          const dataUri = canvas.toDataURL("image/png");
+          const bin = atob(dataUri.split(",")[1]);
+          const arr = new Uint8Array(bin.length);
+          for (let i = 0; i < bin.length; i++) arr[i] = bin.charCodeAt(i);
+          const pngBlob = new Blob([arr], { type: "image/png" });
+          const pngName = (file.name || "logo").replace(/\.svg$/i, "") + ".png";
+          resolve(new File([pngBlob], pngName, { type: "image/png" }));
+        } catch (_) {
+          resolve(file);
+        }
+      };
+      img.onerror = () => resolve(file);
+      img.src = dataUrl;
+    }).catch(() => resolve(file));
   });
 }
 

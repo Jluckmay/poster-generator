@@ -151,6 +151,8 @@ _ARROW_FLOW_RE = re.compile(r"(?:->|→|=>)")
 
 def _is_arrow_pipeline(text: str) -> bool:
     s = text.strip()
+    if re.search(r"\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b", s) or s.startswith(("\\", "%")):
+        return False
     # Remove marcadores de lista e rótulos opcionais como "– Pipeline:", "• Fluxo:"
     s = re.sub(r"^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?", "", s).strip()
     if not _ARROW_FLOW_RE.search(s):
@@ -163,6 +165,8 @@ def _is_arrow_pipeline(text: str) -> bool:
 
 
 def _arrow_pipeline_to_latex(text: str) -> str:
+    if not _is_arrow_pipeline(text):
+        return _inline(text)
     s = text.strip()
     s = re.sub(r"^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?", "", s).strip()
     bracket_nodes = [m.strip() for m in re.findall(r"\[([^\[\]]+)\]", s) if m.strip()]
@@ -694,6 +698,8 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         institute_tex = institute
         logos = ""
 
+    titlegraphic_tex = f"\\titlegraphic{{{logos}}}\n" if logos else ""
+
     return f"""\\documentclass[{poster.get('_font') or paper['font']},a0paper,margin=20mm,innermargin=12mm,blockverticalspace=12mm,colspace=12mm,subcolspace=8mm]{{tikzposter}}
 \\geometry{{paperwidth={pw * 10:.0f}mm,paperheight={ph * 10:.0f}mm,margin=20mm}}
 \\usepackage[T1]{{fontenc}}
@@ -737,8 +743,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\title{{{title}}}
 \\author{{{authors}}}
 \\institute{{{institute_tex}}}
-\\titlegraphic{{{logos}}}
-\\begin{{document}}
+{titlegraphic_tex}\\begin{{document}}
 \\maketitle
 \\begin{{columns}}
 {chr(10).join(col_tex)}

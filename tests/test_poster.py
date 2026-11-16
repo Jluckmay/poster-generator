@@ -681,3 +681,46 @@ def test_no_citations_in_results_and_conclusions():
     assert "- Recomendação de implantação." in conclusions["content"]
     assert "- Escala invariante." in conclusions["content"]
 
+
+def test_classic_template_empty_titlegraphic_omitted():
+    from src.latex import build_tex, _is_arrow_pipeline
+    d = {
+        "title": "Poster Title",
+        "authors": "Author Name",
+        "affiliations": "University",
+        "template": "classic",
+        "paper": "a0",
+        "columns": 2,
+        "sections": [
+            {"id": "intro", "title": "Intro", "content": "Sample content"},
+            {"id": "results", "title": "Results", "content": "Sample result"},
+        ],
+        "logos_header": [],
+        "logos_footer": [],
+    }
+    norm = normalize_poster(d)
+    tex = build_tex(norm, {})
+    assert "\\titlegraphic{}" not in tex
+    assert "\\titlegraphic" not in tex or "\\titlegraphic{~}" in tex
+
+
+def test_arrow_pipeline_guard_against_latex_snippets():
+    from src.latex import _is_arrow_pipeline
+    assert not _is_arrow_pipeline(r"\draw[ -> , thick] (A) -- (B);")
+    assert not _is_arrow_pipeline(r"\node[draw] at (0,0) {Test -> Step};")
+    assert not _is_arrow_pipeline(r"\begin{tikzpicture}")
+    assert _is_arrow_pipeline("[Etapa 1] -> [Etapa 2]")
+    assert _is_arrow_pipeline("Dados -> Modelo -> Avaliação")
+
+
+def test_tectonic_bundle_contents():
+    import tarfile
+    from pathlib import Path
+    bundle_path = Path(__file__).resolve().parent.parent / "assets" / "tectonic" / "tectonic-bundle.tar.gz"
+    assert bundle_path.is_file()
+    with tarfile.open(bundle_path) as tar:
+        names = {n.replace("./", "") for n in tar.getnames()}
+        assert "colortbl.sty" in names
+        assert "lmroman10-regular.otf" in names
+
+
