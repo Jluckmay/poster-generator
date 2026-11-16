@@ -724,3 +724,56 @@ def test_tectonic_bundle_contents():
         assert "lmroman10-regular.otf" in names
 
 
+def test_format_grouped_emails():
+    from src.poster import format_grouped_emails
+    assert format_grouped_emails("") == ""
+    assert (
+        format_grouped_emails("lucas.mayrinck@dcc.ufmg.br, brendo.eugenio@dcc.ufmg.br, lfvieira@dcc.ufmg.br")
+        == "{lucas.mayrinck, brendo.eugenio, lfvieira}@dcc.ufmg.br"
+    )
+    assert format_grouped_emails("{a, b}@ufmg.br, c@ufmg.br, d@gmail.com") == "{a, b, c}@ufmg.br, d@gmail.com"
+    assert format_grouped_emails("author@university.edu") == "author@university.edu"
+
+
+def test_renumber_citations_filters_uncited_references():
+    from src.poster import renumber_citations
+    secs = [
+        {"id": "intro", "title": "Introdução", "content": "Conforme analisado em [1] e [3]."},
+        {"id": "methods", "title": "Metodologia", "content": "Seguindo [3]."},
+        {"id": "results", "title": "Resultados", "content": "Acurácia de 98% [1]."},
+        {
+            "id": "references",
+            "title": "Referências",
+            "content": "[1] Primeiro autor. Artigo A. 2021.\n[2] Segundo autor. Artigo B. 2022.\n[3] Terceiro autor. Artigo C. 2023.\n[4] Quarto autor. Artigo D. 2024.",
+        },
+    ]
+    res = renumber_citations(secs)
+    assert res[0]["content"] == "Conforme analisado em [1] e [2]."
+    assert res[1]["content"] == "Seguindo [2]."
+    assert res[2]["content"] == "Acurácia de 98%."
+    ref_body = res[3]["content"]
+    assert "[1] Primeiro autor. Artigo A. 2021." in ref_body
+    assert "[2] Terceiro autor. Artigo C. 2023." in ref_body
+    assert "Segundo autor" not in ref_body
+    assert "Quarto autor" not in ref_body
+
+
+def test_normalize_poster_language_alignment():
+    # Quando idioma é pt-BR, títulos padrão em inglês devem ser normalizados para pt-BR
+    d_pt = {
+        "language": "pt-BR",
+        "title": "Research Poster Title",
+        "email": "a@dcc.ufmg.br, b@dcc.ufmg.br",
+        "sections": [
+            {"id": "introduction", "title": "Introduction", "content": "Introdução com [1]."},
+            {"id": "references", "title": "References", "content": "[1] Ref 1."},
+        ],
+    }
+    norm_pt = normalize_poster(d_pt)
+    assert norm_pt["title"] == "Título do Pôster"
+    assert norm_pt["email"] == "{a, b}@dcc.ufmg.br"
+    assert norm_pt["sections"][0]["title"] == "Introdução"
+    assert norm_pt["sections"][1]["title"] == "Referências"
+
+
+

@@ -822,7 +822,8 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
                 target_h = max(min_h, target_h)
                 body = f"\\cardminbox{{{target_h:.1f}cm}}{{\n{body}\n}}"
 
-            title_text = _inline(s['title'])
+            sec_raw_title = labels.get("references", s['title']) if s["id"] == "references" else s['title']
+            title_text = _inline(sec_raw_title)
             if tpl["block"] == "AcademicCard":
                 title_text = f"\\textbf{{{title_text}}}"
             parts.append(f"\\block{{{title_text}}}{{\n{body}\n}}")

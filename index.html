@@ -3399,7 +3399,22 @@ if (uiLangToggleBtn) {
 document.querySelectorAll("input[name=posterLang]").forEach(r => {
   r.onchange = () => {
     if (r.checked) {
+      const prevLang = posterLang;
       posterLang = r.value;
+      const titleInput = $("#title");
+      if (titleInput) {
+        const prevFallback = (draftFallbacks[prevLang] && draftFallbacks[prevLang].title) || "";
+        if (!titleInput.value || titleInput.value.trim() === prevFallback) {
+          titleInput.value = (draftFallbacks[posterLang] && draftFallbacks[posterLang].title) || "";
+        }
+      }
+      sections.forEach(s => {
+        const prevLabel = (CFG.labels[prevLang] && CFG.labels[prevLang][s.id]) || "";
+        const newLabel = (CFG.labels[posterLang] && CFG.labels[posterLang][s.id]) || "";
+        if (newLabel && (!s.title || s.title.trim() === prevLabel)) {
+          s.title = newLabel;
+        }
+      });
       renderSections();
       updateDraftPreview();
     }
@@ -3512,6 +3527,9 @@ function fillFromExtract(p) {
   ["title", "authors", "affiliations", "email"].forEach(k => {
     if (p[k]) $("#" + k).value = p[k];
   });
+  if (p.email) {
+    $("#email").value = formatGroupedEmails(p.email);
+  }
   const kept = sections.filter(s => s.images.length);
   const byId = Object.fromEntries(sections.map(s => [s.id, s]));
   const out = [];
@@ -3519,6 +3537,7 @@ function fillFromExtract(p) {
     if (s.id === "abstract") return;
     const old = byId[s.id];
     const n = old || newSec(s.id);
+    n.title = s.title || secLabel(s.id);
     n.content = s.content || "";
     out.push(n);
   });
@@ -4266,7 +4285,8 @@ function updateDraftPreview() {
   const titleVal = ($("#title") && $("#title").value.trim()) || dFb.title;
   const authorsVal = ($("#authors") && $("#authors").value.trim()) || dFb.authors;
   const affilVal = ($("#affiliations") && $("#affiliations").value.trim()) || dFb.affil;
-  const emailVal = ($("#email") && $("#email").value.trim()) || "";
+  const rawEmailVal = ($("#email") && $("#email").value.trim()) || "";
+  const emailVal = formatGroupedEmails(rawEmailVal);
   draftTitle.textContent = titleVal;
   draftAuthors.textContent = authorsVal;
   draftAffil.innerHTML = [emailVal, ...affilVal.split(/\n/).map(x => x.trim())].filter(Boolean).map(escapeHtml).join("<br>");
@@ -4401,9 +4421,10 @@ function updateDraftPreview() {
     grid.innerHTML = colBuckets.map(colSecs => `
       <div class="draft-col">
         ${colSecs.map(s => {
-          const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
+          let sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
           const sBody = (s.content && s.content.trim()) || dFb.content;
           const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
+          if (isRef && secLabel("references")) sTitle = secLabel("references");
           const placedIndices = new Set();
           const bodyHtml = isRef ? renderDraftReferences(sBody) : renderDraftBody(sBody, s.images, placedIndices);
           const remainingImages = (s.images && s.images.length > 0)
@@ -4488,11 +4509,71 @@ function stripDraftCitations(str) {
     .replace(/[ \t]+([.,;:!?])/g, "$1");
 }
 
+function formatGroupedEmails(emailStr) {
+  if (!emailStr || !emailStr.trim()) return "";
+  let s = emailStr.trim();
+  const groupedRe = /\{([^}]+)\}@([A-Za-z0-9.\-]+)/g;
+  const normalRe = /([A-Za-z0-9._%+\-]+)@([A-Za-z0-9.\-]+)/g;
+  const extracted = [];
+  let m;
+  while ((m = groupedRe.exec(s)) !== null) {
+    const usersPart = m[1];
+    const dom = m[2].toLowerCase();
+    usersPart.split(/[,;\s]+/).forEach(u => {
+      const uClean = u.trim();
+      if (uClean) extracted.push({ user: uClean, dom });
+    });
+  }
+  s = s.replace(groupedRe, "");
+  while ((m = normalRe.exec(s)) !== null) {
+    const u = m[1].trim();
+    const dom = m[2].trim().toLowerCase();
+    if (u && dom) extracted.push({ user: u, dom });
+  }
+  if (extracted.length === 0) return emailStr.trim();
+  const domainUsers = {};
+  extracted.forEach(({ user, dom }) => {
+    if (!domainUsers[dom]) domainUsers[dom] = [];
+    if (!domainUsers[dom].includes(user)) domainUsers[dom].push(user);
+  });
+  const parts = [];
+  Object.keys(domainUsers).forEach(dom => {
+    const users = domainUsers[dom];
+    if (users.length === 1) {
+      parts.push(`${users[0]}@${dom}`);
+    } else {
+      parts.push(`{${users.join(", ")}}@${dom}`);
+    }
+  });
+  return parts.join(", ");
+}
+
 function getRenumberedDraftSections(activeSections) {
   const refSec = activeSections.find(s => s && (s.id === "references" || /refer[eê]nc/i.test(s.title || "")));
   if (!refSec || !refSec.content) {
     return activeSections.map(s => isResultsOrConclusionsSection(s) ? { ...s, content: stripDraftCitations(s.content) } : s);
   }
+
+  const usedCitations = new Set();
+  activeSections.forEach(s => {
+    if (s === refSec || isResultsOrConclusionsSection(s)) return;
+    const cText = s.content || "";
+    const matches = cText.matchAll(/\[(\d+(?:[,;\s–-]+\d+)*)\]/g);
+    for (const m of matches) {
+      const parts = m[1].split(/[,;]\s*/);
+      parts.forEach(p => {
+        p = p.trim();
+        const rng = p.match(/^(\d+)\s*[-–]\s*(\d+)$/);
+        if (rng) {
+          const start = parseInt(rng[1], 10);
+          const end = parseInt(rng[2], 10);
+          for (let n = start; n <= end; n++) usedCitations.add(n);
+        } else if (/^\d+$/.test(p)) {
+          usedCitations.add(parseInt(p, 10));
+        }
+      });
+    }
+  });
 
   let clean = refSec.content.trim();
   clean = clean.replace(/(?:^|\s+)(?:\[\d{1,3}\]|\d{1,2}[.)]?)\s+(?=[A-ZÀ-ÿ])/g, "\n$1 ");
@@ -4508,16 +4589,34 @@ function getRenumberedDraftSections(activeSections) {
     if (m) {
       const oldNum = parseInt(m[1] || m[2], 10);
       const body = m[3].trim();
+      if (usedCitations.size > 0 && !usedCitations.has(oldNum)) {
+        return;
+      }
       if (!oldToNew[oldNum]) {
         oldToNew[oldNum] = newIdx;
         newRefs.push(`[${newIdx}] ${body}`);
         newIdx++;
       }
     } else {
-      newRefs.push(`[${newIdx}] ${ln}`);
-      newIdx++;
+      if (usedCitations.size === 0) {
+        newRefs.push(`[${newIdx}] ${ln}`);
+        newIdx++;
+      }
     }
   });
+
+  if (newRefs.length === 0 && lines.length > 0) {
+    lines.slice(0, 4).forEach(ln => {
+      const m = ln.match(/^(?:\[(\d+)\]|(\d+)[.)]?)\s+(.+)/);
+      const body = m ? m[3].trim() : ln;
+      newRefs.push(`[${newIdx}] ${body}`);
+      if (m) {
+        const oldNum = parseInt(m[1] || m[2], 10);
+        oldToNew[oldNum] = newIdx;
+      }
+      newIdx++;
+    });
+  }
 
   if (Object.keys(oldToNew).length === 0) {
     return activeSections.map(s => isResultsOrConclusionsSection(s) ? { ...s, content: stripDraftCitations(s.content) } : s);
@@ -5392,12 +5491,13 @@ async function buildForm() {
     title: titleVal,
     authors: authorsVal,
     affiliations: affilVal,
-    email: $("#email").value,
+    email: formatGroupedEmails($("#email").value || ""),
     url: $("#url").value,
     logos_header: logosH.map(l => l.field),
     logos_footer: logosF.map(l => l.field),
     sections: sections.map(s => {
-      const sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
+      let sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
+      if (s.id === "references" && secLabel("references")) sTitle = secLabel("references");
       const rawContent = isResultsOrConclusionsSection(s) ? stripDraftCitations(s.content) : s.content;
       const sBody = (rawContent && rawContent.trim()) || dFb.content;
       return {

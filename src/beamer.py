@@ -71,6 +71,8 @@ def build_beamer_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
             raw_title = sec.get("title") or sec.get("id") or "Section"
             clean_title = re.sub(r"^\s*\d+[\.\-\)]\s*", "", str(raw_title)).strip()
             is_ref = sec["id"] in _UNNUMBERED or bool(re.search(r"refer[eê]nc", raw_title, re.IGNORECASE))
+            if sec["id"] == "references":
+                clean_title = labels.get("references", clean_title)
             if not is_ref:
                 counter += 1
                 title = f"{counter}. {clean_title}"

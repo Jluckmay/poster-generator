@@ -17,7 +17,7 @@ _LANG_NAME = {"pt-BR": "Brazilian Portuguese", "en-US": "American English"}
 
 SYSTEM_PROMPT = """You are an expert academic researcher and designer converting academic papers into structured, high-impact content for a scientific poster.
 Return ONLY a valid JSON object, no markdown fences, with this exact shape:
-{"title": str, "authors": str, "affiliations": str (one per line), "email": str (all author emails, e.g. "email1@ufmg.br, email2@ufmg.br" or "{user1, user2}@ufmg.br"),
+{"title": str, "authors": str, "affiliations": str (one per line), "email": str (all author emails grouped by domain in the format "{user1, user2}@domain.com" or "user@domain.com"),
  "sections": {"introduction": str, "methods": str, "results": str, "conclusions": str, "references": str}}
 
 CRITICAL MANDATORY RULES:
@@ -32,6 +32,7 @@ CRITICAL MANDATORY RULES:
 2. TARGET LANGUAGE & TRANSLATION (ABSOLUTE REQUIREMENT):
    - Target Language: {language}.
    - ALL content without exception (title, introduction, methods, results, conclusions, table headers, bullet points, captions) MUST be written strictly in {language}.
+   - CRITICAL REQUIREMENT FOR TITLE: ALL content, INCLUDING THE POSTER TITLE, MUST be written strictly in {language}. If the source paper is written in English (or any other language) and the Target Language is Brazilian Portuguese, YOU MUST TRANSLATE THE PAPER TITLE into fluent, academic Brazilian Portuguese (PT-BR). NEVER leave an English title on a Brazilian Portuguese poster! For example, a paper with an English title MUST be translated to Portuguese (e.g. "CAPACIDADE CONDICIONAL E VALIDADE DE MEDIÇÃO EM BENCHMARKS DE DETECÇÃO DE INTRUSÃO EM IOT"). Conversely, if Target Language is English, ALL content (title, sections, tables, captions) MUST be strictly in English.
    - If the source paper is written in English (or any other language) and the target language is Brazilian Portuguese, you MUST TRANSLATE and synthesize ALL sections into clear, fluent, academic Brazilian Portuguese (PT-BR).
    - NEVER leave English sentences, paragraphs, or table headers in a Brazilian Portuguese poster (except universal acronyms such as IoT, AI, F1, 2PL, LSTM, CUDA, etc.).
 
@@ -54,8 +55,9 @@ CRITICAL MANDATORY RULES:
    - Example: "...benchmarks de detecção de intrusão IoT como CICIoT2023 [3] e Edge-IIoTset [4] classificam modelos sem estabelecer validade de construto [2], motivando calibrações via Teoria de Resposta ao Item (IRT) no nível de instância [1]."
    - NEVER create a standalone bullet point such as `- **Referências-chave:** [1], [2], [3]` or `- **Key references:** [1, 2, 3]`. Every reference in "references" MUST be cited naturally in context within the text!
 
-5. REFERENCES FILTERING (STRICTLY 3 TO 4 KEY REFERENCES):
-   - Posters have strictly limited space. Include ONLY the 3 to 4 most relevant references cited in the paper (e.g. seminal papers, key datasets).
+5. REFERENCES FILTERING (STRICTLY ONLY CITED REFERENCES):
+   - Posters have strictly limited space. Include ONLY references in "references" that are EXPLICITLY cited in "introduction" or "methods" (strictly 3 to 4 key references).
+   - NEVER include unreferenced citations in "references". Every single reference listed in "references" MUST have a corresponding [N] cited in the poster text.
    - NEVER dump the paper's full bibliography!
    - Format each reference in a single line:
      [1] Author, A. et al. (Year). Short Title. Conference/Journal.

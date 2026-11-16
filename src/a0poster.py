@@ -74,6 +74,8 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
         raw_title = sec.get("title") or sec.get("id") or "Section"
         clean_title = _clean_title(raw_title)
         is_ref = sec["id"] in _UNNUMBERED or bool(re.search(r"refer[eê]nc", raw_title, re.IGNORECASE))
+        if sec["id"] == "references":
+            clean_title = labels.get("references", clean_title)
         if not is_ref:
             counter += 1
             display_title = f"{counter}. {clean_title}"
