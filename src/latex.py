@@ -178,29 +178,28 @@ def _arrow_pipeline_to_latex(text: str) -> str:
 
     nodes = bracket_nodes[:6]
 
-    # TikZ colorido: usa colorOne (accent do poster) para bordas e setas, idêntico ao preview
+    # TikZ colorido: usa colorOne (accent do poster) para bordas e setas, idêntico ao preview (sem moldura externa)
     if len(nodes) == 4:
-        # Layout 2x2 com setas e moldura externa idêntico ao preview (.draft-diagram flex-wrap)
+        # Layout 2x2 com setas centralizado
         pos_lines = [
-            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black] (n0) at (0, 0) {{{_inline(nodes[0])}}};",
-            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, right=28pt of n0] (n1) {{{_inline(nodes[1])}}};",
-            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, below=36pt of n0] (n2) {{{_inline(nodes[2])}}};",
-            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=10pt, font=\\Large\\bfseries, text=black, right=28pt of n2] (n3) {{{_inline(nodes[3])}}};",
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, anchor=east] (n0) at (-14pt, 0) {{{_inline(nodes[0])}}};",
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, anchor=west] (n1) at (14pt, 0) {{{_inline(nodes[1])}}};",
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, anchor=east] (n2) at (-14pt, -52pt) {{{_inline(nodes[2])}}};",
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, anchor=west] (n3) at (14pt, -52pt) {{{_inline(nodes[3])}}};",
         ]
         arrow_lines = [
-            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n0) -- (n1);",
-            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n1.south) -- ++(0,-18pt) -| (n2.north);",
-            r"  \draw[-{Stealth[scale=1.6]}, line width=2.4pt, color=colorOne] (n2) -- (n3);",
+            r"  \draw[-{Stealth[scale=1.5]}, line width=2.2pt, color=colorOne] (n0) -- (n1);",
+            r"  \draw[-{Stealth[scale=1.5]}, line width=2.2pt, color=colorOne] (n1.south) -- ++(0,-16pt) -| (n2.north);",
+            r"  \draw[-{Stealth[scale=1.5]}, line width=2.2pt, color=colorOne] (n2) -- (n3);",
         ]
-        frame_line = [r"  \node[draw=diagFrame, line width=1.5pt, rounded corners=12pt, fit=(n0) (n1) (n2) (n3), inner sep=14pt] {};"]
-        body = "\n".join(pos_lines + arrow_lines + frame_line)
+        body = "\n".join(pos_lines + arrow_lines)
         return (
             "\\begin{center}\n"
-            "\\resizebox{0.96\\linewidth}{!}{%\n"
+            "\\resizebox{\\ifdim\\width>0.95\\linewidth 0.95\\linewidth\\else\\width\\fi}{!}{%\n"
             "\\begin{tikzpicture}\n"
             f"{body}\n"
             "\\end{tikzpicture}%\n"
@@ -208,30 +207,29 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             "\\end{center}"
         )
     elif len(nodes) > 4:
-        # Layout vertical com setas para baixo e moldura externa
+        # Layout vertical com setas para baixo
         tikz_nodes = []
         for i, st in enumerate(nodes):
             tikz_nodes.append(
-                f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-                f"        text width=0.82\\linewidth, align=center, inner sep=11pt,\n"
-                f"        font=\\LARGE\\bfseries, text=black] (n{i}) {{{_inline(st)}}};"
+                f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+                f"        text width=0.82\\linewidth, align=center, inner sep=9pt,\n"
+                f"        font=\\Large\\bfseries, text=black] (n{i}) {{{_inline(st)}}};"
             )
         pos_lines = [tikz_nodes[0]]
         for i in range(1, len(nodes)):
             pos_lines.append(
-                f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-                f"        text width=0.82\\linewidth, align=center, inner sep=11pt,\n"
-                f"        font=\\LARGE\\bfseries, text=black, below=20pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
+                f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+                f"        text width=0.82\\linewidth, align=center, inner sep=9pt,\n"
+                f"        font=\\Large\\bfseries, text=black, below=18pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
             )
         arrow_lines = [
-            f"  \\draw[-{{Stealth[scale=1.6]}}, line width=2.4pt, color=colorOne] (n{i}.south) -- (n{i+1}.north);"
+            f"  \\draw[-{{Stealth[scale=1.5]}}, line width=2.2pt, color=colorOne] (n{i}.south) -- (n{i+1}.north);"
             for i in range(len(nodes) - 1)
         ]
-        frame_line = [f"  \\node[draw=diagFrame, line width=1.5pt, rounded corners=12pt, fit=(n0) (n{len(nodes)-1}), inner sep=14pt] {{}};"]
-        body = "\n".join(pos_lines + arrow_lines + frame_line)
+        body = "\n".join(pos_lines + arrow_lines)
         return (
             "\\begin{center}\n"
-            "\\resizebox{0.95\\linewidth}{!}{%\n"
+            "\\resizebox{\\ifdim\\width>0.95\\linewidth 0.95\\linewidth\\else\\width\\fi}{!}{%\n"
             "\\begin{tikzpicture}\n"
             f"{body}\n"
             "\\end{tikzpicture}%\n"
@@ -239,25 +237,23 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             "\\end{center}"
         )
     elif len(nodes) == 3 and sum(len(n) for n in nodes) > 28:
-        # Layout em 2 linhas com quebra responsiva idêntico ao preview (.draft-diagram flex-wrap)
+        # Layout em 2 linhas com quebra responsiva idêntico ao preview (.draft-diagram flex-wrap), perfeitamente centralizado
         pos_lines = [
             f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
-            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black] (n0) at (0, 0) {{{_inline(nodes[0])}}};",
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, anchor=east] (n0) at (-14pt, 0) {{{_inline(nodes[0])}}};",
             f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
-            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, right=28pt of n0] (n1) {{{_inline(nodes[1])}}};",
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, anchor=west] (n1) at (14pt, 0) {{{_inline(nodes[1])}}};",
             f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
-            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, below=24pt of n0, xshift=50pt] (n2) {{{_inline(nodes[2])}}};",
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black] (n2) at (14pt, -52pt) {{{_inline(nodes[2])}}};",
         ]
         arrow_lines = [
             r"  \draw[-{Stealth[scale=1.5]}, line width=2.2pt, color=colorOne] (n0) -- (n1);",
-            r"  \coordinate (cleft) at ($(n2.west)-(30pt,0)$);",
             r"  \draw[-{Stealth[scale=1.5]}, line width=2.2pt, color=colorOne] ($(n2.west)-(28pt,0)$) -- (n2.west);",
         ]
-        frame_line = [r"  \node[draw=diagFrame, line width=1.5pt, rounded corners=10pt, fit=(n0) (n1) (n2) (cleft), inner sep=12pt] {};"]
-        body = "\n".join(pos_lines + arrow_lines + frame_line)
+        body = "\n".join(pos_lines + arrow_lines)
         return (
             "\\begin{center}\n"
-            "\\resizebox{0.96\\linewidth}{!}{%\n"
+            "\\resizebox{\\ifdim\\width>0.95\\linewidth 0.95\\linewidth\\else\\width\\fi}{!}{%\n"
             "\\begin{tikzpicture}\n"
             f"{body}\n"
             "\\end{tikzpicture}%\n"
@@ -265,7 +261,7 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             "\\end{center}"
         )
     else:
-        # Layout horizontal com setas para a direita e moldura externa
+        # Layout horizontal com setas para a direita
         tikz_nodes = []
         tikz_nodes.append(
             f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
@@ -282,11 +278,10 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             f"  \\draw[-{{Stealth[scale=1.5]}}, line width=2.2pt, color=colorOne] (n{i}.east) -- (n{i+1}.west);"
             for i in range(len(nodes) - 1)
         ]
-        frame_line = [f"  \\node[draw=diagFrame, line width=1.5pt, rounded corners=10pt, fit=(n0) (n{len(nodes)-1}), inner sep=12pt] {{}};"]
-        body = "\n".join(tikz_nodes + arrow_lines + frame_line)
+        body = "\n".join(tikz_nodes + arrow_lines)
         return (
             "\\begin{center}\n"
-            "\\resizebox{0.98\\linewidth}{!}{%\n"
+            "\\resizebox{\\ifdim\\width>0.95\\linewidth 0.95\\linewidth\\else\\width\\fi}{!}{%\n"
             "\\begin{tikzpicture}\n"
             f"{body}\n"
             "\\end{tikzpicture}%\n"
@@ -792,8 +787,8 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 
     titlegraphic_tex = f"\\titlegraphic{{{logos}}}\n" if logos else ""
 
-    return f"""\\documentclass[{poster.get('_font') or paper['font']},a0paper,margin=20mm,innermargin=12mm,blockverticalspace=12mm,colspace=12mm,subcolspace=8mm]{{tikzposter}}
-\\geometry{{paperwidth={pw * 10:.0f}mm,paperheight={ph * 10:.0f}mm,margin=20mm}}
+    return f"""\\documentclass[{poster.get('_font') or paper['font']},a0paper,margin=0mm,innermargin=15mm,blockverticalspace=12mm,colspace=12mm,subcolspace=8mm]{{tikzposter}}
+\\geometry{{paperwidth={pw * 10:.0f}mm,paperheight={ph * 10:.0f}mm,margin=0mm}}
 \\makeatletter
 \\setlength{{\\TP@visibletextwidth}}{{\\textwidth-2\\TP@innermargin}}
 \\setlength{{\\TP@visibletextheight}}{{\\textheight-2\\TP@innermargin}}
