@@ -4298,7 +4298,9 @@ function updateDraftPreview() {
 }
 
 function formatInlineText(str) {
-  let esc = escapeHtml(str);
+  if (!str) return "";
+  let clean = String(str).replace(/\\(?:begin|end)\{tikzpicture\}/gi, "");
+  let esc = escapeHtml(clean);
   esc = esc.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
   esc = esc.replace(/(?<!\w)\*([^*]+?)\*(?!\w)/g, "<em>$1</em>");
   // Citações flutuantes numéricas [1], [2, 3] como expoente (superscript)
@@ -4541,14 +4543,33 @@ function explodeInlineTables(text) {
 
 function renderDraftBody(text) {
   if (!text) return "";
-  // Pré-processa tabelas inline e blocos LaTeX
-  let normalized = explodeInlineTables(text.trim()).replace(/(\n)?(\\begin\{(?:center|tabular\*?|tabularx|tikzpicture)\}[\s\S]*?\\end\{(?:center|tabular\*?|tabularx|tikzpicture)\})(\n)?/g, "\n\n$2\n\n");
+  // Pré-processa tabelas inline e isola blocos LaTeX com placeholders seguros
+  const latexBlocks = [];
+  let normalized = explodeInlineTables(text.trim()).replace(
+    /\\begin\{(?:center|tabular\*?|tabularx|tikzpicture)\}[\s\S]*?(?:\\end\{(?:center|tabular\*?|tabularx|tikzpicture)\}|$)/gi,
+    match => {
+      const idx = latexBlocks.length;
+      latexBlocks.push(match);
+      return `\n\n@@LATEX_ENV_BLOCK_${idx}@@\n\n`;
+    }
+  );
 
-  // Garante que fluxogramas com setas e tabelas fiquem em blocos isolados
+  // Garante que fluxogramas com setas fiquem em blocos isolados, sem quebrar comandos LaTeX
   const preLines = normalized.split("\n");
   const separated = [];
   for (let ln of preLines) {
     const s = ln.trim();
+    if (s.startsWith("@@LATEX_ENV_BLOCK_")) {
+      if (separated.length && separated[separated.length - 1].trim()) separated.push("");
+      separated.push(ln);
+      separated.push("");
+      continue;
+    }
+    const isLatex = s.startsWith("\\") || /\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b/.test(s);
+    if (isLatex) {
+      separated.push(ln);
+      continue;
+    }
     const stripped = s.replace(/^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?/, "").trim();
     const isArrow = /(?:->|→|=>)/.test(stripped) && stripped.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2;
     if (isArrow) {
@@ -4563,8 +4584,31 @@ function renderDraftBody(text) {
 
   const rawBlocks = normalized.split(/\n\s*\n/);
   return rawBlocks.map(block => {
-    const trimmed = block.trim();
+    let trimmed = block.trim();
     if (!trimmed) return "";
+
+    // Restaura e renderiza bloco LaTeX protegido
+    const latexMatch = trimmed.match(/^@@LATEX_ENV_BLOCK_(\d+)@@$/);
+    if (latexMatch) {
+      const originalBlock = latexBlocks[Number(latexMatch[1])].trim();
+      if (/\\begin\{(?:tabular\*?|tabularx)\}/i.test(originalBlock)) {
+        return renderLatexTabularToHtml(originalBlock);
+      }
+      if (/\\begin\{tikzpicture\}/i.test(originalBlock)) {
+        return renderTikzToHtml(originalBlock);
+      }
+      if (/\\begin\{center\}/i.test(originalBlock)) {
+        if (/\\begin\{(?:tabular\*?|tabularx)\}/i.test(originalBlock)) {
+          return renderLatexTabularToHtml(originalBlock);
+        }
+        if (/\\begin\{tikzpicture\}/i.test(originalBlock)) {
+          return renderTikzToHtml(originalBlock);
+        }
+        const inner = originalBlock.replace(/^\\begin\{center\}\s*/i, "").replace(/\s*\\end\{center\}$/i, "").trim();
+        return inner ? `<p style="margin:0 0 4px;text-align:center;">${formatInlineText(inner)}</p>` : "";
+      }
+      trimmed = originalBlock;
+    }
 
     // 1. Tabela LaTeX
     if (/\\begin\{(?:tabular\*?|tabularx)\}/i.test(trimmed)) {
@@ -4574,14 +4618,15 @@ function renderDraftBody(text) {
     if (/\\begin\{tikzpicture\}/i.test(trimmed)) {
       return renderTikzToHtml(trimmed);
     }
-    // 3. Diagrama de fluxo com setas (independente de marcadores de lista)
+    // 3. Diagrama de fluxo com setas (ignora linhas com comandos LaTeX)
+    const isLatex = trimmed.startsWith("\\") || /\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b/.test(trimmed);
     const strippedArrow = trimmed.replace(/^[–—\-*•]\s*(?:\w[\w\s]*:\s*)?/, "").trim();
-    if (/(?:->|→|=>)/.test(strippedArrow) && strippedArrow.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2) {
+    if (!isLatex && /(?:->|→|=>)/.test(strippedArrow) && strippedArrow.split(/\s*(?:->|→|=>)\s*/).filter(Boolean).length >= 2) {
       return renderArrowPipelineToHtml(strippedArrow);
     }
     // 3.1. Diagrama multilinhas com setas verticais intercaladas (↓, ->, etc.)
     const blockLines = trimmed.split("\n").map(l => l.trim()).filter(Boolean);
-    if (blockLines.length >= 3) {
+    if (blockLines.length >= 3 && !isLatex) {
       const arrowSyms = new Set(["↓", "->", "→", "=>", "|", "v", "V"]);
       const multiNodes = [];
       let isMultiPipeline = true;
@@ -4590,7 +4635,7 @@ function renderDraftBody(text) {
         if (i % 2 === 1) {
           if (!arrowSyms.has(ln)) { isMultiPipeline = false; break; }
         } else {
-          if (arrowSyms.has(ln) || !ln) { isMultiPipeline = false; break; }
+          if (arrowSyms.has(ln) || !ln || ln.startsWith("\\")) { isMultiPipeline = false; break; }
           multiNodes.push(ln);
         }
       }
@@ -4609,8 +4654,13 @@ function renderDraftBody(text) {
       const items = lines.map(l => l.replace(/^[-*•–\d.)]\s+/, ""));
       return `<ul style="margin:2px 0 4px 14px;padding:0;">${items.map(it => `<li>${formatInlineText(it)}</li>`).join("")}</ul>`;
     }
-    // 6. Parágrafo simples
-    return `<p style="margin:0 0 4px;">${formatInlineText(trimmed)}</p>`;
+    // 6. Parágrafo simples (remove qualquer tag LaTeX solta que possa ter sobrado)
+    const cleanParagraph = trimmed
+      .replace(/\\(?:begin|end)\{tikzpicture\}/gi, "")
+      .replace(/\\draw\b[^;]*;/gi, "")
+      .trim();
+    if (!cleanParagraph) return "";
+    return `<p style="margin:0 0 4px;">${formatInlineText(cleanParagraph)}</p>`;
   }).join("");
 }
 

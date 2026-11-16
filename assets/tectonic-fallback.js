@@ -218,7 +218,8 @@
 
   function inlineTex(text) {
     const bold = [];
-    let value = escapeTex(text).replace(/\*\*(.+?)\*\*/g, (_, part) => {
+    let clean = String(text || "").replace(/\\(?:begin|end)\{tikzpicture\}/gi, "");
+    let value = escapeTex(clean).replace(/\*\*(.+?)\*\*/g, (_, part) => {
       bold.push(part); return `\u0000B${bold.length - 1}\u0000`;
     });
     value = value.replace(/(?<![\w*])\*(?!\s)(.+?)(?<!\s)\*(?![\w*])/g, "\\textit{$1}");
@@ -313,12 +314,22 @@ ${items}
     return blocks.map(block => {
       const lines = block.split("\n").map(line => line.trim()).filter(Boolean);
       if (lines.length > 1 && lines[0].includes("|") && /^\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)+\|?$/.test(lines[1])) return renderTable(lines);
+      if (/\\begin\{tikzpicture\}/i.test(block)) {
+        const nodeMatches = [...block.matchAll(/\\node\b.*?\{([^}]+)\}/gi)];
+        if (nodeMatches.length >= 2) {
+          const nodes = nodeMatches.map(m => m[1].replace(/\\textbf\{([^}]+)\}/g, "$1").trim());
+          return renderPipeline(nodes.map(n => `[${n}]`).join(" -> "), accent);
+        }
+        return "";
+      }
       const flow = lines.length === 1 ? lines[0] : block;
       if (/(?:->|\u2192|=>)/.test(flow) && !flow.startsWith("\\") && !/\\(?:draw|node|begin|end|path|fill|clip|coordinate)\b/.test(flow) && (flow.includes("[") || lines.length === 1)) return renderPipeline(flow, accent);
       if (lines.every(line => /^[-*\u2022\u2013]\s+/.test(line))) {
         return `\\begin{itemize}\\setlength{\\itemsep}{0.15em}${lines.map(line => `\\item ${inlineTex(line.replace(/^[-*\u2022\u2013]\s+/, ""))}`).join("\n")}\\end{itemize}`;
       }
-      return lines.map(line => `\\noindent ${inlineTex(line)}\\par`).join("\n");
+      const cleanLines = lines.filter(line => !/\\(?:begin|end)\{tikzpicture\}/i.test(line) && !/\\(?:draw|node)\b/i.test(line));
+      if (cleanLines.length === 0) return "";
+      return cleanLines.map(line => `\\noindent ${inlineTex(line)}\\par`).join("\n");
     }).join("\\vspace{0.5em}\n");
   }
 
