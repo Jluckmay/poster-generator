@@ -157,7 +157,7 @@ def build_a0poster_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage[table]{{xcolor}}
 \\usepackage{{colortbl}}
 \\usepackage{{booktabs,array,tikz}}
-\\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
+\\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit,calc}}
 
 {_hex_to_latex('uzhAccent', c1)}
 {_hex_to_latex('colorOne', c1)}

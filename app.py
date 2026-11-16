@@ -589,7 +589,7 @@ with col_form:
                     st.rerun()
             with c_snip2:
                 if st.button("🔀 + TikZ", key=f"btn_tikz_{idx}", help="Inserir modelo de fluxograma TikZ"):
-                    sec["content"] = (sec.get("content", "") + "\n\n\\begin{tikzpicture}\n\\node[draw, rounded corners, fill=blue!10] (A) {Entrada / Dados};\n\\node[draw, rounded corners, fill=green!10, right=of A] (B) {Processamento & Extração};\n\\node[draw, rounded corners, fill=red!10, right=of B] (C) {Resultados & Classificação};\n\\draw[->, thick] (A) -- (B);\n\\draw[->, thick] (B) -- (C);\n\\end{tikzpicture}\n").strip()
+                    sec["content"] = (sec.get("content", "") + "\n\n[Entrada / Dados] -> [Processamento & Extração] -> [Resultados & Classificação]\n").strip()
                     st.rerun()
             with c_snip3:
                 if st.button("📋 + Tópicos", key=f"btn_top_{idx}", help="Inserir tópicos formatados com citação"):

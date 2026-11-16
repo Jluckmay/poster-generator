@@ -168,7 +168,7 @@ def build_article_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage{{graphicx}}
 \\usepackage{{qrcode}}
 \\usepackage{{booktabs,array,tikz}}
-\\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
+\\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit,calc}}
 \\pagestyle{{empty}}{page_bg_tex}
 {_hex_to_latex('accent', c1)}
 {_hex_to_latex('colorOne', c1)}

@@ -238,25 +238,51 @@ def _arrow_pipeline_to_latex(text: str) -> str:
             "}\n"
             "\\end{center}"
         )
+    elif len(nodes) == 3 and sum(len(n) for n in nodes) > 28:
+        # Layout em 2 linhas com quebra responsiva idêntico ao preview (.draft-diagram flex-wrap)
+        pos_lines = [
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black] (n0) at (0, 0) {{{_inline(nodes[0])}}};",
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, right=28pt of n0] (n1) {{{_inline(nodes[1])}}};",
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt, font=\\Large\\bfseries, text=black, below=24pt of n0, xshift=50pt] (n2) {{{_inline(nodes[2])}}};",
+        ]
+        arrow_lines = [
+            r"  \draw[-{Stealth[scale=1.5]}, line width=2.2pt, color=colorOne] (n0) -- (n1);",
+            r"  \coordinate (cleft) at ($(n2.west)-(30pt,0)$);",
+            r"  \draw[-{Stealth[scale=1.5]}, line width=2.2pt, color=colorOne] ($(n2.west)-(28pt,0)$) -- (n2.west);",
+        ]
+        frame_line = [r"  \node[draw=diagFrame, line width=1.5pt, rounded corners=10pt, fit=(n0) (n1) (n2) (cleft), inner sep=12pt] {};"]
+        body = "\n".join(pos_lines + arrow_lines + frame_line)
+        return (
+            "\\begin{center}\n"
+            "\\resizebox{0.96\\linewidth}{!}{%\n"
+            "\\begin{tikzpicture}\n"
+            f"{body}\n"
+            "\\end{tikzpicture}%\n"
+            "}\n"
+            "\\end{center}"
+        )
     else:
         # Layout horizontal com setas para a direita e moldura externa
         tikz_nodes = []
         tikz_nodes.append(
-            f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-            f"        align=center, inner sep=11pt,\n"
+            f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+            f"        align=center, inner sep=9pt,\n"
             f"        font=\\Large\\bfseries, text=black] (n0) {{{_inline(nodes[0])}}};"
         )
         for i in range(1, len(nodes)):
             tikz_nodes.append(
-                f"  \\node[draw=colorOne, line width=2.4pt, fill=white, rounded corners=8pt,\n"
-                f"        align=center, inner sep=11pt,\n"
+                f"  \\node[draw=colorOne, line width=2pt, fill=white, rounded corners=6pt,\n"
+                f"        align=center, inner sep=9pt,\n"
                 f"        font=\\Large\\bfseries, text=black, right=20pt of n{i-1}] (n{i}) {{{_inline(nodes[i])}}};"
             )
         arrow_lines = [
-            f"  \\draw[-{{Stealth[scale=1.6]}}, line width=2.4pt, color=colorOne] (n{i}.east) -- (n{i+1}.west);"
+            f"  \\draw[-{{Stealth[scale=1.5]}}, line width=2.2pt, color=colorOne] (n{i}.east) -- (n{i+1}.west);"
             for i in range(len(nodes) - 1)
         ]
-        frame_line = [f"  \\node[draw=diagFrame, line width=1.5pt, rounded corners=12pt, fit=(n0) (n{len(nodes)-1}), inner sep=14pt] {{}};"]
+        frame_line = [f"  \\node[draw=diagFrame, line width=1.5pt, rounded corners=10pt, fit=(n0) (n{len(nodes)-1}), inner sep=12pt] {{}};"]
         body = "\n".join(tikz_nodes + arrow_lines + frame_line)
         return (
             "\\begin{center}\n"
@@ -441,6 +467,25 @@ def _parse_multiline_pipeline(lines: List[str]) -> List[str] | None:
     return None
 
 
+def _parse_tikz_pipeline_nodes(block: str) -> List[str] | None:
+    """Extrai sequência de nós de fluxogramas TikZ simples para unificar estilização com a paleta do pôster."""
+    s = block.strip()
+    if not (r"\begin{tikzpicture}" in s and r"\end{tikzpicture}" in s):
+        return None
+    if any(k in s for k in [r"\addplot", r"\datavisualization", r"\axis", r"\matrix"]):
+        return None
+    matches = re.findall(r"\\node\b[^{]*\{([^}]+)\}", s, flags=re.IGNORECASE)
+    if len(matches) >= 2:
+        cleaned = []
+        for m in matches:
+            t = m.strip()
+            t = re.sub(r"\\textbf\{([^}]+)\}", r"\1", t).strip()
+            t = t.replace(r"\&", "&")
+            cleaned.append(t)
+        return cleaned
+    return None
+
+
 def text_to_latex(text: str) -> str:
     """Converte texto simples, listas, tabelas e diagramas em LaTeX."""
     normalized = _preprocess_structured_blocks(explode_inline_tables(text.strip()))
@@ -448,6 +493,11 @@ def text_to_latex(text: str) -> str:
     out: List[str] = []
     for block in blocks:
         if not block.strip():
+            continue
+        tikz_nodes = _parse_tikz_pipeline_nodes(block)
+        if tikz_nodes:
+            synthetic_arrow = " -> ".join(f"[{n}]" for n in tikz_nodes)
+            out.append(_arrow_pipeline_to_latex(synthetic_arrow) + "\n")
             continue
         raw_env = _safe_latex_env(block)
         if raw_env:
@@ -757,7 +807,7 @@ def build_tex(poster: Dict[str, Any], images: Dict[str, str]) -> str:
 \\usepackage{{graphicx}}
 \\usepackage{{qrcode}}
 \\usepackage{{booktabs,array,colortbl}}
-\\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit}}
+\\usetikzlibrary{{arrows.meta,positioning,shapes.geometric,fit,calc}}
 \\definecolor{{tableHead}}{{HTML}}{{F1F5F9}}
 \\definecolor{{tableLine}}{{HTML}}{{334155}}
 \\definecolor{{diagFrame}}{{HTML}}{{CBD5E1}}

@@ -3681,7 +3681,7 @@ function renderSections() {
         if (type === "table") {
           snippet = "\n\n| Parâmetro / Métrica | Baseline | Proposto | Variação |\n| :--- | :---: | :---: | :---: |\n| Acurácia (%) | 84.2 | 96.5 | +12.3% |\n| Macro F1 | 0.81 | 0.94 | +16.0% |\n| Latência (ms) | 48.0 | 19.5 | -59.4% |\n";
         } else if (type === "tikz") {
-          snippet = "\n\n\\begin{tikzpicture}\n\\node[draw, rounded corners, fill=blue!10] (A) {Entrada / Dados};\n\\node[draw, rounded corners, fill=green!10, right=of A] (B) {Processamento & Extração};\n\\node[draw, rounded corners, fill=red!10, right=of B] (C) {Resultados & Classificação};\n\\draw[->, thick] (A) -- (B);\n\\draw[->, thick] (B) -- (C);\n\\end{tikzpicture}\n";
+          snippet = "\n\n[Entrada / Dados] -> [Processamento & Extração] -> [Resultados & Classificação]\n";
         } else if (type === "bullets") {
           snippet = "\n\n- **Objetivo Central:** Descrição sintética da meta da pesquisa.\n- **Destaque Metodológico:** Abordagem técnica e parâmetros chave.\n- **Impacto Principal:** Resultado quantitativo comprovado [1].\n";
         }
