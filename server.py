@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import shutil
 import sys
 import threading
@@ -17,7 +18,7 @@ from src import config
 from src.extractors import ALLOWED_DOC_EXT, extract_text, heuristic_parse
 from src.i18n import DEFAULT_SECTION_IDS, LABELS
 from src.images import save_image
-from src.latex import build_tex, compile_tex, fit_compile, make_zip, new_build_dir
+from src.latex import build_tex, compile_tex, fit_compile, make_zip, new_build_dir, validate_custom_tex
 from src.llm import LLMError, ai_extract, resolve_key
 from src.poster import normalize_poster
 from src.templates import public_templates
@@ -59,12 +60,8 @@ def _get_allowed_origin() -> str | None:
     # Permite estritamente jluckmay.github.io
     if origin == PROD_ALLOWED_ORIGIN:
         return PROD_ALLOWED_ORIGIN
-    # Permite origens locais de desenvolvimento
-    if (
-        origin.startswith("http://localhost:")
-        or origin.startswith("http://127.0.0.1:")
-        or origin in ("http://localhost", "http://127.0.0.1")
-    ):
+    # Permite origens locais de desenvolvimento estritas
+    if re.fullmatch(r"^https?://(localhost|127\.0\.0\.1)(?::\d+)?$", origin):
         return origin
     return None
 
@@ -239,19 +236,41 @@ def api_generate() -> Tuple[Response, int] | Response:
 
     custom_tex_file = request.files.get("custom_tex")
     if custom_tex_file and custom_tex_file.filename:
+        custom_tex_file.seek(0, os.SEEK_END)
+        f_size = custom_tex_file.tell()
+        custom_tex_file.seek(0)
+        if f_size > config.MAX_CUSTOM_TEX_BYTES:
+            return _err(f"Arquivo .tex excede o limite máximo de {config.MAX_CUSTOM_TEX_BYTES // 1024} KB.", 400)
+
         tex = custom_tex_file.read().decode("utf-8", errors="replace")
-        if not tex.strip():
-            return _err("Arquivo .tex vazio.")
+        try:
+            validate_custom_tex(tex)
+        except ValueError as exc:
+            return _err(str(exc), 400)
+
         if fmt == "tex":
             return Response(tex, mimetype="text/plain", headers={"Content-Disposition": 'attachment; filename="poster.tex"'})
         build = new_build_dir()
         try:
+            # Salva imagens opcionais enviadas junto ao template customizado
+            img_count = 0
+            for field, up in request.files.items():
+                if field == "custom_tex" or not up or not up.filename:
+                    continue
+                if img_count >= config.MAX_IMAGES_TOTAL:
+                    break
+                try:
+                    save_image(up.read(), build, f"img{img_count}")
+                    img_count += 1
+                except Exception:
+                    pass
+
             if not _BUILD_SLOTS.acquire(timeout=20):
                 return _err("Servidor ocupado, tente novamente em instantes.", 503)
             try:
                 pdf, _ = compile_tex(tex, build)
             except RuntimeError as exc:
-                return _err(str(exc), 500)
+                return _err(str(exc), 400)
             except Exception:
                 return _err("Tempo esgotado ou erro ao compilar o arquivo LaTeX customizado.", 500)
             finally:

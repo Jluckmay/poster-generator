@@ -13,7 +13,7 @@ import zipfile
 from pathlib import Path
 from typing import Any, Dict, List, Tuple
 
-from .config import LATEX_TIMEOUT_S, POSTER_SIZES
+from .config import LATEX_TIMEOUT_S, MAX_CUSTOM_TEX_BYTES, POSTER_SIZES
 from .i18n import labels_for
 from .templates import TEMPLATES
 
@@ -947,6 +947,62 @@ def make_zip(tex: str, build_dir: Path) -> bytes:
     return buf.getvalue()
 
 
+def sanitize_latex_log_error(err_str: str) -> str:
+    """Remove caminhos absolutos do sistema de arquivos dos erros do LaTeX para evitar information disclosure."""
+    s = re.sub(r"[A-Za-z]:[\\/][^'\"`\s<>]+[\\/]", "[build]/", err_str)
+    s = re.sub(r"/(?:tmp|home|var|usr|etc|root)/[^'\"`\s<>]+/", "[build]/", s)
+    return s
+
+
+# Padrões perigosos estritamente proibidos em templates customizados
+_FORBIDDEN_TEX_PATTERNS = [
+    # Execução de comandos do sistema operacional (Shell Escape)
+    (re.compile(r"\\(?:immediate\s*)?write18\b", re.I), "Execução de comandos de shell (\\write18)"),
+    (re.compile(r"\\sys_shell_now\b", re.I), "Execução de shell"),
+    (re.compile(r"\\(?:directlua|luaexec|luadirect)\b", re.I), "Execução de scripts Lua (\\directlua)"),
+    # Pacotes perigosos de shell ou I/O
+    (
+        re.compile(r"\\usepackage\s*(?:\[[^\]]*\])?\s*\{(?:[^{}]*,\s*)*(?:shellesc|write18|bashful|catchfile|subfiles)\b", re.I),
+        "Pacote de execução ou I/O não permitido",
+    ),
+    # Comandos de I/O de arquivos externos (leitura/escrita arbitrária)
+    (re.compile(r"\\(?:openin|openout|closein|closeout)\b", re.I), "Manipulação de arquivos do sistema (\\openin / \\openout)"),
+    (re.compile(r"\\(?:read|write)\s*(?:\\[a-zA-Z]+|\d+)\s*(?:to\s*\\[a-zA-Z]+|\{)", re.I), "Operação de leitura/escrita de arquivo bruto"),
+    (re.compile(r"\\(?:input|include|subfile|import|lstinputlisting|verbatiminput)\s*\{", re.I), "Inclusão de arquivos externos (\\input / \\include)"),
+    # Evasão de primitivas TeX ou manipulação de categorias de caracteres
+    (re.compile(r"\\catcode\b", re.I), "Manipulação de categorias de caracteres (\\catcode)"),
+    (re.compile(r"\\csname\b", re.I), "Expansão dinâmica de macros (\\csname)"),
+    (re.compile(r"\\(?:let|def|edef|gdef|xdef)\s*\\(?:input|include|write|openin|openout|catcode)\b", re.I), "Redefinição de primitivas restritas"),
+    # Loops arbitrários / DoS
+    (re.compile(r"\\loop\b[\s\S]*?\\repeat\b", re.I), "Loops TeX não permitidos (\\loop...\\repeat)"),
+    # Path traversal ou referências a caminhos de sistema
+    (re.compile(r"(?:\.\.[/\\]|/etc/|/proc/|/var/|/tmp/|[A-Za-z]:[/\\])", re.I), "Caminhos de arquivo do sistema ou path traversal"),
+]
+
+
+def validate_custom_tex(tex: str) -> None:
+    """Valida o código LaTeX customizado contra injeções, path traversal e comandos perigosos."""
+    if not tex or not tex.strip():
+        raise ValueError("O arquivo de template LaTeX está vazio.")
+
+    raw_bytes = tex.encode("utf-8")
+    if len(raw_bytes) > MAX_CUSTOM_TEX_BYTES:
+        raise ValueError(f"O arquivo .tex excede o limite máximo permitido de {MAX_CUSTOM_TEX_BYTES // 1024} KB.")
+
+    # Remove comentários do TeX para evitar falsos positivos
+    clean_tex = re.sub(r"(?<!\\)%.*", "", tex)
+
+    # Verifica estrutura obrigatória mínima de documento LaTeX
+    if not re.search(r"\\documentclass\b", clean_tex):
+        raise ValueError("O template LaTeX deve conter a declaração \\documentclass.")
+    if not re.search(r"\\begin\{document\}", clean_tex) or not re.search(r"\\end\{document\}", clean_tex):
+        raise ValueError("O template LaTeX deve conter \\begin{document} e \\end{document}.")
+
+    for pattern, reason in _FORBIDDEN_TEX_PATTERNS:
+        if pattern.search(clean_tex):
+            raise ValueError(f"Template LaTeX contém instrução não permitida por segurança: {reason}.")
+
+
 def compile_tex(tex: str, build_dir: Path) -> Tuple[bytes, str]:
     """Compila com pdflatex (sem shell-escape). Retorna (pdf, log)."""
     exe = shutil.which("pdflatex")
@@ -968,7 +1024,8 @@ def compile_tex(tex: str, build_dir: Path) -> Tuple[bytes, str]:
     pdf = build_dir / "poster.pdf"
     if not pdf.exists() or pdf.stat().st_size == 0:
         err = [ln for ln in log.splitlines() if ln.startswith("!")][:5]
-        raise RuntimeError("Falha ao compilar o LaTeX: " + " | ".join(err))
+        clean_err = sanitize_latex_log_error(" | ".join(err))
+        raise RuntimeError("Falha ao compilar o LaTeX: " + clean_err)
     return pdf.read_bytes(), log
 
 

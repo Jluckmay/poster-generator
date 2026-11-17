@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="color-scheme" content="dark">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' * http://127.0.0.1:5000 http://localhost:5000 https://academic-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self' 'unsafe-inline' 'wasm-unsafe-eval' https://cdnjs.cloudflare.com; worker-src 'self' blob: data: https://cdnjs.cloudflare.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://use.typekit.net https://p.typekit.net; font-src 'self' https://fonts.gstatic.com https://use.typekit.net https://p.typekit.net data:; img-src 'self' blob: data:; frame-src 'self' blob: data: chrome-extension:; object-src 'self' blob: data:; connect-src 'self' http://127.0.0.1:5000 http://localhost:5000 https://*.onrender.com https://academic-generator.onrender.com https://cdnjs.cloudflare.com; base-uri 'none'; form-action 'self';">
 <meta http-equiv="X-Content-Type-Options" content="nosniff">
 <meta name="referrer" content="strict-origin-when-cross-origin">
 <title>poster-generator | Gerador de Pôsteres Acadêmicos</title>
@@ -4209,13 +4209,18 @@ function updateDraftPreview() {
   poster.style.aspectRatio = `${aspect}`;
 
   // Cores
+  const safeColor = (c, fallback) => {
+    if (!c || typeof c !== "string") return fallback;
+    const s = c.trim();
+    return /^#[0-9a-fA-F]{3,8}$/.test(s) ? s : fallback;
+  };
   const useColors = $("#useColors") && $("#useColors").checked;
   const defPalette = tpl.colors || ["1F3A5F", "2E5C8A", "9DB9D8"];
-  const accent = useColors ? $("#accent").value : `#${defPalette[0]}`;
-  const titleColor = useColors ? $("#colorTitle").value : (tplId === "classic" || tplId === "bold" || tplId === "corner" || tplId === "tudelft" ? "#ffffff" : `#${defPalette[0]}`);
-  const subtitleColor = useColors ? $("#colorSubtitle").value : (tplId === "classic" || tplId === "bold" || tplId === "corner" || tplId === "tudelft" ? "rgba(255,255,255,0.85)" : "#4b5563");
-  const bodyColor = useColors ? $("#colorBody").value : "#1f2937";
-  const bgColor = useColors ? $("#colorBg").value : `#${tpl.bg || "ffffff"}`;
+  const accent = useColors ? safeColor($("#accent").value, `#${defPalette[0]}`) : `#${defPalette[0]}`;
+  const titleColor = useColors ? safeColor($("#colorTitle").value, "#ffffff") : (tplId === "classic" || tplId === "bold" || tplId === "corner" || tplId === "tudelft" ? "#ffffff" : `#${defPalette[0]}`);
+  const subtitleColor = useColors ? safeColor($("#colorSubtitle").value, "#4b5563") : (tplId === "classic" || tplId === "bold" || tplId === "corner" || tplId === "tudelft" ? "rgba(255,255,255,0.85)" : "#4b5563");
+  const bodyColor = useColors ? safeColor($("#colorBody").value, "#1f2937") : "#1f2937";
+  const bgColor = useColors ? safeColor($("#colorBg").value, `#${tpl.bg || "ffffff"}`) : `#${tpl.bg || "ffffff"}`;
 
   poster.style.setProperty("--tpl-accent", accent);
   poster.style.setProperty("--tpl-color2", `#${defPalette[1] || defPalette[0]}`);
@@ -4445,7 +4450,7 @@ function updateDraftPreview() {
               <div class="draft-block-title">
                 ${escapeHtml(displayTitle)}
               </div>
-              <div class="draft-block-body" style="color: ${bodyColor};">
+              <div class="draft-block-body" style="color: ${escapeHtml(bodyColor)};">
                 ${bodyHtml}
               </div>
               ${imgHtml}
