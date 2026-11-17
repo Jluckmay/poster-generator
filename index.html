@@ -2307,7 +2307,6 @@ button.sm {
           <div>
             <label data-i18n="model">Modelo de IA</label>
             <select id="model"></select>
-            <input type="text" id="modelCustom" class="hidden" style="margin-top:6px;" placeholder="Ex: meta/llama-3.3-70b-instruct">
           </div>
         </div>
         <label data-i18n="api_key">Chave de API</label>
@@ -2689,7 +2688,6 @@ const T = {
     provider: "Provedor de IA",
     model: "Modelo de IA",
     free_keys_title: "⚡ Opções de chaves de API gratuitas:",
-    free_custom_model: "+ Outro modelo (digitar manualmente)...",
     api_key: "Chave de API",
     key_hint: "A chave é utilizada unicamente nesta chamada e jamais é persistida em disco. Sem chave, usa-se extração heurística.",
     extract: "Extrair conteúdo do trabalho",
@@ -2786,7 +2784,6 @@ const T = {
     provider: "AI Provider",
     model: "AI Model",
     free_keys_title: "⚡ Free API key options:",
-    free_custom_model: "+ Custom model (enter manually)...",
     api_key: "API Key",
     key_hint: "Key is used solely for this request and never persisted to disk. Without key, heuristic extraction is used.",
     extract: "Extract paper content",
@@ -3441,26 +3438,15 @@ function populateProviders() {
       if (CFG.providers[p]) {
         const prov = CFG.providers[p];
         const modelSelect = $("#model");
-        const modelCustom = $("#modelCustom");
         if (modelSelect) {
           const availModels = prov.models || [prov.default_model];
           modelSelect.innerHTML = availModels.map(m => {
             const isDef = (m === prov.default_model);
             const label = isDef ? `${m} (Recomendado)` : m;
             return `<option value="${escapeHtml(m)}">${escapeHtml(label)}</option>`;
-          }).join("") + `<option value="__custom__">${t("free_custom_model") || "+ Outro modelo (digitar manualmente)..."}</option>`;
+          }).join("");
           modelSelect.value = prov.default_model;
-          if (modelCustom) {
-            modelCustom.classList.add("hidden");
-            modelCustom.value = "";
-          }
-          modelSelect.onchange = () => {
-            if (modelCustom) {
-              const isCust = (modelSelect.value === "__custom__");
-              modelCustom.classList.toggle("hidden", !isCust);
-              if (isCust) modelCustom.focus();
-            }
-          };
+          modelSelect.onchange = null;
         }
         const isServer = Boolean(prov.server_key);
         const apiKeyInput = $("#apiKey");
@@ -3584,9 +3570,6 @@ $("#extractBtn").onclick = async () => {
   fd.append("mode", modeVal);
 
   let modelVal = $("#model") ? $("#model").value.trim() : "";
-  if (modelVal === "__custom__") {
-    modelVal = ($("#modelCustom") && $("#modelCustom").value.trim()) || "";
-  }
   if (!modelVal && selectedProvider === "nvidia") {
     modelVal = "nvidia/nemotron-3.5-super-vl-120b-a12b";
   } else if (!modelVal && CFG.providers && CFG.providers[selectedProvider]) {
