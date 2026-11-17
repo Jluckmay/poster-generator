@@ -102,6 +102,11 @@
   color: var(--fg-bright);
   transform: translateY(-1px);
 }
+.free-key-chip:hover {
+  border-color: var(--amber) !important;
+  color: var(--fg-bright) !important;
+  transform: translateY(-1px);
+}
 .draft-cite {
   font-size: 0.72em;
   vertical-align: super;
@@ -2299,12 +2304,31 @@ button.sm {
       <div id="aiBox" style="margin-top:10px;">
         <div class="row">
           <div><label data-i18n="provider">Provedor de IA</label><select id="provider"></select></div>
-          <div><label data-i18n="model">Modelo (opcional)</label><input type="text" id="model" autocomplete="off" placeholder="nvidia/nemotron-3.5-super-vl-120b-a12b"></div>
+          <div>
+            <label data-i18n="model">Modelo de IA</label>
+            <select id="model"></select>
+            <input type="text" id="modelCustom" class="hidden" style="margin-top:6px;" placeholder="Ex: meta/llama-3.3-70b-instruct">
+          </div>
         </div>
         <label data-i18n="api_key">Chave de API</label>
         <input type="password" id="apiKey" data-i18n-ph="ph_api_key" autocomplete="new-password" spellcheck="false" data-lpignore="true" autocapitalize="off" placeholder="Cole sua chave aqui ou use a do servidor">
         <div class="hint" data-i18n="key_hint">A chave é utilizada unicamente nesta chamada e jamais é persistida em disco.</div>
-        <div style="margin-top:4px;font-size:11px;"><a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" style="color:var(--amber);text-decoration:underline;">⚡ Obter chave gratuita do Google Gemini (Google AI Studio) ↗</a></div>
+        <div class="free-keys-box" style="margin-top:8px;padding:8px 10px;background:rgba(251,191,36,0.06);border:1px solid rgba(251,191,36,0.25);border-radius:4px;font-size:11px;">
+          <div style="display:flex;align-items:center;gap:6px;font-weight:600;color:var(--amber);margin-bottom:6px;">
+            <span data-i18n="free_keys_title">⚡ Opções de chaves de API gratuitas:</span>
+          </div>
+          <div class="free-keys-list" style="display:flex;flex-wrap:wrap;gap:6px 10px;">
+            <a href="https://aistudio.google.com/app/apikey" target="_blank" rel="noopener" class="free-key-chip" style="color:var(--fg);background:var(--bg-subtle);border:1px solid var(--line-strong);border-radius:4px;padding:4px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s ease;" title="Google AI Studio: chave gratuita com cota diária para Gemini 2.0 Flash / 1.5 Flash">
+              <span style="color:var(--amber);">⚡</span> <strong>Google AI Studio</strong> (Gemini Grátis) ↗
+            </a>
+            <a href="https://build.nvidia.com/" target="_blank" rel="noopener" class="free-key-chip" style="color:var(--fg);background:var(--bg-subtle);border:1px solid var(--line-strong);border-radius:4px;padding:4px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s ease;" title="NVIDIA Build: 1.000 créditos gratuitos de API para Nemotron, Llama 3.3, Mistral, DeepSeek-R1">
+              <span style="color:#10b981;">⚡</span> <strong>NVIDIA Build</strong> (1.000 créditos grátis) ↗
+            </a>
+            <a href="https://platform.deepseek.com/" target="_blank" rel="noopener" class="free-key-chip" style="color:var(--fg);background:var(--bg-subtle);border:1px solid var(--line-strong);border-radius:4px;padding:4px 8px;text-decoration:none;display:inline-flex;align-items:center;gap:4px;transition:all 0.15s ease;" title="DeepSeek Platform: créditos promocionais iniciais para novos cadastros">
+              <span style="color:#60a5fa;">⚡</span> <strong>DeepSeek</strong> (Créditos iniciais) ↗
+            </a>
+          </div>
+        </div>
       </div>
       <p style="margin:12px 0 0;"><button class="pri" id="extractBtn" data-i18n="extract">Extrair conteúdo do trabalho</button></p>
       <div id="extractMsg"></div>
@@ -2663,7 +2687,9 @@ const T = {
     drop_work: "Clique ou arraste seu trabalho aqui (PDF, DOCX, TXT, MD, TEX)",
     use_ai: "Usar IA para sintetizar e estruturar o trabalho em formato de pôster",
     provider: "Provedor de IA",
-    model: "Modelo (opcional)",
+    model: "Modelo de IA",
+    free_keys_title: "⚡ Opções de chaves de API gratuitas:",
+    free_custom_model: "+ Outro modelo (digitar manualmente)...",
     api_key: "Chave de API",
     key_hint: "A chave é utilizada unicamente nesta chamada e jamais é persistida em disco. Sem chave, usa-se extração heurística.",
     extract: "Extrair conteúdo do trabalho",
@@ -2758,7 +2784,9 @@ const T = {
     drop_work: "Click or drag your paper here (PDF, DOCX, TXT, MD, TEX)",
     use_ai: "Use AI to condense and structure paper into poster format",
     provider: "AI Provider",
-    model: "Model (optional)",
+    model: "AI Model",
+    free_keys_title: "⚡ Free API key options:",
+    free_custom_model: "+ Custom model (enter manually)...",
     api_key: "API Key",
     key_hint: "Key is used solely for this request and never persisted to disk. Without key, heuristic extraction is used.",
     extract: "Extract paper content",
@@ -2932,11 +2960,65 @@ const DEFAULT_CFG = {
   },
   default_provider: "nvidia",
   providers: {
-    "nvidia": { "name": "NVIDIA NIM", "default_model": "nvidia/nemotron-3.5-super-vl-120b-a12b", "server_key": true },
-    "google": { "name": "Google Gemini", "default_model": "gemini-2.0-flash", "server_key": false },
-    "openai": { "name": "OpenAI", "default_model": "gpt-4o-mini", "server_key": false },
-    "anthropic": { "name": "Anthropic Claude", "default_model": "claude-3-5-haiku-latest", "server_key": false },
-    "deepseek": { "name": "DeepSeek", "default_model": "deepseek-chat", "server_key": false }
+    "nvidia": {
+      "name": "NVIDIA NIM",
+      "default_model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
+      "models": [
+        "nvidia/nemotron-3.5-super-vl-120b-a12b",
+        "nvidia/nemotron-3.5-lightning-30b-a3b",
+        "meta/llama-3.3-70b-instruct",
+        "meta/llama-3.1-405b-instruct",
+        "meta/llama-3.1-70b-instruct",
+        "mistralai/mistral-large-2411",
+        "mistralai/mixtral-8x22b-instruct-v0.1",
+        "qwen/qwen2.5-72b-instruct",
+        "deepseek-ai/deepseek-r1"
+      ],
+      "server_key": true
+    },
+    "google": {
+      "name": "Google Gemini",
+      "default_model": "gemini-2.0-flash",
+      "models": [
+        "gemini-2.0-flash",
+        "gemini-2.0-flash-lite",
+        "gemini-1.5-flash",
+        "gemini-1.5-pro"
+      ],
+      "server_key": false
+    },
+    "openai": {
+      "name": "OpenAI",
+      "default_model": "gpt-4o-mini",
+      "models": [
+        "gpt-4o-mini",
+        "gpt-4o",
+        "o3-mini",
+        "o1-mini",
+        "gpt-4-turbo"
+      ],
+      "server_key": false
+    },
+    "anthropic": {
+      "name": "Anthropic Claude",
+      "default_model": "claude-3-5-haiku-latest",
+      "models": [
+        "claude-3-5-haiku-latest",
+        "claude-3-5-sonnet-latest",
+        "claude-3-7-sonnet-latest",
+        "claude-3-opus-latest"
+      ],
+      "server_key": false
+    },
+    "deepseek": {
+      "name": "DeepSeek",
+      "default_model": "deepseek-chat",
+      "models": [
+        "deepseek-chat",
+        "deepseek-reasoner"
+      ],
+      "server_key": false
+    }
   },
   sections: ["introduction", "methods", "results", "conclusions", "references"],
   labels: {
@@ -3357,13 +3439,35 @@ function populateProviders() {
     $("#provider").onchange = () => {
       const p = $("#provider").value;
       if (CFG.providers[p]) {
-        $("#model").placeholder = CFG.providers[p].default_model;
-        const isServer = Boolean(CFG.providers[p].server_key);
+        const prov = CFG.providers[p];
+        const modelSelect = $("#model");
+        const modelCustom = $("#modelCustom");
+        if (modelSelect) {
+          const availModels = prov.models || [prov.default_model];
+          modelSelect.innerHTML = availModels.map(m => {
+            const isDef = (m === prov.default_model);
+            const label = isDef ? `${m} (Recomendado)` : m;
+            return `<option value="${escapeHtml(m)}">${escapeHtml(label)}</option>`;
+          }).join("") + `<option value="__custom__">${t("free_custom_model") || "+ Outro modelo (digitar manualmente)..."}</option>`;
+          modelSelect.value = prov.default_model;
+          if (modelCustom) {
+            modelCustom.classList.add("hidden");
+            modelCustom.value = "";
+          }
+          modelSelect.onchange = () => {
+            if (modelCustom) {
+              const isCust = (modelSelect.value === "__custom__");
+              modelCustom.classList.toggle("hidden", !isCust);
+              if (isCust) modelCustom.focus();
+            }
+          };
+        }
+        const isServer = Boolean(prov.server_key);
         const apiKeyInput = $("#apiKey");
         if (apiKeyInput) {
           apiKeyInput.placeholder = isServer
             ? (uiLang === "en-US" ? "Using Render Server key (optional: enter custom key)" : "Usando chave do Servidor Render (opcional: digite chave própria)")
-            : (uiLang === "en-US" ? "Enter API key (e.g. free Gemini from Google AI Studio)" : "Cole sua chave de API (ex: Gemini grátis no Google AI Studio)");
+            : (uiLang === "en-US" ? "Enter API key (or get free from options below)" : "Cole sua chave de API (ou obtenha grátis nas opções abaixo)");
         }
       }
     };
@@ -3480,6 +3584,9 @@ $("#extractBtn").onclick = async () => {
   fd.append("mode", modeVal);
 
   let modelVal = $("#model") ? $("#model").value.trim() : "";
+  if (modelVal === "__custom__") {
+    modelVal = ($("#modelCustom") && $("#modelCustom").value.trim()) || "";
+  }
   if (!modelVal && selectedProvider === "nvidia") {
     modelVal = "nvidia/nemotron-3.5-super-vl-120b-a12b";
   } else if (!modelVal && CFG.providers && CFG.providers[selectedProvider]) {

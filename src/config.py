@@ -38,29 +38,63 @@ PROVIDERS: Dict[str, Dict[str, Any]] = {
         "env": "NVIDIA_API_KEY",
         "default_model": "nvidia/nemotron-3.5-super-vl-120b-a12b",
         "url": "https://integrate.api.nvidia.com/v1/chat/completions",
+        "models": [
+            "nvidia/nemotron-3.5-super-vl-120b-a12b",
+            "nvidia/nemotron-3.5-lightning-30b-a3b",
+            "meta/llama-3.3-70b-instruct",
+            "meta/llama-3.1-405b-instruct",
+            "meta/llama-3.1-70b-instruct",
+            "mistralai/mistral-large-2411",
+            "mistralai/mixtral-8x22b-instruct-v0.1",
+            "qwen/qwen2.5-72b-instruct",
+            "deepseek-ai/deepseek-r1",
+        ],
     },
     "google": {
         "name": "Google Gemini",
         "env": "GEMINI_API_KEY",
         "default_model": "gemini-2.0-flash",
+        "models": [
+            "gemini-2.0-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-1.5-flash",
+            "gemini-1.5-pro",
+        ],
     },
     "openai": {
         "name": "OpenAI",
         "env": "OPENAI_API_KEY",
         "default_model": "gpt-4o-mini",
         "url": "https://api.openai.com/v1/chat/completions",
+        "models": [
+            "gpt-4o-mini",
+            "gpt-4o",
+            "o3-mini",
+            "o1-mini",
+            "gpt-4-turbo",
+        ],
     },
     "anthropic": {
         "name": "Anthropic Claude",
         "env": "ANTHROPIC_API_KEY",
         "default_model": "claude-3-5-haiku-latest",
         "url": "https://api.anthropic.com/v1/messages",
+        "models": [
+            "claude-3-5-haiku-latest",
+            "claude-3-5-sonnet-latest",
+            "claude-3-7-sonnet-latest",
+            "claude-3-opus-latest",
+        ],
     },
     "deepseek": {
         "name": "DeepSeek",
         "env": "DEEPSEEK_API_KEY",
         "default_model": "deepseek-chat",
         "url": "https://api.deepseek.com/chat/completions",
+        "models": [
+            "deepseek-chat",
+            "deepseek-reasoner",
+        ],
     },
 }
 
@@ -75,6 +109,7 @@ def public_provider_info() -> Dict[str, Any]:
         pid: {
             "name": cfg["name"],
             "default_model": cfg["default_model"],
+            "models": list(cfg.get("models") or [cfg["default_model"]]),
             "server_key": bool(server_key_for(pid)),
         }
         for pid, cfg in PROVIDERS.items()

@@ -138,6 +138,13 @@ def client():
 def test_config_endpoint(client):
     j = client.get("/api/config").get_json()
     assert set(j["templates"]) == set(TEMPLATES) and "pt-BR" in j["languages"]
+    assert "providers" in j
+    for pid in ("nvidia", "google", "openai", "anthropic", "deepseek"):
+        assert pid in j["providers"]
+        prov = j["providers"][pid]
+        assert "default_model" in prov and "models" in prov
+        assert isinstance(prov["models"], list) and len(prov["models"]) >= 2
+        assert prov["default_model"] in prov["models"]
 
 
 def test_extract_endpoint_basic(client):
