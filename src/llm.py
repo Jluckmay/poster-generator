@@ -107,9 +107,9 @@ CRITICAL MANDATORY RULES:
      [1] Author, A. et al. (Year). Short Title. Conference/Journal.
      [2] Author, B. et al. (Year). Short Title. Conference/Journal.
 
-6. TEXT FORMATTING & VISUAL SCANNABILITY (NO MONOLITHIC PARAGRAPHS):
-   - Academic posters are read from 1 to 2 meters away. NEVER output monolithic walls of text.
-   - Format sections using concise bullet points (lines starting with "- ").
+6. TEXT FORMATTING & VISUAL SCANNABILITY (STRICTLY BULLET POINTS - NO PARAGRAPHS):
+   - Academic posters are read from 1 to 2 meters away. NEVER output monolithic paragraphs or unbulleted prose blocks in any section!
+   - Every text entry in "introduction", "methods", "results", and "conclusions" (except the pipeline diagram line and the Markdown table) MUST be a bullet list where EVERY item starts with `- **Bold Lead-in:** concise explanation...` (3 to 5 bullet points per section).
 {bullet_examples}
 
 7. SECTION BALANCING & LENGTH EQUILIBRIUM:
@@ -431,37 +431,47 @@ def translate_poster_fields(
     api_key: str,
     model: str | None = None,
 ) -> Dict[str, Any]:
-    """Traduz título, afiliações e seções de um pôster para o idioma alvo preservando tabelas, diagramas e citações."""
+    """Traduz título, afiliações e seções de um pôster 1-para-1 para o idioma alvo sem alterar estrutura, números ou citações."""
     from .poster import normalize_affiliations_language, strip_citations
 
     target_name = _LANG_NAME.get(language, "Brazilian Portuguese")
     labels = labels_for(language)
 
-    raw_secs = data.get("sections") or {}
+    raw_secs = data.get("sections") or []
+    ordered_sids: list[str] = []
+    secs_dict: Dict[str, str] = {}
+    extra_sec_meta: Dict[str, Dict[str, Any]] = {}
     if isinstance(raw_secs, list):
-        secs_dict = {str(s.get("id") or ""): str(s.get("content") or "") for s in raw_secs if isinstance(s, dict)}
+        for s in raw_secs:
+            if isinstance(s, dict) and s.get("id"):
+                sid = str(s["id"])
+                ordered_sids.append(sid)
+                secs_dict[sid] = str(s.get("content") or "")
+                extra_sec_meta[sid] = s
     elif isinstance(raw_secs, dict):
-        secs_dict = {str(k): str(v or "") for k, v in raw_secs.items()}
-    else:
-        secs_dict = {}
+        for k, v in raw_secs.items():
+            sid = str(k)
+            ordered_sids.append(sid)
+            secs_dict[sid] = str(v or "")
+    if not ordered_sids:
+        ordered_sids = list(DEFAULT_SECTION_IDS)
+
+    translatable_sids = [sid for sid in ordered_sids if sid != "references" and secs_dict.get(sid)]
 
     payload_to_translate = {
         "title": _clean_str(data.get("title")),
         "affiliations": _clean_str(data.get("affiliations")),
-        "sections": {
-            sid: secs_dict.get(sid, "")
-            for sid in ("introduction", "methods", "results", "conclusions")
-            if secs_dict.get(sid)
-        },
+        "sections": {sid: secs_dict[sid] for sid in translatable_sids},
     }
 
     trans_system = (
-        f"You are an expert academic translator. Translate the following scientific poster JSON strictly into {target_name} ({language}).\n"
-        f"Return ONLY a valid JSON object with the exact shape: {{\"title\": str, \"affiliations\": str, \"sections\": {{\"introduction\": str, \"methods\": str, \"results\": str, \"conclusions\": str}}}}.\n"
-        f"CRITICAL RULES:\n"
-        f"1. Translate 'title', 'affiliations', and all text, bullet lead-ins, flowchart stage labels ([Stage 1] -> [Stage 2]), and Markdown table headers/cells in 'sections' strictly into {target_name}.\n"
-        f"2. Preserve all Markdown formatting (**bold**, bullet lists '- ', tables '| ... |', pipeline arrows '->', and numeric bracket citations '[1]', '[2]') identically.\n"
-        f"3. Do NOT invent or remove facts, numbers, or citations."
+        f"You are a strict 1-to-1 academic translator. Translate the values of the following scientific poster JSON into {target_name} ({language}).\n"
+        f"Return ONLY a valid JSON object with the exact same keys: {{\"title\": str, \"affiliations\": str, \"sections\": {{...}}}}.\n"
+        f"CRITICAL MANDATORY RULES (DO NOT ALTER CONTENT OR STRUCTURE):\n"
+        f"1. STRICT 1-TO-1 TRANSLATION ONLY: Translate the text sentence-by-sentence and line-by-line into {target_name}. NEVER summarize, expand, omit, reorder, paraphrase, or alter the meaning or structure of any section.\n"
+        f"2. IDENTICAL LINE & BULLET STRUCTURE: If a section has 3 bullet points ('- **Lead-in:** ...'), the output MUST have the exact same 3 bullet points in the exact same order. If a section has a paragraph, keep it as a paragraph. NEVER convert bullets into paragraphs or paragraphs into bullets.\n"
+        f"3. IDENTICAL ELEMENT PLACEMENT: Keep pipeline flowcharts ('[1. Stage A] -> [2. Stage B]') and Markdown tables ('| Col 1 | Col 2 |') at their EXACT vertical position (top, middle, or bottom of the section). Translate stage labels and table headers/text cells into {target_name}, while keeping all numeric values, signs (e.g. '+1.039', '+0.157', '0.699'), model names, and dataset names 100% identical.\n"
+        f"4. IDENTICAL CITATIONS: Preserve every numeric bracket citation ('[1]', '[2]', '[3]', '[4]') at its exact sentence position with the exact same number."
     )
     raw_resp = chat(provider, api_key, model, trans_system, json.dumps(payload_to_translate, ensure_ascii=False))
     translated = parse_json_object(raw_resp)
@@ -474,18 +484,22 @@ def translate_poster_fields(
     )
 
     out_sections = []
-    for sid in DEFAULT_SECTION_IDS:
+    for sid in ordered_sids:
+        orig_meta = extra_sec_meta.get(sid, {})
         if sid == "references":
             content = _clean_str(secs_dict.get("references", ""))
         else:
             content = _clean_str(t_secs.get(sid)) or _clean_str(secs_dict.get(sid, ""))
             if sid in ("results", "conclusions"):
                 content = strip_citations(content)
-        out_sections.append({
+        sec_out: Dict[str, Any] = {
             "id": sid,
-            "title": labels.get(sid, sid.capitalize()),
+            "title": labels.get(sid, orig_meta.get("title") or sid.capitalize()),
             "content": content,
-        })
+        }
+        if "images" in orig_meta:
+            sec_out["images"] = orig_meta["images"]
+        out_sections.append(sec_out)
 
     return {
         "language": language,

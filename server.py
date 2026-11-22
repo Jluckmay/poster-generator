@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import os
 import re
@@ -30,6 +31,8 @@ else:
 app = Flask(__name__, static_folder=None)
 app.config["MAX_CONTENT_LENGTH"] = config.MAX_UPLOAD_BYTES
 _BUILD_SLOTS = threading.BoundedSemaphore(int(os.environ.get("MAX_CONCURRENT_BUILDS", "2")))
+_EXTRACT_DOC_CACHE: Dict[str, Dict[str, Dict[str, Any]]] = {}
+_EXTRACT_CACHE_LOCK = threading.Lock()
 
 
 PROD_ALLOWED_ORIGIN = "https://jluckmay.github.io"
@@ -177,9 +180,13 @@ def api_extract() -> Tuple[Response, int] | Response:
         if not f or not f.filename:
             return _err("Nenhum arquivo enviado.")
         language = request.form.get("language", config.DEFAULT_LANGUAGE)
+        if language not in config.LANGUAGES:
+            language = config.DEFAULT_LANGUAGE
         mode = request.form.get("mode", "ai")
+        raw_bytes = f.read()
+        doc_hash = hashlib.sha256(raw_bytes).hexdigest()
         try:
-            text = extract_text(f.filename, f.read())
+            text = extract_text(f.filename, raw_bytes)
         except ValueError as exc:
             return _err(str(exc))
         except Exception:
@@ -192,25 +199,50 @@ def api_extract() -> Tuple[Response, int] | Response:
         if mode == "ai":
             provider = request.form.get("provider", config.DEFAULT_PROVIDER)
             user_key = (request.form.get("api_key") or "").strip()
+            model_arg = request.form.get("model") or None
             server_key = config.server_key_for(provider)
             if not user_key and not server_key:
                 warning = "Chave de API necessária para extração com IA."
             else:
-                try:
-                    key = user_key or server_key
-                    result = ai_extract(text, language, provider, key, request.form.get("model") or None)
-                except Exception as exc:
-                    warning = str(exc)
-                    if not user_key:
-                        for fallback_p in ("google", "openai", "deepseek"):
-                            if fallback_p != provider and config.server_key_for(fallback_p):
-                                try:
-                                    f_key = config.server_key_for(fallback_p)
-                                    result = ai_extract(text, language, fallback_p, f_key, None)
-                                    warning = ""
-                                    break
-                                except Exception:
-                                    continue
+                key = user_key or server_key
+                with _EXTRACT_CACHE_LOCK:
+                    cached_langs = dict(_EXTRACT_DOC_CACHE.get(doc_hash) or {})
+                if language in cached_langs:
+                    result = cached_langs[language]
+                elif cached_langs:
+                    # Se o mesmo documento já foi extraído em outro idioma, apenas traduz 1-para-1 o conteúdo existente
+                    other_poster = next(iter(cached_langs.values()))
+                    try:
+                        result = translate_poster_fields(other_poster, language, provider, key, model_arg)
+                    except Exception:
+                        if not user_key:
+                            for fallback_p in ("google", "openai", "deepseek"):
+                                if fallback_p != provider and config.server_key_for(fallback_p):
+                                    try:
+                                        result = translate_poster_fields(other_poster, language, fallback_p, config.server_key_for(fallback_p), None)
+                                        break
+                                    except Exception:
+                                        continue
+                if result is None:
+                    try:
+                        result = ai_extract(text, language, provider, key, model_arg)
+                    except Exception as exc:
+                        warning = str(exc)
+                        if not user_key:
+                            for fallback_p in ("google", "openai", "deepseek"):
+                                if fallback_p != provider and config.server_key_for(fallback_p):
+                                    try:
+                                        f_key = config.server_key_for(fallback_p)
+                                        result = ai_extract(text, language, fallback_p, f_key, None)
+                                        warning = ""
+                                        break
+                                    except Exception:
+                                        continue
+                if result is not None and not warning:
+                    with _EXTRACT_CACHE_LOCK:
+                        if len(_EXTRACT_DOC_CACHE) >= 32 and doc_hash not in _EXTRACT_DOC_CACHE:
+                            _EXTRACT_DOC_CACHE.pop(next(iter(_EXTRACT_DOC_CACHE)), None)
+                        _EXTRACT_DOC_CACHE.setdefault(doc_hash, {})[language] = result
         if result is None:
             result = heuristic_parse(text, language)
             if mode == "ai":

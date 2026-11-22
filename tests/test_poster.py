@@ -1045,6 +1045,82 @@ def test_ai_extract_auto_translates_wrong_language_and_translate_endpoint(monkey
     assert p_out["sections"][1]["title"] == "Metodologia"
 
 
+def test_extract_same_doc_different_language_translates_cached_poster(monkeypatch):
+    import json
+    import server as server_mod
+    import src.config as cfg_mod
+
+    server_mod._EXTRACT_DOC_CACHE.clear()
+    monkeypatch.setattr(cfg_mod, "server_key_for", lambda prov: "fake-server-key" if prov == "nvidia" else "")
+
+    extract_calls = []
+    translate_calls = []
+
+    def fake_ai_extract(text, language, provider, api_key, model):
+        extract_calls.append(language)
+        return {
+            "language": language,
+            "title": "CAPACIDADE CONDICIONAL E VALIDADE DE MEDIÇÃO",
+            "authors": "João Lucas Mayrinck",
+            "affiliations": "Departamento de Ciência da Computação – Universidade Federal de Minas Gerais (UFMG)",
+            "email": "lucas.mayrinck@dcc.ufmg.br",
+            "sections": [
+                {"id": "introduction", "title": "Introdução", "content": "- **Contexto:** Benchmarks de detecção de intrusão [1]."},
+                {"id": "methods", "title": "Metodologia", "content": "- **Design:** Calibração Rasch e 2PL."},
+                {"id": "results", "title": "Resultados", "content": "- **Desempenho:** Random Forest atingiu Macro F1 0.699."},
+                {"id": "conclusions", "title": "Conclusões", "content": "- **Diferenciação:** Contrastes reprodutíveis."},
+                {"id": "references", "title": "Referências", "content": "[1] Truong, S. T. (2026). AI Measurement Science."},
+            ],
+        }
+
+    def fake_translate(other_poster, language, provider, api_key, model=None):
+        translate_calls.append(language)
+        return {
+            "language": language,
+            "title": "CONDITIONAL CAPABILITY AND MEASUREMENT VALIDITY",
+            "authors": other_poster["authors"],
+            "affiliations": "Department of Computer Science – Federal University of Minas Gerais (UFMG)",
+            "email": other_poster["email"],
+            "sections": [
+                {"id": "introduction", "title": "Introduction", "content": "- **Context:** Intrusion detection benchmarks [1]."},
+                {"id": "methods", "title": "Methods", "content": "- **Design:** Rasch and 2PL calibration."},
+                {"id": "results", "title": "Results", "content": "- **Performance:** Random Forest achieved Macro F1 0.699."},
+                {"id": "conclusions", "title": "Conclusions", "content": "- **Differentiation:** Reproducible contrasts."},
+                {"id": "references", "title": "References", "content": "[1] Truong, S. T. (2026). AI Measurement Science."},
+            ],
+        }
+
+    monkeypatch.setattr(server_mod, "ai_extract", fake_ai_extract)
+    monkeypatch.setattr(server_mod, "translate_poster_fields", fake_translate)
+
+    client = server_mod.app.test_client()
+    doc_bytes = (" Academic paper content with sufficient length for testing extraction. " * 5).encode("utf-8")
+
+    # 1st extraction in pt-BR runs ai_extract
+    r1 = client.post(
+        "/api/extract",
+        data={"file": (io.BytesIO(doc_bytes), "paper.txt"), "language": "pt-BR", "mode": "ai"},
+        content_type="multipart/form-data",
+    )
+    assert r1.status_code == 200
+    assert extract_calls == ["pt-BR"]
+    assert translate_calls == []
+
+    # 2nd extraction of the same document in en-US strictly translates the cached pt-BR poster 1-to-1
+    r2 = client.post(
+        "/api/extract",
+        data={"file": (io.BytesIO(doc_bytes), "paper.txt"), "language": "en-US", "mode": "ai"},
+        content_type="multipart/form-data",
+    )
+    assert r2.status_code == 200
+    assert extract_calls == ["pt-BR"]
+    assert translate_calls == ["en-US"]
+    p2 = r2.get_json()["poster"]
+    assert p2["title"] == "CONDITIONAL CAPABILITY AND MEASUREMENT VALIDITY"
+    assert p2["sections"][0]["content"] == "- **Context:** Intrusion detection benchmarks [1]."
+
+
+
 
 
 
