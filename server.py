@@ -19,7 +19,7 @@ from src.extractors import ALLOWED_DOC_EXT, extract_text, heuristic_parse
 from src.i18n import DEFAULT_SECTION_IDS, LABELS
 from src.images import save_image
 from src.latex import build_tex, compile_tex, fit_compile, make_zip, new_build_dir, validate_custom_tex
-from src.llm import LLMError, ai_extract, resolve_key
+from src.llm import LLMError, ai_extract, resolve_key, translate_poster_fields
 from src.poster import normalize_poster
 from src.templates import public_templates
 
@@ -212,7 +212,7 @@ def api_extract() -> Tuple[Response, int] | Response:
                                 except Exception:
                                     continue
         if result is None:
-            result = heuristic_parse(text)
+            result = heuristic_parse(text, language)
             if mode == "ai":
                 if "Chave de API necessária" in warning:
                     warning = "Chave de API não informada no modo IA — campos preenchidos por extração estrutural direta."
@@ -225,6 +225,41 @@ def api_extract() -> Tuple[Response, int] | Response:
         raise
     except Exception as exc:
         return jsonify({"error": f"Erro interno ao processar o arquivo: {str(exc)}"}), 500
+
+
+@app.post("/api/translate")
+def api_translate() -> Tuple[Response, int] | Response:
+    """Traduz/normaliza os campos de um pôster existente para o idioma selecionado."""
+    try:
+        body = request.get_json(silent=True) or {}
+        if not isinstance(body, dict):
+            return _err("Payload JSON inválido.")
+        poster_in = body.get("poster")
+        if not isinstance(poster_in, dict):
+            return _err("Dados do pôster ausentes.")
+        language = body.get("language") if body.get("language") in config.LANGUAGES else config.DEFAULT_LANGUAGE
+        provider = body.get("provider") or config.DEFAULT_PROVIDER
+        user_key = (body.get("api_key") or "").strip()
+        model = body.get("model") or None
+        server_key = config.server_key_for(provider)
+        key = user_key or server_key
+
+        translated = None
+        if key:
+            try:
+                translated = translate_poster_fields(poster_in, language, provider, key, model)
+            except Exception:
+                translated = None
+        if translated is None:
+            merged = {**poster_in, "language": language}
+            translated = normalize_poster(merged)
+        else:
+            translated = normalize_poster({**poster_in, **translated, "language": language})
+        return jsonify({"poster": translated})
+    except HTTPException:
+        raise
+    except Exception as exc:
+        return jsonify({"error": f"Erro ao traduzir conteúdo: {str(exc)}"}), 500
 
 
 @app.post("/api/generate")

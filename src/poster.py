@@ -193,11 +193,109 @@ def renumber_citations(sections: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     return result
 
 from .config import LANGUAGES
-from .i18n import labels_for
+from .i18n import LABELS, SECTION_ALIASES, labels_for
 from .templates import DEFAULT_TEMPLATE, TEMPLATES, default_paper_for, papers_for
 
 MAX_SECTIONS = 20
 MAX_FIELD = 20_000
+
+
+def _norm_key(s: str) -> str:
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(s or ""))
+    s = "".join(c for c in s if not unicodedata.combining(c)).lower()
+    return re.sub(r"[^a-z0-9 &]", " ", s).strip()
+
+
+_ALL_SECTION_LABEL_MAP: Dict[str, str] = {}
+for _sid, _aliases in SECTION_ALIASES.items():
+    for _al in _aliases:
+        _ALL_SECTION_LABEL_MAP[_norm_key(_al)] = _sid
+for _l_dict in LABELS.values():
+    for _sid, _lbl in _l_dict.items():
+        if _sid not in ("figure", "babel"):
+            _ALL_SECTION_LABEL_MAP[_norm_key(_lbl)] = _sid
+
+
+def normalize_section_title_language(sid: str, raw_title: str, lang: str) -> str:
+    """Garante que cabeçalhos de seções padrão ou equivalentes em outro idioma sigam estritamente `lang`."""
+    labels = labels_for(lang)
+    cleaned = re.sub(r"^\s*(?:\d+(?:\.\d+)*|[IVX]+)[\.\-\)]\s*", "", str(raw_title or "")).strip()
+    norm_t = _norm_key(cleaned)
+
+    if sid in labels and sid not in ("figure", "babel"):
+        if not cleaned or _ALL_SECTION_LABEL_MAP.get(norm_t) == sid:
+            return labels[sid]
+
+    matched_sid = _ALL_SECTION_LABEL_MAP.get(norm_t)
+    if matched_sid and matched_sid in labels:
+        return labels[matched_sid]
+
+    if not cleaned:
+        return labels.get(sid) or sid.capitalize()
+    return cleaned
+
+
+_AFFIL_EN_TO_PT = [
+    (r"\bDepartment\s+of\s+Computer\s+Science\b", "Departamento de Ciência da Computação"),
+    (r"\bDepartment\s+of\s+Information\s+Systems\b", "Departamento de Sistemas de Informação"),
+    (r"\bDepartment\s+of\s+Electrical\s+Engineering\b", "Departamento de Engenharia Elétrica"),
+    (r"\bDepartment\s+of\s+Mechanical\s+Engineering\b", "Departamento de Engenharia Mecânica"),
+    (r"\bDepartment\s+of\s+Civil\s+Engineering\b", "Departamento de Engenharia Civil"),
+    (r"\bDepartment\s+of\s+Mathematics\b", "Departamento de Matemática"),
+    (r"\bDepartment\s+of\s+Physics\b", "Departamento de Física"),
+    (r"\bDepartment\s+of\s+Chemistry\b", "Departamento de Química"),
+    (r"\bDepartment\s+of\s+Statistics\b", "Departamento de Estatística"),
+    (r"\bDepartment\s+of\s+Engineering\b", "Departamento de Engenharia"),
+    (r"\bDepartment\s+of\s+", "Departamento de "),
+    (r"\bFederal\s+University\s+of\s+Minas\s+Gerais\b", "Universidade Federal de Minas Gerais"),
+    (r"\bFederal\s+University\s+of\s+", "Universidade Federal de "),
+    (r"\bState\s+University\s+of\s+", "Universidade Estadual de "),
+    (r"\bUniversity\s+of\s+", "Universidade de "),
+    (r"\bFederal\s+Institute\s+of\s+", "Instituto Federal de "),
+    (r"\bInstitute\s+of\s+", "Instituto de "),
+    (r"\bFaculty\s+of\s+", "Faculdade de "),
+    (r"\bSchool\s+of\s+", "Escola de "),
+    (r"\bCent(?:er|re)\s+for\s+", "Centro de "),
+    (r"\bLaboratory\s+of\s+", "Laboratório de "),
+    (r"\bBrazil\b", "Brasil"),
+]
+
+_AFFIL_PT_TO_EN = [
+    (r"\bDepartamento\s+de\s+Ci[êe]ncia\s+da\s+Computa[çc][ãa]o\b", "Department of Computer Science"),
+    (r"\bDepartamento\s+de\s+Sistemas\s+de\s+Informa[çc][ãa]o\b", "Department of Information Systems"),
+    (r"\bDepartamento\s+de\s+Engenharia\s+El[ée]trica\b", "Department of Electrical Engineering"),
+    (r"\bDepartamento\s+de\s+Engenharia\s+Mec[âa]nica\b", "Department of Mechanical Engineering"),
+    (r"\bDepartamento\s+de\s+Engenharia\s+Civil\b", "Department of Civil Engineering"),
+    (r"\bDepartamento\s+de\s+Matem[áa]tica\b", "Department of Mathematics"),
+    (r"\bDepartamento\s+de\s+F[íi]sica\b", "Department of Physics"),
+    (r"\bDepartamento\s+de\s+Qu[íi]mica\b", "Department of Chemistry"),
+    (r"\bDepartamento\s+de\s+Estat[íi]stica\b", "Department of Statistics"),
+    (r"\bDepartamento\s+de\s+Engenharia\b", "Department of Engineering"),
+    (r"\bDepartamento\s+d[eoa]s?\s+", "Department of "),
+    (r"\bUniversidade\s+Federal\s+de\s+Minas\s+Gerais\b", "Federal University of Minas Gerais"),
+    (r"\bUniversidade\s+Federal\s+d[eoa]s?\s+", "Federal University of "),
+    (r"\bUniversidade\s+Estadual\s+d[eoa]s?\s+", "State University of "),
+    (r"\bUniversidade\s+d[eoa]s?\s+", "University of "),
+    (r"\bInstituto\s+Federal\s+d[eoa]s?\s+", "Federal Institute of "),
+    (r"\bInstituto\s+d[eoa]s?\s+", "Institute of "),
+    (r"\bFaculdade\s+d[eoa]s?\s+", "Faculty of "),
+    (r"\bEscola\s+d[eoa]s?\s+", "School of "),
+    (r"\bCentro\s+d[eoa]s?\s+", "Center for "),
+    (r"\bLaborat[óo]rio\s+d[eoa]s?\s+", "Laboratory of "),
+    (r"\bBrasil\b", "Brazil"),
+]
+
+
+def normalize_affiliations_language(affiliations: str, lang: str) -> str:
+    """Normaliza termos institucionais comuns nas afiliações para o idioma selecionado (`pt-BR` ou `en-US`)."""
+    if not affiliations or not affiliations.strip():
+        return ""
+    res = affiliations
+    rules = _AFFIL_EN_TO_PT if lang == "pt-BR" else _AFFIL_PT_TO_EN
+    for pattern, repl in rules:
+        res = re.sub(pattern, repl, res, flags=re.IGNORECASE)
+    return res
 
 
 def _s(value: Any, limit: int = MAX_FIELD) -> str:
@@ -246,10 +344,7 @@ def normalize_poster(data: Dict[str, Any]) -> Dict[str, Any]:
         if not isinstance(sec, dict):
             continue
         sid = _s(sec.get("id"), 40) or f"custom{i}"
-        title = _s(sec.get("title"), 200) or labels.get(sid, "")
-        if sid in labels:
-            if not title or title.strip().lower() == other_labels.get(sid, "").lower():
-                title = labels[sid]
+        title = normalize_section_title_language(sid, _s(sec.get("title"), 200), lang)
         content = _s(sec.get("content"))
         images = []
         for img in sec.get("images") or []:
@@ -257,8 +352,6 @@ def normalize_poster(data: Dict[str, Any]) -> Dict[str, Any]:
                 images.append({"path": str(img["path"]), "caption": _s(img.get("caption"), 400)})
         if not (content or images):
             continue
-        if not title:
-            title = sid.capitalize()
         sections.append({"id": sid, "title": title, "content": content, "images": images})
 
     sections = renumber_citations(sections)
@@ -288,7 +381,7 @@ def normalize_poster(data: Dict[str, Any]) -> Dict[str, Any]:
         "colors": colors,
         "title": poster_title,
         "authors": _s(data.get("authors"), 1500),
-        "affiliations": _s(data.get("affiliations"), 2000),
+        "affiliations": normalize_affiliations_language(_s(data.get("affiliations"), 2000), lang),
         "email": format_grouped_emails(_s(data.get("email"), 400)),
         "url": _s(data.get("url"), 300),
         "logos_header": logos_header,

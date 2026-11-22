@@ -915,5 +915,136 @@ def test_server_origin_validation():
     assert r3.status_code == 403
 
 
+def test_build_system_prompt_language_isolation():
+    from src.llm import build_system_prompt
+
+    prompt_en = build_system_prompt("en-US")
+    assert "Target Language: American English (en-US)." in prompt_en
+    assert "[1. Input: CICIoT2023 & Edge-IIoTset]" in prompt_en
+    assert "| Scale / Dataset | Model | Macro F1 | 2PL Capability |" in prompt_en
+    assert "CAPACIDADE CONDICIONAL" not in prompt_en
+    assert "Entrada: CICIoT2023" not in prompt_en
+    assert "Capacidade 2PL" not in prompt_en
+
+    prompt_pt = build_system_prompt("pt-BR")
+    assert "Target Language: Brazilian Portuguese (pt-BR)." in prompt_pt
+    assert "Departamento de Ciência da Computação – Universidade Federal de Minas Gerais (UFMG)" in prompt_pt
+    assert "[1. Entrada: CICIoT2023 & Edge-IIoTset]" in prompt_pt
+    assert "| Escala / Dataset | Modelo | Macro F1 | Capacidade 2PL |" in prompt_pt
+
+
+def test_normalize_affiliations_and_numbered_section_titles():
+    from src.poster import normalize_affiliations_language, normalize_poster, normalize_section_title_language
+
+    en_affil = "Department of Computer Science – Federal University of Minas Gerais (UFMG)\nBelo Horizonte – MG – Brazil"
+    pt_affil = normalize_affiliations_language(en_affil, "pt-BR")
+    assert "Departamento de Ciência da Computação" in pt_affil
+    assert "Universidade Federal de Minas Gerais (UFMG)" in pt_affil
+    assert "Brasil" in pt_affil
+
+    back_en = normalize_affiliations_language(pt_affil, "en-US")
+    assert "Department of Computer Science" in back_en
+    assert "Federal University of Minas Gerais (UFMG)" in back_en
+    assert "Brazil" in back_en
+
+    assert normalize_section_title_language("introduction", "1. INTRODUCTION", "pt-BR") == "Introdução"
+    assert normalize_section_title_language("methods", "2. METHODS", "pt-BR") == "Metodologia"
+    assert normalize_section_title_language("methods", "Methodology", "pt-BR") == "Metodologia"
+    assert normalize_section_title_language("results", "3. RESULTS", "pt-BR") == "Resultados"
+    assert normalize_section_title_language("conclusions", "4. CONCLUSIONS", "pt-BR") == "Conclusões"
+    assert normalize_section_title_language("references", "REFERENCES", "pt-BR") == "Referências"
+
+    assert normalize_section_title_language("introduction", "1. INTRODUÇÃO", "en-US") == "Introduction"
+    assert normalize_section_title_language("methods", "2. METODOLOGIA", "en-US") == "Methods"
+    assert normalize_section_title_language("results", "3. RESULTADOS", "en-US") == "Results"
+    assert normalize_section_title_language("conclusions", "4. CONCLUSÕES", "en-US") == "Conclusions"
+    assert normalize_section_title_language("references", "REFERÊNCIAS", "en-US") == "References"
+
+    norm_pt = normalize_poster({
+        "language": "pt-BR",
+        "title": "CAPACIDADE CONDICIONAL E VALIDADE DE MEDIÇÃO",
+        "affiliations": en_affil,
+        "sections": [
+            {"id": "introduction", "title": "1. INTRODUCTION", "content": "Texto de introdução."},
+            {"id": "methods", "title": "2. METHODS", "content": "Texto de metodologia."},
+            {"id": "results", "title": "3. RESULTS", "content": "Texto de resultados."},
+            {"id": "conclusions", "title": "4. CONCLUSIONS", "content": "Texto de conclusões."},
+            {"id": "references", "title": "REFERENCES", "content": "[1] Ref A."},
+        ],
+    })
+    assert "Departamento de Ciência da Computação" in norm_pt["affiliations"]
+    assert [s["title"] for s in norm_pt["sections"]] == [
+        "Introdução", "Metodologia", "Resultados", "Conclusões", "Referências"
+    ]
+
+
+def test_ai_extract_auto_translates_wrong_language_and_translate_endpoint(monkeypatch):
+    import json
+    import src.llm as llm_mod
+    from server import app
+
+    calls = []
+
+    def fake_chat(provider, api_key, model, system, user):
+        calls.append((system, user))
+        if len(calls) == 1:
+            # First call simulates LLM returning Portuguese despite en-US request
+            return json.dumps({
+                "title": "CAPACIDADE CONDICIONAL E VALIDADE DE MEDIÇÃO EM BENCHMARKS DE DETECÇÃO DE INTRUSÃO EM IOT",
+                "authors": "João Lucas Mayrinck",
+                "affiliations": "Departamento de Ciência da Computação – Universidade Federal de Minas Gerais (UFMG)\nBelo Horizonte – MG – Brasil",
+                "email": "lucas.mayrinck@dcc.ufmg.br",
+                "sections": {
+                    "introduction": "Contexto: Benchmarks de detecção de intrusão não justificam afirmações sobre capacidade geral [1].",
+                    "methods": "Avaliação com calibração Rasch e 2PL para respostas binárias observadas.",
+                    "results": "Random Forest obteve maior capacidade e Macro F1 nas comparações.",
+                    "conclusions": "Os benchmarks suportam contrastes reprodutíveis sob condições declaradas.",
+                    "references": "[1] Truong, S. T. (2026). AI Measurement Science.",
+                },
+            })
+        # Second call is automatic translation to en-US
+        return json.dumps({
+            "title": "CONDITIONAL CAPABILITY AND MEASUREMENT VALIDITY IN IOT INTRUSION-DETECTION BENCHMARKS",
+            "affiliations": "Department of Computer Science – Federal University of Minas Gerais (UFMG)\nBelo Horizonte – MG – Brazil",
+            "sections": {
+                "introduction": "Context: Intrusion detection benchmarks do not justify claims about general capability [1].",
+                "methods": "Evaluation with Rasch and 2PL calibration for observed binary responses.",
+                "results": "Random Forest achieved higher capability and Macro F1 across comparisons.",
+                "conclusions": "Benchmarks support reproducible contrasts under declared conditions.",
+            },
+        })
+
+    monkeypatch.setattr(llm_mod, "chat", fake_chat)
+    res = llm_mod.ai_extract("Sample paper text " * 20, "en-US", "nvidia", "fake-key", None)
+    assert len(calls) == 2
+    assert res["language"] == "en-US"
+    assert res["title"] == "CONDITIONAL CAPABILITY AND MEASUREMENT VALIDITY IN IOT INTRUSION-DETECTION BENCHMARKS"
+    assert "Department of Computer Science" in res["affiliations"]
+    assert [s["title"] for s in res["sections"]] == [
+        "Introduction", "Methods", "Results", "Conclusions", "References"
+    ]
+    assert "Intrusion detection benchmarks" in res["sections"][0]["content"]
+
+    client = app.test_client()
+    r = client.post("/api/translate", json={
+        "language": "pt-BR",
+        "poster": {
+            "title": "Research Poster Title",
+            "affiliations": "Department of Computer Science – Federal University of Minas Gerais (UFMG), Brazil",
+            "sections": [
+                {"id": "introduction", "title": "1. INTRODUCTION", "content": "Texto."},
+                {"id": "methods", "title": "2. METHODS", "content": "Metodologia."},
+            ],
+        },
+    })
+    assert r.status_code == 200
+    p_out = r.get_json()["poster"]
+    assert p_out["language"] == "pt-BR"
+    assert "Departamento de Ciência da Computação" in p_out["affiliations"]
+    assert p_out["sections"][0]["title"] == "Introdução"
+    assert p_out["sections"][1]["title"] == "Metodologia"
+
+
+
 
 

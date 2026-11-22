@@ -298,7 +298,7 @@ def _classify_header_line(line: str) -> tuple[List[str], List[str]]:
     return ([author_name] if author_name else []), []
 
 
-def heuristic_parse(text: str) -> Dict[str, Any]:
+def heuristic_parse(text: str, language: str | None = None) -> Dict[str, Any]:
     """Extração sem IA: detecta título/autores e seções pelos cabeçalhos usuais."""
     text = clean_hyphens(text)
     # Garante que cabeçalhos de seção embutidos em linhas de autores/emails iniciem em nova linha
@@ -430,8 +430,11 @@ def heuristic_parse(text: str) -> Dict[str, Any]:
 
     limits = {"references": 800, "acknowledgments": 400}
     out_sections = []
-    from .i18n import DEFAULT_SECTION_IDS
+    from .i18n import DEFAULT_SECTION_IDS, labels_for
+    from .poster import normalize_affiliations_language, strip_citations
 
+    eff_lang = language or "pt-BR"
+    labels = labels_for(eff_lang)
     for sid in DEFAULT_SECTION_IDS:
         if sid in sections:
             buf = sections[sid]
@@ -439,17 +442,28 @@ def heuristic_parse(text: str) -> Dict[str, Any]:
             if content:
                 body = _format_references(content) if sid == "references" else _unwrap(clean_hyphens(content))
                 if sid in ("results", "conclusions"):
-                    from .poster import strip_citations
                     body = strip_citations(body)
-                out_sections.append({"id": sid, "content": _condense(body, limits.get(sid, 1100))})
+                sec_entry: Dict[str, Any] = {
+                    "id": sid,
+                    "content": _condense(body, limits.get(sid, 1100)),
+                }
+                if language:
+                    sec_entry["title"] = labels.get(sid, sid.capitalize())
+                out_sections.append(sec_entry)
 
-    return {
+    raw_affil = affiliations[:800].strip()
+    final_affil = normalize_affiliations_language(raw_affil, language) if language else raw_affil
+
+    res: Dict[str, Any] = {
         "title": title[:300].strip(),
         "authors": authors[:600].strip(),
-        "affiliations": affiliations[:800].strip(),
+        "affiliations": final_affil,
         "email": ", ".join(emails[:3]) if emails else "",
         "sections": out_sections,
     }
+    if language:
+        res["language"] = language
+    return res
 
 
 def _unwrap(text: str) -> str:

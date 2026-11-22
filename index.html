@@ -3120,8 +3120,109 @@ function showMsg(el, text, cls) {
   el.innerHTML = text ? `<div class="msg ${escapeHtml(cls)}">${escapeHtml(text)}</div>` : "";
 }
 
-function secLabel(id) {
-  return (CFG && CFG.labels && CFG.labels[posterLang] && CFG.labels[posterLang][id]) || "";
+function secLabel(id, lang = posterLang) {
+  return (CFG && CFG.labels && CFG.labels[lang] && CFG.labels[lang][id]) || (DEFAULT_CFG.labels[lang] && DEFAULT_CFG.labels[lang][id]) || "";
+}
+
+function _normSecKey(str) {
+  return String(str || "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9 &]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const _SEC_ALIAS_MAP = {
+  "abstract": "abstract", "resumo": "abstract", "summary": "abstract", "sumario executivo": "abstract",
+  "introduction": "introduction", "introducao": "introduction", "background": "introduction", "contexto": "introduction", "motivation": "introduction", "motivacao": "introduction",
+  "objectives": "objectives", "objetivos": "objectives", "objective": "objectives", "objetivo": "objectives", "aims": "objectives", "goals": "objectives",
+  "methods": "methods", "methodology": "methods", "materials and methods": "methods", "materials & methods": "methods", "metodologia": "methods", "metodos": "methods", "material e metodos": "methods", "materiais e metodos": "methods",
+  "results": "results", "resultados": "results", "findings": "results", "results and discussion": "results", "resultados e discussao": "results", "experimental results": "results", "resultados experimentais": "results",
+  "discussion": "discussion", "discussao": "discussion", "analysis": "discussion", "analise": "discussion",
+  "conclusions": "conclusions", "conclusion": "conclusions", "conclusoes": "conclusions", "conclusao": "conclusions", "final remarks": "conclusions", "consideracoes finais": "conclusions", "concluding remarks": "conclusions",
+  "references": "references", "referencias": "references", "bibliography": "references", "bibliografia": "references", "referencias bibliograficas": "references",
+  "acknowledgments": "acknowledgments", "acknowledgements": "acknowledgments", "agradecimentos": "acknowledgments", "acknowledgment": "acknowledgments",
+  "contact": "contact", "contato": "contact"
+};
+
+function resolveSectionTitleForLang(sec, lang = posterLang) {
+  const sid = (sec && sec.id) ? String(sec.id).trim() : "";
+  const rawTitle = (sec && sec.title) ? String(sec.title).trim() : "";
+  const cleaned = rawTitle.replace(/^\s*(?:\d+(?:\.\d+)*|[IVX]+)[\.\-\)]\s*/i, "").trim();
+  const normT = _normSecKey(cleaned);
+  const mappedSid = _SEC_ALIAS_MAP[normT];
+
+  if (sid && secLabel(sid, lang)) {
+    if (!cleaned || mappedSid === sid) {
+      return secLabel(sid, lang);
+    }
+  }
+  if (mappedSid && secLabel(mappedSid, lang)) {
+    return secLabel(mappedSid, lang);
+  }
+  return cleaned || secLabel(sid, lang) || "";
+}
+
+const _AFFIL_RULES_EN_TO_PT = [
+  [/\bDepartment\s+of\s+Computer\s+Science\b/gi, "Departamento de Ciência da Computação"],
+  [/\bDepartment\s+of\s+Information\s+Systems\b/gi, "Departamento de Sistemas de Informação"],
+  [/\bDepartment\s+of\s+Electrical\s+Engineering\b/gi, "Departamento de Engenharia Elétrica"],
+  [/\bDepartment\s+of\s+Mechanical\s+Engineering\b/gi, "Departamento de Engenharia Mecânica"],
+  [/\bDepartment\s+of\s+Civil\s+Engineering\b/gi, "Departamento de Engenharia Civil"],
+  [/\bDepartment\s+of\s+Mathematics\b/gi, "Departamento de Matemática"],
+  [/\bDepartment\s+of\s+Physics\b/gi, "Departamento de Física"],
+  [/\bDepartment\s+of\s+Chemistry\b/gi, "Departamento de Química"],
+  [/\bDepartment\s+of\s+Statistics\b/gi, "Departamento de Estatística"],
+  [/\bDepartment\s+of\s+Engineering\b/gi, "Departamento de Engenharia"],
+  [/\bDepartment\s+of\s+/gi, "Departamento de "],
+  [/\bFederal\s+University\s+of\s+Minas\s+Gerais\b/gi, "Universidade Federal de Minas Gerais"],
+  [/\bFederal\s+University\s+of\s+/gi, "Universidade Federal de "],
+  [/\bState\s+University\s+of\s+/gi, "Universidade Estadual de "],
+  [/\bUniversity\s+of\s+/gi, "Universidade de "],
+  [/\bFederal\s+Institute\s+of\s+/gi, "Instituto Federal de "],
+  [/\bInstitute\s+of\s+/gi, "Instituto de "],
+  [/\bFaculty\s+of\s+/gi, "Faculdade de "],
+  [/\bSchool\s+of\s+/gi, "Escola de "],
+  [/\bCent(?:er|re)\s+for\s+/gi, "Centro de "],
+  [/\bLaboratory\s+of\s+/gi, "Laboratório de "],
+  [/\bBrazil\b/gi, "Brasil"]
+];
+
+const _AFFIL_RULES_PT_TO_EN = [
+  [/\bDepartamento\s+de\s+Ci[êe]ncia\s+da\s+Computa[çc][ãa]o\b/gi, "Department of Computer Science"],
+  [/\bDepartamento\s+de\s+Sistemas\s+de\s+Informa[çc][ãa]o\b/gi, "Department of Information Systems"],
+  [/\bDepartamento\s+de\s+Engenharia\s+El[ée]trica\b/gi, "Department of Electrical Engineering"],
+  [/\bDepartamento\s+de\s+Engenharia\s+Mec[âa]nica\b/gi, "Department of Mechanical Engineering"],
+  [/\bDepartamento\s+de\s+Engenharia\s+Civil\b/gi, "Department of Civil Engineering"],
+  [/\bDepartamento\s+de\s+Matem[áa]tica\b/gi, "Department of Mathematics"],
+  [/\bDepartamento\s+de\s+F[íi]sica\b/gi, "Department of Physics"],
+  [/\bDepartamento\s+de\s+Qu[íi]mica\b/gi, "Department of Chemistry"],
+  [/\bDepartamento\s+de\s+Estat[íi]stica\b/gi, "Department of Statistics"],
+  [/\bDepartamento\s+de\s+Engenharia\b/gi, "Department of Engineering"],
+  [/\bDepartamento\s+d[eoa]s?\s+/gi, "Department of "],
+  [/\bUniversidade\s+Federal\s+de\s+Minas\s+Gerais\b/gi, "Federal University of Minas Gerais"],
+  [/\bUniversidade\s+Federal\s+d[eoa]s?\s+/gi, "Federal University of "],
+  [/\bUniversidade\s+Estadual\s+d[eoa]s?\s+/gi, "State University of "],
+  [/\bUniversidade\s+d[eoa]s?\s+/gi, "University of "],
+  [/\bInstituto\s+Federal\s+d[eoa]s?\s+/gi, "Federal Institute of "],
+  [/\bInstituto\s+d[eoa]s?\s+/gi, "Institute of "],
+  [/\bFaculdade\s+d[eoa]s?\s+/gi, "Faculty of "],
+  [/\bEscola\s+d[eoa]s?\s+/gi, "School of "],
+  [/\bCentro\s+d[eoa]s?\s+/gi, "Center for "],
+  [/\bLaborat[óo]rio\s+d[eoa]s?\s+/gi, "Laboratory of "],
+  [/\bBrasil\b/gi, "Brazil"]
+];
+
+function normalizeAffiliationsForLang(affil, lang = posterLang) {
+  if (!affil || typeof affil !== "string") return "";
+  let res = affil;
+  const rules = lang === "pt-BR" ? _AFFIL_RULES_EN_TO_PT : _AFFIL_RULES_PT_TO_EN;
+  for (const [re, repl] of rules) {
+    res = res.replace(re, repl);
+  }
+  return res;
 }
 
 function newSec(id, title = "", content = "") {
@@ -3486,6 +3587,66 @@ if (uiLangToggleBtn) {
   };
 }
 
+let extractReqId = 0;
+let extractedCache = {};
+let isDemoSampleLoaded = false;
+
+async function translateCurrentPosterToLang(targetLang) {
+  if (!backendAvailable) return;
+  const titleEl = $("#title");
+  const affilEl = $("#affiliations");
+  const curTitle = (titleEl && titleEl.value.trim()) || "";
+  const hasContent = Boolean(curTitle || sections.some(s => s.content && s.content.trim()));
+  if (!hasContent) return;
+
+  const myReqId = ++extractReqId;
+  const msg = $("#extractMsg");
+  const selectedProvider = $("#provider") ? $("#provider").value : "nvidia";
+  const userKey = ($("#apiKey") ? $("#apiKey").value : "").trim();
+  let modelVal = $("#model") ? $("#model").value.trim() : "";
+  if (!modelVal && CFG.providers && CFG.providers[selectedProvider]) {
+    modelVal = CFG.providers[selectedProvider].default_model;
+  }
+
+  if (msg) showMsg(msg, t("working"), "ok");
+  try {
+    const payload = {
+      language: targetLang,
+      provider: selectedProvider,
+      api_key: userKey,
+      model: modelVal,
+      poster: {
+        language: targetLang,
+        title: curTitle,
+        authors: ($("#authors") && $("#authors").value.trim()) || "",
+        affiliations: (affilEl && affilEl.value.trim()) || "",
+        email: ($("#email") && $("#email").value.trim()) || "",
+        sections: sections.map(s => ({
+          id: s.id,
+          title: resolveSectionTitleForLang(s, targetLang),
+          content: s.content || ""
+        }))
+      }
+    };
+    const r = await robustFetch(getApiBase() + "/api/translate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (myReqId !== extractReqId) return;
+    if (r.ok) {
+      const j = await r.json().catch(() => ({}));
+      if (j && j.poster && myReqId === extractReqId) {
+        extractedCache[targetLang] = JSON.parse(JSON.stringify(j.poster));
+        fillFromExtract(j.poster, targetLang);
+        if (msg) showMsg(msg, "", "");
+      }
+    }
+  } catch (_) {
+    // Mantém normalização local caso tradução remota falhe
+  }
+}
+
 document.querySelectorAll("input[name=posterLang]").forEach(r => {
   r.onchange = () => {
     if (r.checked) {
@@ -3494,19 +3655,34 @@ document.querySelectorAll("input[name=posterLang]").forEach(r => {
       const titleInput = $("#title");
       if (titleInput) {
         const prevFallback = (draftFallbacks[prevLang] && draftFallbacks[prevLang].title) || "";
-        if (!titleInput.value || titleInput.value.trim() === prevFallback) {
+        if (!titleInput.value || titleInput.value.trim().toLowerCase() === prevFallback.toLowerCase()) {
           titleInput.value = (draftFallbacks[posterLang] && draftFallbacks[posterLang].title) || "";
         }
       }
+      const affilInput = $("#affiliations");
+      if (affilInput && affilInput.value) {
+        affilInput.value = normalizeAffiliationsForLang(affilInput.value, posterLang);
+      }
       sections.forEach(s => {
-        const prevLabel = (CFG.labels[prevLang] && CFG.labels[prevLang][s.id]) || "";
-        const newLabel = (CFG.labels[posterLang] && CFG.labels[posterLang][s.id]) || "";
-        if (newLabel && (!s.title || s.title.trim() === prevLabel)) {
-          s.title = newLabel;
-        }
+        const resolved = resolveSectionTitleForLang(s, posterLang);
+        if (resolved) s.title = resolved;
       });
       renderSections();
       updateDraftPreview();
+
+      if (isDemoSampleLoaded) {
+        const sampleBtn = $("#quickSampleBtn");
+        if (sampleBtn) sampleBtn.click();
+      } else if (extractedCache[posterLang]) {
+        ++extractReqId;
+        $("#extractBtn").disabled = false;
+        fillFromExtract(extractedCache[posterLang], posterLang);
+      } else if (docFile) {
+        $("#extractBtn").disabled = false;
+        $("#extractBtn").click();
+      } else {
+        translateCurrentPosterToLang(posterLang);
+      }
     }
   };
 });
@@ -3535,10 +3711,13 @@ $("#docFile").onchange = e => setDoc(e.target.files[0]);
 function setDoc(f) {
   if (!f) return;
   docFile = f;
+  extractedCache = {};
+  isDemoSampleLoaded = false;
   $("#docName").textContent = "📄 " + f.name + " (" + (f.size / 1024).toFixed(1) + " KB)";
   // Dispara extração automática imediatamente após o upload/seleção do trabalho
   const btn = $("#extractBtn");
   if (btn) {
+    btn.disabled = false;
     btn.click();
   }
 }
@@ -3555,9 +3734,16 @@ $("#extractBtn").onclick = async () => {
   }
 
   if (!docFile) return showMsg(msg, t("no_file"), "err");
+  const checkedRadio = document.querySelector("input[name=posterLang]:checked");
+  if (checkedRadio && checkedRadio.value) {
+    posterLang = checkedRadio.value;
+  }
+  const reqLang = posterLang;
+  const myReqId = ++extractReqId;
+
   const fd = new FormData();
   fd.append("file", docFile);
-  fd.append("language", posterLang);
+  fd.append("language", reqLang);
   const isAi = Boolean(($("#useAI") || $("#useAi"))?.checked);
   const selectedProvider = $("#provider") ? $("#provider").value : "nvidia";
   const userKey = ($("#apiKey") ? $("#apiKey").value : "").trim();
@@ -3583,8 +3769,9 @@ $("#extractBtn").onclick = async () => {
   showMsg(msg, t("working"), "ok");
   try {
     const r = await robustFetch(getApiBase() + "/api/extract", { method: "POST", body: fd }, {
-      onStatusUpdate: (stMsg) => showMsg(msg, stMsg, "ok")
+      onStatusUpdate: (stMsg) => { if (myReqId === extractReqId) showMsg(msg, stMsg, "ok"); }
     });
+    if (myReqId !== extractReqId) return;
     let j = {};
     const ct = (r.headers.get("content-type") || "").toLowerCase();
     if (ct.includes("application/json")) {
@@ -3597,8 +3784,12 @@ $("#extractBtn").onclick = async () => {
       await r.text().catch(() => "");
       return showMsg(msg, `Erro no servidor (${r.status}). O serviço pode estar reiniciando ou temporariamente indisponível. Tente novamente em instantes.`, "err");
     }
+    if (myReqId !== extractReqId) return;
     if (!r.ok) return showMsg(msg, j.error || "Erro na extração (" + r.status + ")", "err");
-    fillFromExtract(j.poster);
+    if (j.poster) {
+      extractedCache[reqLang] = JSON.parse(JSON.stringify(j.poster));
+    }
+    fillFromExtract(j.poster, reqLang);
     if (isAi && !userKey && !providerHasServerKey) {
       showMsg(msg, t("extracted") + " (💡 Análise estrutural realizada. Para síntese com IA, insira sua chave gratuita de API).", "ok");
     } else if (j.warning && isAi) {
@@ -3607,16 +3798,21 @@ $("#extractBtn").onclick = async () => {
       showMsg(msg, t("extracted") + (j.warning ? " (" + j.warning + ")" : ""), "ok");
     }
   } catch (e) {
-    showMsg(msg, String(e), "err");
+    if (myReqId === extractReqId) showMsg(msg, String(e), "err");
   } finally {
-    $("#extractBtn").disabled = false;
+    if (myReqId === extractReqId) $("#extractBtn").disabled = false;
   }
 };
 
-function fillFromExtract(p) {
+function fillFromExtract(p, targetLang = posterLang) {
+  if (!p) return;
+  isDemoSampleLoaded = false;
   ["title", "authors", "affiliations", "email"].forEach(k => {
     if (p[k]) $("#" + k).value = p[k];
   });
+  if (p.affiliations) {
+    $("#affiliations").value = normalizeAffiliationsForLang(p.affiliations, targetLang);
+  }
   if (p.email) {
     $("#email").value = formatGroupedEmails(p.email);
   }
@@ -3627,11 +3823,16 @@ function fillFromExtract(p) {
     if (s.id === "abstract") return;
     const old = byId[s.id];
     const n = old || newSec(s.id);
-    n.title = s.title || secLabel(s.id);
+    n.title = resolveSectionTitleForLang({ id: s.id, title: s.title }, targetLang) || secLabel(s.id, targetLang);
     n.content = s.content || "";
     out.push(n);
   });
-  kept.forEach(s => { if (!out.includes(s)) out.push(s); });
+  kept.forEach(s => {
+    if (!out.includes(s)) {
+      s.title = resolveSectionTitleForLang(s, targetLang) || s.title;
+      out.push(s);
+    }
+  });
   sections = out.length ? out : sections;
   renderSections();
   updateDraftPreview();
@@ -3793,7 +3994,8 @@ function insertTagCleanly(ta, tagStr) {
 function renderSections() {
   const el = $("#sections");
   el.innerHTML = sections.map((s, i) => {
-    const safeTitle = escapeHtml(s.title || secLabel(s.id));
+    const resolvedTitle = resolveSectionTitleForLang(s, posterLang) || s.title || secLabel(s.id);
+    const safeTitle = escapeHtml(resolvedTitle);
     const safeContent = escapeHtml(s.content || "");
     return `
     <div class="sec" data-i="${i}">
@@ -3928,13 +4130,20 @@ function renderSections() {
         const type = btn.dataset.snip;
         const ta = div.querySelector("textarea[data-f=content]");
         if (!ta) return;
+        const isEn = posterLang === "en-US";
         let snippet = "";
         if (type === "table") {
-          snippet = "\n\n| Parâmetro / Métrica | Baseline | Proposto | Variação |\n| :--- | :---: | :---: | :---: |\n| Acurácia (%) | 84.2 | 96.5 | +12.3% |\n| Macro F1 | 0.81 | 0.94 | +16.0% |\n| Latência (ms) | 48.0 | 19.5 | -59.4% |\n";
+          snippet = isEn
+            ? "\n\n| Parameter / Metric | Baseline | Proposed | Change |\n| :--- | :---: | :---: | :---: |\n| Accuracy (%) | 84.2 | 96.5 | +12.3% |\n| Macro F1 | 0.81 | 0.94 | +16.0% |\n| Latency (ms) | 48.0 | 19.5 | -59.4% |\n"
+            : "\n\n| Parâmetro / Métrica | Baseline | Proposto | Variação |\n| :--- | :---: | :---: | :---: |\n| Acurácia (%) | 84.2 | 96.5 | +12.3% |\n| Macro F1 | 0.81 | 0.94 | +16.0% |\n| Latência (ms) | 48.0 | 19.5 | -59.4% |\n";
         } else if (type === "tikz") {
-          snippet = "\n\n[Entrada / Dados] -> [Processamento & Extração] -> [Resultados & Classificação]\n";
+          snippet = isEn
+            ? "\n\n[Input / Data] -> [Processing & Extraction] -> [Results & Classification]\n"
+            : "\n\n[Entrada / Dados] -> [Processamento & Extração] -> [Resultados & Classificação]\n";
         } else if (type === "bullets") {
-          snippet = "\n\n- **Objetivo Central:** Descrição sintética da meta da pesquisa.\n- **Destaque Metodológico:** Abordagem técnica e parâmetros chave.\n- **Impacto Principal:** Resultado quantitativo comprovado [1].\n";
+          snippet = isEn
+            ? "\n\n- **Core Objective:** Concise description of the research goal.\n- **Methodological Highlight:** Technical approach and key parameters.\n- **Primary Impact:** Verified quantitative finding [1].\n"
+            : "\n\n- **Objetivo Central:** Descrição sintética da meta da pesquisa.\n- **Destaque Metodológico:** Abordagem técnica e parâmetros chave.\n- **Impacto Principal:** Resultado quantitativo comprovado [1].\n";
         }
         const start = ta.selectionStart != null ? ta.selectionStart : ta.value.length;
         const end = ta.selectionEnd != null ? ta.selectionEnd : ta.value.length;
@@ -4005,6 +4214,9 @@ $("#addSec").onclick = () => {
 
 /* ---------- Exemplo de Demonstração Rápido ---------- */
 $("#quickSampleBtn").onclick = () => {
+  const checkedRadio = document.querySelector("input[name=posterLang]:checked");
+  if (checkedRadio && checkedRadio.value) posterLang = checkedRadio.value;
+  isDemoSampleLoaded = true;
   const isEn = posterLang === "en-US";
   if (isEn) {
     $("#title").value = "Modulation of the Electromagnetic Spectrum in Controlled Photobiology: Plant Growth Dynamics";
@@ -4036,6 +4248,8 @@ $("#quickSampleBtn").onclick = () => {
 
   sections.forEach(s => {
     if (sampleTexts[s.id]) s.content = sampleTexts[s.id];
+    const lbl = secLabel(s.id, posterLang);
+    if (lbl) s.title = lbl;
   });
 
   // Gera logos fictícios diretamente como PNG nativo via canvas (compatível com Pillow / XeTeX / Tectonic)
@@ -4375,11 +4589,31 @@ function updateDraftPreview() {
   }
 
   // Textos Principais
+  const checkedLangRadio = document.querySelector("input[name=posterLang]:checked");
+  if (checkedLangRadio && checkedLangRadio.value) {
+    posterLang = checkedLangRadio.value;
+  }
   const dFb = draftFallbacks[posterLang] || draftFallbacks["pt-BR"];
+  const otherLang = posterLang === "pt-BR" ? "en-US" : "pt-BR";
+  const otherFb = draftFallbacks[otherLang] || {};
 
-  const titleVal = ($("#title") && $("#title").value.trim()) || dFb.title;
-  const authorsVal = ($("#authors") && $("#authors").value.trim()) || dFb.authors;
-  const affilVal = ($("#affiliations") && $("#affiliations").value.trim()) || dFb.affil;
+  let rawTitleVal = ($("#title") && $("#title").value.trim()) || "";
+  if (!rawTitleVal || (otherFb.title && rawTitleVal.toLowerCase() === otherFb.title.toLowerCase())) {
+    rawTitleVal = dFb.title;
+  }
+  const titleVal = rawTitleVal;
+  let rawAuthorsVal = ($("#authors") && $("#authors").value.trim()) || "";
+  if (!rawAuthorsVal || (otherFb.authors && rawAuthorsVal.toLowerCase() === otherFb.authors.toLowerCase())) {
+    rawAuthorsVal = dFb.authors;
+  }
+  const authorsVal = rawAuthorsVal;
+  let rawAffilVal = ($("#affiliations") && $("#affiliations").value.trim()) || "";
+  if (!rawAffilVal || (otherFb.affil && rawAffilVal.toLowerCase() === otherFb.affil.toLowerCase())) {
+    rawAffilVal = dFb.affil;
+  } else {
+    rawAffilVal = normalizeAffiliationsForLang(rawAffilVal, posterLang);
+  }
+  const affilVal = rawAffilVal;
   const rawEmailVal = ($("#email") && $("#email").value.trim()) || "";
   const emailVal = formatGroupedEmails(rawEmailVal);
   draftTitle.textContent = titleVal;
@@ -4516,7 +4750,7 @@ function updateDraftPreview() {
     grid.innerHTML = colBuckets.map(colSecs => `
       <div class="draft-col">
         ${colSecs.map(s => {
-          let sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
+          let sTitle = resolveSectionTitleForLang(s, posterLang) || (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
           const sBody = (s.content && s.content.trim()) || dFb.content;
           const isRef = s.id === "references" || /refer[eê]nc/i.test(sTitle);
           if (isRef && secLabel("references")) sTitle = secLabel("references");
@@ -5570,10 +5804,33 @@ async function buildForm() {
     bg: ($("#colorBg").value || "").replace(/^#/, "")
   } : null;
 
+  const checkedLangRadio = document.querySelector("input[name=posterLang]:checked");
+  if (checkedLangRadio && checkedLangRadio.value) {
+    posterLang = checkedLangRadio.value;
+  }
   const dFb = draftFallbacks[posterLang] || draftFallbacks["pt-BR"];
-  const titleVal = ($("#title") && $("#title").value.trim()) || dFb.title;
-  const authorsVal = ($("#authors") && $("#authors").value.trim()) || dFb.authors;
-  const affilVal = ($("#affiliations") && $("#affiliations").value.trim()) || dFb.affil;
+  const otherLang = posterLang === "pt-BR" ? "en-US" : "pt-BR";
+  const otherFb = draftFallbacks[otherLang] || {};
+
+  let rawTitleVal = ($("#title") && $("#title").value.trim()) || "";
+  if (!rawTitleVal || (otherFb.title && rawTitleVal.toLowerCase() === otherFb.title.toLowerCase())) {
+    rawTitleVal = dFb.title;
+  }
+  const titleVal = rawTitleVal;
+
+  let rawAuthorsVal = ($("#authors") && $("#authors").value.trim()) || "";
+  if (!rawAuthorsVal || (otherFb.authors && rawAuthorsVal.toLowerCase() === otherFb.authors.toLowerCase())) {
+    rawAuthorsVal = dFb.authors;
+  }
+  const authorsVal = rawAuthorsVal;
+
+  let rawAffilVal = ($("#affiliations") && $("#affiliations").value.trim()) || "";
+  if (!rawAffilVal || (otherFb.affil && rawAffilVal.toLowerCase() === otherFb.affil.toLowerCase())) {
+    rawAffilVal = dFb.affil;
+  } else {
+    rawAffilVal = normalizeAffiliationsForLang(rawAffilVal, posterLang);
+  }
+  const affilVal = rawAffilVal;
 
   const data = {
     language: posterLang,
@@ -5591,7 +5848,7 @@ async function buildForm() {
     logos_header: logosH.map(l => l.field),
     logos_footer: logosF.map(l => l.field),
     sections: sections.map(s => {
-      let sTitle = (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
+      let sTitle = resolveSectionTitleForLang(s, posterLang) || (s.title && s.title.trim()) || secLabel(s.id) || dFb.section;
       if (s.id === "references" && secLabel("references")) sTitle = secLabel("references");
       const rawContent = isResultsOrConclusionsSection(s) ? stripDraftCitations(s.content) : s.content;
       const sBody = (rawContent && rawContent.trim()) || dFb.content;
